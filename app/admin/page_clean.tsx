@@ -235,6 +235,14 @@ export default function AdminDashboard() {
     alert('💾 Database backup feature would be implemented here')
   }
 
+  const handleOpenTodaysPicks = async () => {
+    alert('🎯 Today\'s picks feature would be implemented here');
+  };
+
+  const handleOpenReports = async () => {
+    alert('📊 Reports feature would be implemented here');
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
   }
@@ -383,6 +391,8 @@ export default function AdminDashboard() {
             onSendNotification={handleSendNotification}
             onExportData={handleExportData}
             onBackupDatabase={handleBackupDatabase}
+            onOpenTodaysPicks={handleOpenTodaysPicks}
+            onOpenReports={handleOpenReports}
           />
           <UserActivityChart />
         </div>

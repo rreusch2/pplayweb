@@ -73,7 +73,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
               <OddsDisplay homeOutcome={moneyline.home} awayOutcome={moneyline.away} marketName="Moneyline" />
               <OddsDisplay homeOutcome={total.home} awayOutcome={total.away} marketName="Total" />
             </div>
-            <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={setSelectedBook} />
+            <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
           </>
         );
       case 'pro':
@@ -84,7 +84,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
                     <OddsDisplay homeOutcome={moneyline.home} awayOutcome={moneyline.away} marketName="Moneyline" />
                     <OddsDisplay homeOutcome={total.home} awayOutcome={total.away} marketName="Total" />
                 </div>
-                <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={setSelectedBook} />
+                <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
             </>
         );
       case 'free':

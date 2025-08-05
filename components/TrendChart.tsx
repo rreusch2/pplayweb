@@ -30,7 +30,7 @@ export default function TrendChart({ trendId }: TrendChartProps) {
         }
         const data = await response.json();
         setChartData(data);
-      } catch (err) {
+      } catch (err: any) {
         setError(err.message);
       }
     };

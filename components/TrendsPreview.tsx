@@ -396,11 +396,7 @@ export default function TrendsPreview({ onViewAllTrends }: TrendsPreviewProps) {
                 {/* Chart Section */}
                 {selectedTrend.chart_data && selectedTrend.visual_data && (
                   <div>
-                    <TrendChart 
-                      chartData={selectedTrend.chart_data}
-                      visualData={selectedTrend.visual_data}
-                      propType={selectedTrend.trend_type === 'player_prop' ? selectedTrend.description?.match(/(RBI|Hit|Home Run|Run)/)?.[0] : undefined}
-                    />
+                    <TrendChart trendId={selectedTrend.id} />
                   </div>
                 )}
 
@@ -413,7 +409,7 @@ export default function TrendsPreview({ onViewAllTrends }: TrendsPreviewProps) {
                         {Object.entries(selectedTrend.key_stats).map(([key, value]) => (
                           <div key={key} className="text-center">
                             <p className="text-xs text-gray-400 uppercase tracking-wide">{key}</p>
-                            <p className="text-lg font-semibold text-white mt-1">{value}</p>
+                            <p className="text-lg font-semibold text-white mt-1">{String(value)}</p>
                           </div>
                         ))}
                       </div>
