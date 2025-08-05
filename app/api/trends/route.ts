@@ -1,12 +1,12 @@
-
+import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { trendId } = req.query;
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const trendId = searchParams.get('trendId');
 
   if (!trendId) {
-    return res.status(400).json({ error: 'Trend ID is required' });
+    return NextResponse.json({ error: 'Trend ID is required' }, { status: 400 });
   }
 
   try {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!trend) {
-      return res.status(404).json({ error: 'Trend not found' });
+      return NextResponse.json({ error: 'Trend not found' }, { status: 404 });
     }
 
     const { data: propType, error: propTypeError } = await supabase
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         throw eventError;
     }
 
-    res.status(200).json({
+    return NextResponse.json({
       ...trend,
       prop_line: propData?.line,
       over_odds: propData?.over_odds,
@@ -65,6 +65,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       event_details: eventData
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
