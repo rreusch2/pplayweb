@@ -40,12 +40,15 @@ export default function PredictionsPage() {
     totalPredictions,
     highConfidencePicks,
     averageConfidence,
+    fetchFullPredictions,
+    fetchLockOfTheDay,
     refreshAll,
     generatePredictions
   } = usePredictions({
     subscriptionTier: subscriptionTier as any,
     welcomeBonusClaimed: profile?.welcome_bonus_claimed || true,
-    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null
+    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null,
+    userId: user?.id
   })
 
   const { openChatWithContext } = useAIChat()
@@ -58,6 +61,14 @@ export default function PredictionsPage() {
     }
     setMounted(true)
   }, [user, router])
+
+  // Load full predictions for Predictions tab (tier-based amounts)
+  useEffect(() => {
+    if (user?.id && subscriptionTier && mounted) {
+      console.log('🎯 Loading full predictions for Predictions tab...', { subscriptionTier })
+      fetchFullPredictions()
+    }
+  }, [user?.id, subscriptionTier, mounted, fetchFullPredictions])
 
   const currentPredictions = activeTab === 'all' ? predictions : 
                            activeTab === 'team' ? teamPicks : playerPropsPicks

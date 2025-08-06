@@ -14,6 +14,7 @@ import {
   BarChart3,
   Brain
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { usePredictions } from '@/shared/hooks/usePredictions'
 import { useAIChat } from '@/shared/hooks/useAIChat'

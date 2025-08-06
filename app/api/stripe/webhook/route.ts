@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get the raw body as text for signature verification
     const body = await request.text()
-    const headersList = headers()
+    const headersList = await headers()
     const sig = headersList.get('stripe-signature')
 
     if (!sig) {

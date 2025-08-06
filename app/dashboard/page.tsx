@@ -67,7 +67,8 @@ export default function Dashboard() {
   } = usePredictions({
     subscriptionTier: subscriptionTier as any,
     welcomeBonusClaimed: profile?.welcome_bonus_claimed || true,
-    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null
+    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null,
+    userId: user?.id
   })
 
   const {

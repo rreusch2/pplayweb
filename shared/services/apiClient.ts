@@ -2,7 +2,7 @@
 import axios from 'axios'
 import { supabase } from '../../lib/supabase'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://zooming-rebirth-production-a305.up.railway.app/api'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://zooming-rebirth-production-a305.up.railway.app'
 
 const apiClient = axios.create({
   baseURL: API_URL,

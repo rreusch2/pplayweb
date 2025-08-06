@@ -20,12 +20,14 @@ interface UsePredictionsProps {
   subscriptionTier: SubscriptionTier
   welcomeBonusClaimed?: boolean
   welcomeBonusExpiresAt?: string | null
+  userId?: string
 }
 
 export function usePredictions({
   subscriptionTier = 'free',
   welcomeBonusClaimed = true,
-  welcomeBonusExpiresAt = null
+  welcomeBonusExpiresAt = null,
+  userId
 }: UsePredictionsProps = {} as UsePredictionsProps) {
   const [state, setState] = useState<PredictionsState>({
     predictions: [],
@@ -59,11 +61,11 @@ export function usePredictions({
     return predictions.slice(0, capabilities.dailyPicks)
   }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
 
-  // Fetch today's predictions
+  // Fetch today's predictions (for home tab preview - 2 picks)
   const fetchTodaysPredictions = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions()
+      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
       const filteredPredictions = filterPredictionsByTier(allPredictions)
       
       setState(prev => ({ 
@@ -83,11 +85,39 @@ export function usePredictions({
     }
   }, [filterPredictionsByTier])
 
+  // NEW: Fetch full predictions from ai_predictions table (for Predictions tab)
+  const fetchFullPredictions = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }))
+    try {
+      if (!userId) {
+        console.warn('No userId provided for full predictions')
+        return []
+      }
+      
+      const allPredictions = await aiService.getFullPredictions(userId, subscriptionTier)
+      
+      setState(prev => ({ 
+        ...prev, 
+        predictions: allPredictions,
+        isLoading: false 
+      }))
+      return allPredictions
+    } catch (error) {
+      console.error('Error fetching full predictions:', error)
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Failed to load full predictions', 
+        isLoading: false 
+      }))
+      return []
+    }
+  }, [userId, subscriptionTier])
+
   // Fetch team picks (ML, spreads, totals)
   const fetchTeamPicks = useCallback(async () => {
     setState(prev => ({ ...prev, isLoadingTeam: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions()
+      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
       // Filter for team bets (not player props)
       const allTeamPicks = allPredictions.filter(p => 
         p.bet_type && !p.bet_type.toLowerCase().includes('prop') &&
@@ -126,7 +156,7 @@ export function usePredictions({
   const fetchPlayerPropsPicks = useCallback(async () => {
     setState(prev => ({ ...prev, isLoadingProps: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions()
+      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
       // Filter for player props
       const allPropsPicks = allPredictions.filter(p => 
         p.bet_type && (
@@ -185,6 +215,22 @@ export function usePredictions({
     }
   }, [])
 
+  // NEW: Fetch Lock of the Day (highest confidence pick)
+  const fetchLockOfTheDay = useCallback(async () => {
+    try {
+      if (!userId) {
+        console.warn('No userId provided for Lock of the Day')
+        return null
+      }
+      
+      const lockPick = await aiService.getLockOfTheDay(userId)
+      return lockPick
+    } catch (error) {
+      console.error('Error fetching Lock of the Day:', error)
+      return null
+    }
+  }, [userId])
+
   // Generate new predictions
   const generatePredictions = useCallback(async (sport: string = 'MLB') => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
@@ -231,9 +277,11 @@ export function usePredictions({
 
     // Actions
     fetchTodaysPredictions,
+    fetchFullPredictions,
     fetchTeamPicks,
     fetchPlayerPropsPicks,
     fetchPredictionsBySport,
+    fetchLockOfTheDay,
     generatePredictions,
     refreshAll,
 
