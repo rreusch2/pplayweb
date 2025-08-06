@@ -48,13 +48,23 @@ export default function LandingPage() {
       <nav className="relative z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
+            {/* Logo and Brand - Matching Internal Nav */}
+            <div className="flex items-center space-x-3 group">
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden ring-2 ring-white/10 group-hover:ring-blue-500/50 transition-all duration-200">
+                <Image
+                  src="/icon.png"
+                  alt="Predictive Play"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <span className="text-2xl font-bold text-white">
-                Predictive Play
-              </span>
+              <div>
+                <span className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
+                  Predictive Play
+                </span>
+                <div className="text-xs text-blue-200">AI Sports Betting</div>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">

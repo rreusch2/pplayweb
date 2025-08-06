@@ -36,8 +36,9 @@ export default function TierEnhancedUI({ children, className = '' }: TierEnhance
       {/* Elite tier luxury effects */}
       {subscriptionTier === 'elite' && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-amber-500/10 to-orange-500/10 rounded-lg pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-lg pointer-events-none animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/15 via-purple-600/15 to-indigo-700/15 rounded-lg pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-blue-500/10 to-purple-500/10 rounded-lg pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent rounded-lg pointer-events-none animate-pulse" />
         </>
       )}
       

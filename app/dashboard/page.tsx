@@ -102,7 +102,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Welcome Section with tier-based styling */}
         <div className={`mb-8 p-6 rounded-xl ${
-          subscriptionTier === 'elite' ? 'bg-gradient-to-r from-yellow-900/20 to-amber-900/20 border border-yellow-500/30' :
+          subscriptionTier === 'elite' ? 'bg-gradient-to-br from-blue-900/25 via-purple-900/25 to-indigo-900/25 border border-blue-500/40' :
           subscriptionTier === 'pro' ? 'bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30' :
           'bg-gray-800/30 border border-gray-700/30'
         }`}>
@@ -121,15 +121,15 @@ export default function Dashboard() {
                   </div>
                 </TierGatedContent>
               </div>
-              <p className={`text-xl ${
-                subscriptionTier === 'elite' ? 'text-yellow-300' :
+              <div className={`text-xl ${
+                subscriptionTier === 'elite' ? 'text-blue-300' :
                 subscriptionTier === 'pro' ? 'text-purple-300' :
                 'text-gray-300'
               }`}>
                 {subscriptionTier === 'elite' ? 'Elite AI-powered insights with premium analytics 🏆' :
                  subscriptionTier === 'pro' ? 'Professional AI-powered betting insights 🚀' :
                  'Ready to make some winning predictions? 🚀'}
-              </p>
+              </div>
             </div>
             <NoUpgradePrompts>
               <TierButton 

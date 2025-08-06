@@ -40,24 +40,17 @@ export interface AIInsight {
 
 export class AIService {
   
-  // Get today's AI predictions
+  // Get today's AI predictions (using backend API like mobile app)
   async getTodaysPredictions(): Promise<AIPrediction[]> {
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const { data, error } = await supabase
-        .from('ai_predictions')
-        .select('*')
-        .gte('created_at', today)
-        .order('confidence', { ascending: false })
-        .limit(10)
-
-      if (error) {
-        console.error('Error fetching predictions:', error)
-        return []
-      }
-
+      console.log('🎯 Fetching predictions from backend API...')
+      const response = await apiClient.get('/predictions/today')
+      const predictions = response.data || []
+      
+      console.log('📊 Received predictions:', predictions.length)
+      
       // Transform data to match mobile app format
-      return data.map(prediction => ({
+      return predictions.map((prediction: any) => ({
         id: prediction.id,
         match: prediction.match_teams || prediction.match || '',
         pick: prediction.pick || '',
@@ -88,22 +81,16 @@ export class AIService {
     }
   }
 
-  // Get predictions by sport
+  // Get predictions by sport (using backend API)
   async getPredictionsBySport(sport: string): Promise<AIPrediction[]> {
     try {
-      const { data, error } = await supabase
-        .from('ai_predictions')
-        .select('*')
-        .eq('league', sport.toUpperCase())
-        .order('confidence', { ascending: false })
-        .limit(20)
-
-      if (error) {
-        console.error('Error fetching predictions by sport:', error)
-        return []
-      }
-
-      return data.map(prediction => ({
+      console.log(`🏈 Fetching ${sport} predictions from backend API...`)
+      const response = await apiClient.get(`/predictions/sport/${sport.toLowerCase()}`)
+      const predictions = response.data || []
+      
+      console.log(`📊 Received ${sport} predictions:`, predictions.length)
+      
+      return predictions.map((prediction: any) => ({
         id: prediction.id,
         match: prediction.match_teams || prediction.match || '',
         pick: prediction.pick || '',
@@ -138,28 +125,17 @@ export class AIService {
     }
   }
 
-  // Get AI insights (Professor Lock insights)
+  // Get AI insights (Professor Lock insights) - using backend API
   async getDailyInsights(sport?: string): Promise<AIInsight[]> {
     try {
-      const today = new Date().toISOString().split('T')[0]
-      let query = supabase
-        .from('ai_insights')
-        .select('*')
-        .gte('created_at', today)
-        .order('created_at', { ascending: false })
-
-      if (sport) {
-        query = query.eq('sport', sport.toUpperCase())
-      }
-
-      const { data, error } = await query.limit(5)
-
-      if (error) {
-        console.error('Error fetching insights:', error)
-        return []
-      }
-
-      return data || []
+      console.log('🧠 Fetching daily insights from backend API...')
+      const endpoint = sport ? `/insights/daily?sport=${sport.toLowerCase()}` : '/insights/daily'
+      const response = await apiClient.get(endpoint)
+      const insights = response.data || []
+      
+      console.log('📚 Received insights:', insights.length)
+      
+      return insights
     } catch (error) {
       console.error('Error in getDailyInsights:', error)
       return []
