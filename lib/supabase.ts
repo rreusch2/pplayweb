@@ -10,11 +10,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Use localStorage for web instead of AsyncStorage
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // Use localStorage for web instead of AsyncStorage, guarded for SSR and Safari privacy modes
+    storage: ((): Storage | undefined => {
+      if (typeof window === 'undefined') return undefined
+      try {
+        const testKey = '__sb_test__'
+        window.localStorage.setItem(testKey, '1')
+        window.localStorage.removeItem(testKey)
+        return window.localStorage
+      } catch {
+        // localStorage unavailable (Safari private mode or blocked). Fall back to in-memory (undefined)
+        return undefined
+      }
+    })(),
     persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
+    // Disable automatic refresh and URL session detection to avoid race conditions across tabs/SSR
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    flowType: 'pkce'
   }
 })
 

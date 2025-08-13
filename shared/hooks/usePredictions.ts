@@ -25,7 +25,7 @@ interface UsePredictionsProps {
 
 export function usePredictions({
   subscriptionTier = 'free',
-  welcomeBonusClaimed = true,
+  welcomeBonusClaimed = false,
   welcomeBonusExpiresAt = null,
   userId
 }: UsePredictionsProps = {} as UsePredictionsProps) {

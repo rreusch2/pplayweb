@@ -17,26 +17,28 @@ import {
   AlertTriangle,
   Trophy,
   BarChart3,
-  Newspaper
+  Newspaper,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface NewsItem {
   id: string
   title: string
+  summary: string
   content?: string
+  type: 'trade' | 'lineup' | 'weather' | 'breaking' | 'analysis' | 'injury'
+  sport: string
+  league?: string
+  team?: string
+  player?: string
+  timestamp: string
+  source?: string
   url?: string
-  source: string
-  published_date?: string
-  scraped_at: string
-  teams?: string[]
-  players?: string[]
-  keywords?: string[]
-  sentiment_score?: number
-  relevance_score?: number
-  category?: string
+  priority: number
+  tags?: string[]
   metadata?: any
-  is_active?: boolean
 }
 
 interface LatestNewsFeedProps {
@@ -47,7 +49,7 @@ interface LatestNewsFeedProps {
 }
 
 export default function LatestNewsFeed({ 
-  limit = 5, 
+  limit = 12, // Increased to fetch more news for expansion
   sport, 
   showHeader = true, 
   onNewsClick 
@@ -56,7 +58,13 @@ export default function LatestNewsFeed({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const router = useRouter()
+  
+  // Show 6 news cards initially, expand to show all when clicked
+  const initialNewsCount = 6
+  const displayedNews = isExpanded ? news : news.slice(0, initialNewsCount)
+  const hasMoreNews = news.length > initialNewsCount
 
   useEffect(() => {
     setMounted(true)
@@ -68,41 +76,61 @@ export default function LatestNewsFeed({
     try {
       setError(null)
       
-      let query = supabase
-        .from('scrapy_news')
-        .select('*')
-        .eq('is_active', true)
-        .order('scraped_at', { ascending: false })
-        .limit(limit)
+      // Get authentication token (same as mobile app)
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
 
-      if (sport) {
-        // Filter by sport if specified
-        query = query.contains('keywords', [sport])
+      // Build API URL with parameters (same as mobile app)
+      const params = new URLSearchParams()
+      if (sport) params.append('sport', sport)
+      params.append('limit', (limit * 2).toString()) // Get more items to ensure we have enough after filtering
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
       }
 
-      const { data, error: queryError } = await query
-
-      if (queryError) {
-        console.error('Error fetching news:', queryError)
-        setError('Failed to load news')
-        return
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
-      setNews(data || [])
+      // Use the same endpoint as mobile app
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://zooming-rebirth-production-a305.up.railway.app'
+      const response = await fetch(`${baseUrl}/api/news?${params}`, {
+        headers
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Filter out injury and weather news items (same as mobile app)
+        const filteredNews = (data.news || []).filter((item: NewsItem) => 
+          item.type !== 'injury' && item.type !== 'weather'
+        )
+        setNews(filteredNews.slice(0, limit)) // Apply limit after filtering
+      } else {
+        setError('Failed to fetch news')
+        setNews([])
+      }
     } catch (error) {
-      console.error('Error:', error)
-      setError('Failed to load news')
+      console.error('Error fetching news:', error)
+      setError('Unable to load news. Please try again.')
+      setNews([])
     } finally {
       setLoading(false)
     }
   }
 
-  const getNewsIcon = (category?: string) => {
-    switch (category) {
+  const getNewsIcon = (type: string) => {
+    switch (type) {
       case 'trade': return <TrendingUp className="w-4 h-4 text-blue-400" />
       case 'injury': return <AlertTriangle className="w-4 h-4 text-red-400" />
       case 'lineup': return <User className="w-4 h-4 text-green-400" />
-      case 'breaking': return <Flame className="w-4 h-4 text-orange-400" />
+      case 'weather': return <Activity className="w-4 h-4 text-yellow-400" />
+      case 'breaking': return <AlertCircle className="w-4 h-4 text-red-400" />
       case 'analysis': return <BarChart3 className="w-4 h-4 text-purple-400" />
       default: return <Newspaper className="w-4 h-4 text-gray-400" />
     }
@@ -152,18 +180,14 @@ export default function LatestNewsFeed({
       {/* Section Header */}
       {showHeader && (
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center space-x-3">
             <h3 className="text-xl font-bold text-white">📰 Latest News</h3>
-            <p className="text-gray-400">Breaking news and updates</p>
+            <div className="flex items-center space-x-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs">
+              <Activity className="w-3 h-3" />
+              <span>LIVE</span>
+            </div>
           </div>
-          <button
-            onClick={() => router.push('/news')}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200"
-          >
-            <Newspaper className="w-4 h-4" />
-            <span>View All</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          <p className="text-gray-400 text-sm">Breaking news and updates</p>
         </div>
       )}
 
@@ -209,7 +233,7 @@ export default function LatestNewsFeed({
       {/* News List */}
       {!loading && !error && news.length > 0 && (
         <div className="space-y-4">
-          {news.map((item, index) => (
+          {displayedNews.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
@@ -220,7 +244,7 @@ export default function LatestNewsFeed({
             >
               <div className="flex items-start space-x-3">
                 <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
-                  {getNewsIcon(item.category)}
+                  {getNewsIcon(item.type)}
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -235,9 +259,9 @@ export default function LatestNewsFeed({
                     </div>
                   </div>
                   
-                  {item.content && (
+                  {item.summary && (
                     <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                      {item.content.substring(0, 150)}...
+                      {item.summary.substring(0, 150)}...
                     </p>
                   )}
 
@@ -245,22 +269,21 @@ export default function LatestNewsFeed({
                     <div className="flex items-center space-x-4 text-xs text-gray-400">
                       <div className="flex items-center space-x-1">
                         <Clock className="w-3 h-3" />
-                        <span>{getTimeAgo(item.published_date || item.scraped_at)}</span>
+                        <span>{getTimeAgo(item.timestamp)}</span>
                       </div>
                       <span>•</span>
-                      <span>{item.source}</span>
-                      {item.sentiment_score && (
+                      <span>{item.source || item.sport}</span>
+                      {item.priority > 7 && (
                         <>
                           <span>•</span>
-                          <span className={getSentimentColor(item.sentiment_score)}>
-                            {item.sentiment_score > 0.1 ? 'Positive' : 
-                             item.sentiment_score < -0.1 ? 'Negative' : 'Neutral'}
+                          <span className="text-red-400">
+                            Breaking
                           </span>
                         </>
                       )}
                     </div>
                     
-                    {item.relevance_score && item.relevance_score > 0.7 && (
+                    {item.priority > 8 && (
                       <div className="flex items-center space-x-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">
                         <Flame className="w-3 h-3" />
                         <span>Hot</span>
@@ -269,21 +292,21 @@ export default function LatestNewsFeed({
                   </div>
 
                   {/* Tags */}
-                  {(item.teams || item.players || item.keywords) && (
+                  {(item.team || item.player || item.tags) && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {item.teams?.slice(0, 2).map((team, idx) => (
-                        <span key={idx} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">
-                          {team}
+                      {item.team && (
+                        <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">
+                          {item.team}
                         </span>
-                      ))}
-                      {item.players?.slice(0, 2).map((player, idx) => (
-                        <span key={idx} className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
-                          {player}
+                      )}
+                      {item.player && (
+                        <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                          {item.player}
                         </span>
-                      ))}
-                      {item.keywords?.slice(0, 2).map((keyword, idx) => (
+                      )}
+                      {item.tags?.slice(0, 2).map((tag: string, idx: number) => (
                         <span key={idx} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full">
-                          {keyword}
+                          {tag}
                         </span>
                       ))}
                     </div>
@@ -292,6 +315,42 @@ export default function LatestNewsFeed({
               </div>
             </motion.div>
           ))}
+          
+          {/* View More Button */}
+          {hasMoreNews && !isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex justify-center pt-4"
+            >
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <ChevronDown className="w-4 h-4" />
+                <span>View More News ({news.length - initialNewsCount} more)</span>
+              </button>
+            </motion.div>
+          )}
+          
+          {/* View Less Button */}
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex justify-center pt-4"
+            >
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <ChevronUp className="w-4 h-4" />
+                <span>View Less</span>
+              </button>
+            </motion.div>
+          )}
         </div>
       )}
 

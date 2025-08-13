@@ -110,7 +110,9 @@ export function isInWelcomeBonusPeriod(
   welcomeBonusClaimed: boolean,
   welcomeBonusExpiresAt: string | null
 ): boolean {
-  if (welcomeBonusClaimed) return false
+  // When the welcome bonus has been claimed and not yet expired,
+  // the user is considered to be in the welcome bonus period.
+  if (!welcomeBonusClaimed) return false
   if (!welcomeBonusExpiresAt) return false
   
   return new Date(welcomeBonusExpiresAt) > new Date()

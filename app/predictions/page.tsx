@@ -46,7 +46,7 @@ export default function PredictionsPage() {
     generatePredictions
   } = usePredictions({
     subscriptionTier: subscriptionTier as any,
-    welcomeBonusClaimed: profile?.welcome_bonus_claimed || true,
+    welcomeBonusClaimed: profile?.welcome_bonus_claimed ?? false,
     welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null,
     userId: user?.id
   })

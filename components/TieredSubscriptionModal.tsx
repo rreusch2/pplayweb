@@ -91,7 +91,7 @@ export default function TieredSubscriptionModal({
               enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100"
               leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-6xl transform overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 text-left align-middle shadow-2xl transition-all border border-slate-700">
+              <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-left align-middle shadow-2xl transition-all border border-slate-700">
                 {/* Header */}
                 <div className="text-center mb-8">
                   <div className="flex justify-center mb-4">
@@ -173,7 +173,7 @@ export default function TieredSubscriptionModal({
                 </div>
 
                 {/* Plan Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
                   {groupedPlans[selectedTier].map((plan) => {
                     const isSelected = plan.id === selectedPlan.id
                     const tierColor = selectedTier === 'pro' ? 'blue' : 'purple'
@@ -182,7 +182,7 @@ export default function TieredSubscriptionModal({
                       <div
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan)}
-                        className={`relative cursor-pointer rounded-2xl p-6 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl ${
+                        className={`relative cursor-pointer rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl ${
                           isSelected 
                             ? selectedTier === 'pro'
                               ? 'bg-gradient-to-br from-blue-600/20 to-blue-900/40 border-2 border-blue-500 shadow-xl shadow-blue-500/20'

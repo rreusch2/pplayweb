@@ -37,7 +37,47 @@ export default function GamesPage() {
       if (error) {
         console.error('Error fetching games:', error);
       } else {
-        const formattedGames = data.map(game => ({
+        // Apply the same filtering logic as mobile app to show only upcoming games
+        const allGames = data || [];
+        
+        // Filter for upcoming games (scheduled status for today and tomorrow)
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        const todayStr = today.toDateString();
+        const tomorrowStr = tomorrow.toDateString();
+        
+        const now = new Date();
+        
+        const todayGames = allGames.filter(game => {
+          const gameDate = new Date(game.start_time);
+          const gameDateStr = gameDate.toDateString();
+          
+          // Game must be scheduled AND either:
+          // 1. Game is in the future (hasn't started yet)
+          // 2. Game is within 30 minutes of start time (buffer for live games)
+          const gameStartTime = gameDate.getTime();
+          const currentTime = now.getTime();
+          const timeDifference = gameStartTime - currentTime;
+          const thirtyMinutesInMs = 30 * 60 * 1000;
+          
+          return game.status === 'scheduled' && 
+                 gameDateStr === todayStr && 
+                 timeDifference > -thirtyMinutesInMs; // Allow 30 min buffer for recently started games
+        });
+
+        const tomorrowGames = allGames.filter(game => {
+          const gameDate = new Date(game.start_time);
+          const gameDateStr = gameDate.toDateString();
+          return game.status === 'scheduled' && gameDateStr === tomorrowStr;
+        });
+        
+        const upcomingGamesList = [...todayGames, ...tomorrowGames];
+        
+        console.log(`Filtered games: ${upcomingGamesList.length} upcoming games (${todayGames.length} today, ${tomorrowGames.length} tomorrow) from ${allGames.length} total`);
+        
+        const formattedGames = upcomingGamesList.map(game => ({
           id: game.id,
           sport_key: game.sport_key,
           sport_title: game.sport,

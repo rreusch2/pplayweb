@@ -37,6 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    // SSR guard: do nothing on server, immediately mark as not initializing
+    if (typeof window === 'undefined') {
+      setAuthState(prev => ({ ...prev, initializing: false }))
+      return
+    }
+
+    let mounted = true
+    let timeoutId: number | undefined
+
     const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
       console.log('📁 Fetching profile for user:', user.id)
       try {
@@ -62,20 +71,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Set initial auth state
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      let userProfile = null
-      if (session?.user) {
-        userProfile = await fetchUserProfile(session.user)
+    // Set initial auth state with timeout protection
+    const getSessionWithTimeout = async () => {
+      const tenSeconds = 10_000
+      const to = new Promise<null>((resolve) => {
+        timeoutId = window.setTimeout(() => resolve(null), tenSeconds)
+      })
+      try {
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          to,
+        ]) as any
+
+        const session = result && 'data' in result ? (result.data?.session ?? null) : null
+        let userProfile = null
+        if (session?.user) {
+          userProfile = await fetchUserProfile(session.user)
+        }
+        if (!mounted) return
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          profile: userProfile,
+          initializing: false,
+        }))
+      } catch (e) {
+        console.error('❌ getSession failed, proceeding without session:', e)
+        if (!mounted) return
+        setAuthState(prev => ({ ...prev, initializing: false }))
+      } finally {
+        if (timeoutId) window.clearTimeout(timeoutId)
       }
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-        profile: userProfile,
-        initializing: false,
-      }))
-    })
+    }
+
+    getSessionWithTimeout()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -86,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userProfile = await fetchUserProfile(session.user)
         }
 
+        if (!mounted) return
         setAuthState(prev => ({
           ...prev,
           session,
@@ -105,6 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => {
+      mounted = false
+      if (timeoutId) window.clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [router])

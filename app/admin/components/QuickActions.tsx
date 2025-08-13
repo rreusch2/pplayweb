@@ -11,8 +11,10 @@ import {
   Users,
   Settings,
   Target,
-  BarChart3
+  BarChart3,
+  Play
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface QuickActionsProps {
   onSendNotification: () => void
@@ -30,6 +32,7 @@ export default function QuickActions({
   onOpenReports
 }: QuickActionsProps) {
   const [loading, setLoading] = useState<string | null>(null)
+  const { session } = useAuth()
 
   const handleAction = async (actionId: string, action: () => void) => {
     setLoading(actionId)
@@ -40,6 +43,24 @@ export default function QuickActions({
     } finally {
       setLoading(null)
     }
+  }
+
+  const runTopPickAutomation = async () => {
+    if (!session?.access_token) {
+      alert('Not authenticated')
+      return
+    }
+    const res = await fetch('/api/admin/automations/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ flow_key: 'post_top_pick_social' }),
+    })
+    const data = await res.json()
+    if (data.success) alert('Started: Post Top Pick automation')
+    else alert(`Automation failed: ${data.error || 'Unknown error'}`)
   }
 
   const actions = [
@@ -82,6 +103,14 @@ export default function QuickActions({
         icon: BarChart3,
         color: 'from-indigo-500 to-violet-600',
         action: onOpenReports
+      },
+      {
+        id: 'run-top-pick',
+        title: 'Run: Post Top Pick',
+        description: 'Trigger n8n to post social content from latest pick',
+        icon: Play,
+        color: 'from-emerald-500 to-emerald-600',
+        action: runTopPickAutomation
       }
   ]
 

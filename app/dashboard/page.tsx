@@ -161,7 +161,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Today's Picks</h3>
-                <p className="text-2xl font-bold text-blue-400">
+                <div className="text-2xl font-bold text-blue-400">
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
@@ -171,7 +171,7 @@ export default function Dashboard() {
                       profile?.welcome_bonus_expires_at || null
                     )
                   )}
-                </p>
+                </div>
                 <p className="text-xs text-gray-400">AI Generated</p>
               </div>
             </div>

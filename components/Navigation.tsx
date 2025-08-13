@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useAIChat } from '@/shared/hooks/useAIChat'
+import { coinsService } from '@/shared/services/coinsService'
+import InviteReferralModal from './InviteReferralModal'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { 
@@ -20,7 +22,8 @@ import {
   RefreshCw,
   Shield,
   User,
-  ChevronDown
+  ChevronDown,
+  HandCoins
 } from 'lucide-react'
 
 const navigation = [
@@ -38,6 +41,8 @@ export default function Navigation() {
   const { subscriptionTier } = useSubscription()
   const { setShowAIChat, freeUserMessageCount } = useAIChat()
   const [refreshing, setRefreshing] = useState(false)
+  const [coins, setCoins] = useState<number>(0)
+  const [showInvite, setShowInvite] = useState(false)
 
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -54,11 +59,25 @@ export default function Navigation() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Load coin balance on mount
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const bal = await coinsService.getBalance()
+        if (!cancelled) setCoins(bal)
+      } catch {}
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Refresh functionality can be implemented here
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Placeholder
+      // Also refresh coin balance
+      const bal = await coinsService.getBalance()
+      setCoins(bal)
     } finally {
       setRefreshing(false)
     }
@@ -74,6 +93,7 @@ export default function Navigation() {
   }
 
   return (
+    <>
     <nav className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -129,6 +149,17 @@ export default function Navigation() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
+            {/* Coins / Invite Button */}
+            <button
+              onClick={() => setShowInvite(true)}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25 transition-all duration-200 border border-yellow-500/30"
+              title="Invite friends & earn coins"
+            >
+              <HandCoins className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm font-medium">Coins</span>
+              <span className="text-xs bg-yellow-500/20 px-2 py-0.5 rounded-full">{coins}</span>
+            </button>
+
             {/* Professor Lock Chat Button */}
             <button 
               onClick={() => setShowAIChat(true)}
@@ -226,11 +257,12 @@ export default function Navigation() {
           </div>
 
           {/* Mobile Menu Button (for smaller screens) */}
-          <div className="md:hidden">
-            {/* You can add a mobile menu button here if needed */}
-          </div>
+          <div className="md:hidden" />
         </div>
       </div>
     </nav>
+    {/* Invite / Referral Modal */}
+    <InviteReferralModal isOpen={showInvite} onClose={() => setShowInvite(false)} />
+    </>
   )
 }
