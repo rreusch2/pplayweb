@@ -65,7 +65,9 @@ export function usePredictions({
   const fetchTodaysPredictions = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
+      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
+      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
+      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
       const filteredPredictions = filterPredictionsByTier(allPredictions)
       
       setState(prev => ({ 
@@ -117,7 +119,9 @@ export function usePredictions({
   const fetchTeamPicks = useCallback(async () => {
     setState(prev => ({ ...prev, isLoadingTeam: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
+      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
+      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
+      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
       // Filter for team bets (not player props)
       const allTeamPicks = allPredictions.filter(p => 
         p.bet_type && !p.bet_type.toLowerCase().includes('prop') &&
@@ -129,7 +133,6 @@ export function usePredictions({
          p.bet_type.includes('under'))
       )
       
-      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
       const capabilities = getTierCapabilities(subscriptionTier)
       const teamPicksLimit = isWelcomeBonus ? Math.ceil(5 / 2) : capabilities.teamPicks
       
@@ -156,7 +159,9 @@ export function usePredictions({
   const fetchPlayerPropsPicks = useCallback(async () => {
     setState(prev => ({ ...prev, isLoadingProps: true, error: null }))
     try {
-      const allPredictions = await aiService.getTodaysPredictions(userId, subscriptionTier)
+      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
+      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
+      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
       // Filter for player props
       const allPropsPicks = allPredictions.filter(p => 
         p.bet_type && (
@@ -170,7 +175,6 @@ export function usePredictions({
         )
       )
       
-      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
       const capabilities = getTierCapabilities(subscriptionTier)
       const propsPicksLimit = isWelcomeBonus ? Math.floor(5 / 2) : capabilities.playerPropPicks
       
