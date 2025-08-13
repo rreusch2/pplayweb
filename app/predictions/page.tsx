@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
@@ -30,17 +30,13 @@ export default function PredictionsPage() {
   const router = useRouter()
 
   const {
-    predictions,
     teamPicks,
     playerPropsPicks,
     isLoading,
     isLoadingTeam,
     isLoadingProps,
     refreshing,
-    totalPredictions,
-    highConfidencePicks,
-    averageConfidence,
-    fetchFullPredictions,
+    // totals and stats will be computed locally from combined arrays
     fetchLockOfTheDay,
     refreshAll,
     generatePredictions
@@ -62,17 +58,26 @@ export default function PredictionsPage() {
     setMounted(true)
   }, [user, router])
 
-  // Load full predictions for Predictions tab (tier-based amounts)
-  useEffect(() => {
-    if (user?.id && subscriptionTier && mounted) {
-      console.log('🎯 Loading full predictions for Predictions tab...', { subscriptionTier })
-      fetchFullPredictions()
-    }
-  }, [user?.id, subscriptionTier, mounted, fetchFullPredictions])
+  // Combine team + props for All tab
+  const combinedAll = useMemo(() => {
+    return [...teamPicks, ...playerPropsPicks]
+  }, [teamPicks, playerPropsPicks])
 
-  const currentPredictions = activeTab === 'all' ? predictions : 
-                           activeTab === 'team' ? teamPicks : playerPropsPicks
-  const currentLoading = activeTab === 'all' ? isLoading :
+  const combinedLoading = isLoadingTeam || isLoadingProps
+
+  const combinedAvgConfidence = useMemo(() => {
+    if (combinedAll.length === 0) return 0
+    const sum = combinedAll.reduce((acc, p) => acc + (p.confidence || 0), 0)
+    return sum / combinedAll.length
+  }, [combinedAll])
+
+  const combinedHighConfidenceCount = useMemo(() => {
+    return combinedAll.filter(p => (p.confidence || 0) >= 80).length
+  }, [combinedAll])
+
+  const currentPredictions = activeTab === 'all' ? combinedAll : 
+                            activeTab === 'team' ? teamPicks : playerPropsPicks
+  const currentLoading = activeTab === 'all' ? combinedLoading :
                         activeTab === 'team' ? isLoadingTeam : isLoadingProps
 
   if (!user || !mounted) {
@@ -150,10 +155,10 @@ export default function PredictionsPage() {
               <div>
                 <h3 className="text-white font-semibold">Total Predictions</h3>
                 <p className="text-2xl font-bold text-blue-400">
-                  {isLoading ? (
+                  {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
-                    totalPredictions
+                    combinedAll.length
                   )}
                 </p>
               </div>
@@ -173,10 +178,10 @@ export default function PredictionsPage() {
               <div>
                 <h3 className="text-white font-semibold">Avg Confidence</h3>
                 <p className="text-2xl font-bold text-green-400">
-                  {isLoading ? (
+                  {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-12 rounded"></div>
                   ) : (
-                    `${averageConfidence.toFixed(1)}%`
+                    `${combinedAvgConfidence.toFixed(1)}%`
                   )}
                 </p>
               </div>
@@ -196,10 +201,10 @@ export default function PredictionsPage() {
               <div>
                 <h3 className="text-white font-semibold">High Confidence</h3>
                 <p className="text-2xl font-bold text-purple-400">
-                  {isLoading ? (
+                  {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
-                    highConfidencePicks.length
+                    combinedHighConfidenceCount
                   )}
                 </p>
               </div>
@@ -247,7 +252,7 @@ export default function PredictionsPage() {
                 : 'text-gray-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            All Predictions ({totalPredictions})
+            All Predictions ({combinedAll.length})
           </button>
           <button
             onClick={() => setActiveTab('team')}
