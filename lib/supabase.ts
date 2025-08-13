@@ -24,8 +24,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       }
     })(),
     persistSession: true,
-    // Disable automatic refresh and URL session detection to avoid race conditions across tabs/SSR
-    autoRefreshToken: false,
+    // Enable automatic refresh; URL session detection remains disabled to avoid race conditions
+    autoRefreshToken: true,
     detectSessionInUrl: false,
     flowType: 'pkce'
   }

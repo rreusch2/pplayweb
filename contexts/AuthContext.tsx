@@ -102,18 +102,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ]) as any
 
           const session = result && 'data' in result ? (result.data?.session ?? null) : null
-          let userProfile = null
+          // Only set session if we actually have one; otherwise just stop initializing
           if (session?.user) {
-            userProfile = await fetchUserProfile(session.user)
+            const userProfile = await fetchUserProfile(session.user)
+            if (!mounted) return
+            setAuthState(prev => ({
+              ...prev,
+              session,
+              user: session.user,
+              profile: userProfile,
+              initializing: false,
+            }))
+          } else {
+            if (!mounted) return
+            setAuthState(prev => ({ ...prev, initializing: false }))
           }
-          if (!mounted) return
-          setAuthState(prev => ({
-            ...prev,
-            session,
-            user: session?.user ?? null,
-            profile: userProfile,
-            initializing: false,
-          }))
         } catch (e) {
           console.error('❌ getSession failed, proceeding without session:', e)
           if (!mounted) return
@@ -130,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         console.log('🔄 Auth state change:', { event, hasSession: !!session })
         
-        let userProfile = null;
+        let userProfile = null
         if (session?.user) {
           userProfile = await fetchUserProfile(session.user)
         }
@@ -138,18 +141,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return
         setAuthState(prev => ({
           ...prev,
-          session,
+          session: session ?? prev.session,
           user: session?.user ?? null,
-          profile: userProfile,
-          // Only stop initializing once we have a definitive auth state
-          initializing: false, 
-          // Stop loading for any action that triggered this
-          loading: false 
+          profile: userProfile ?? (session ? prev.profile : null),
+          initializing: false,
+          loading: false,
         }))
 
         if (event === 'SIGNED_OUT') {
-           // Redirect to home page on sign out for a clean user experience
-           router.push('/')
+          // Avoid redirecting during initial resolution to prevent flicker
+          setTimeout(() => {
+            if (!mounted) return
+            router.push('/')
+          }, 0)
         }
       }
     )
