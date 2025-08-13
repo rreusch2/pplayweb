@@ -3,10 +3,11 @@ import axios from 'axios';
 import { supabase } from './supabase';
 
 const apiClient = axios.create({
-  baseURL: '/api', // Base URL for API requests
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://zooming-rebirth-production-a305.up.railway.app',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
 
 // Add a request interceptor to include the Supabase auth token

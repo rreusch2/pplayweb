@@ -4,6 +4,7 @@ import { User, Session } from '@supabase/supabase-js'
 import { supabase, UserProfile } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import apiClient from '@/lib/apiClient'
 
 interface AuthState {
   session: Session | null
@@ -47,56 +48,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let sessionCheckInterval: NodeJS.Timeout | null = null
 
     const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
-      console.log('📁 Fetching profile for user:', user.id)
+      console.log('🚀 Fetching profile via Railway backend for user:', user.id)
       try {
-        // Use service role for reliable profile fetch
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        if (error) {
-          console.error('❌ Error fetching profile:', error)
-          // Create profile if it doesn't exist
-          if (error.code === 'PGRST116') {
-            console.log('🔧 Creating missing profile for user:', user.id)
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: user.id,
-                email: user.email,
-                username: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-                subscription_tier: 'free',
-                is_active: true,
-                welcome_bonus_claimed: false,
-                admin_role: false,
-                subscription_status: 'inactive',
-                notification_settings: { ai_picks: true },
-                risk_tolerance: 'medium',
-                favorite_teams: [],
-                favorite_players: [],
-                preferred_bet_types: [],
-                preferred_sports: [],
-                preferred_bookmakers: []
-              })
-              .select()
-              .single()
-            
-            if (createError) {
-              console.error('❌ Failed to create profile:', createError)
-              return null
-            }
-            console.log('✅ Profile created successfully:', newProfile.username)
-            return newProfile
+        // Fetch profile from Railway backend API like mobile app does
+        const response = await apiClient.get(`/api/user/profile`)
+        
+        if (response.data) {
+          console.log('✅ Profile fetched from backend:', response.data.username || response.data.email)
+          return response.data
+        }
+        
+        console.log('⚠️ No profile data returned from backend')
+        return null
+      } catch (error: any) {
+        console.error('❌ Error fetching profile from backend:', error.response?.data || error.message)
+        
+        // If backend fails, try direct Supabase as fallback
+        console.log('🔄 Falling back to direct Supabase query')
+        try {
+          const { data, error: supabaseError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+          
+          if (supabaseError) {
+            console.error('❌ Supabase fallback also failed:', supabaseError)
+            return null
           }
+          
+          console.log('✅ Profile fetched via Supabase fallback:', data.username)
+          return data
+        } catch (fallbackError) {
+          console.error('❌ Both backend and Supabase failed:', fallbackError)
           return null
         }
-        console.log('✅ Profile fetched successfully:', data.username)
-        return data
-      } catch (error) {
-        console.error('An unexpected error occurred while fetching the profile:', error)
-        return null
       }
     }
 
