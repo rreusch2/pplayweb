@@ -100,62 +100,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Robust session initialization
-    const initializeAuth = async () => {
-      try {
-        console.log('🔄 Initializing auth...')
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('❌ getSession error:', error)
-          if (!mounted) return
-          setAuthState(prev => ({ ...prev, initializing: false }))
-          return
-        }
-
-        if (session?.user) {
-          console.log('✅ Session found, user:', session.user.id)
-          if (!mounted) return
-          
-          // Set session immediately
-          setAuthState(prev => ({
-            ...prev,
-            session,
-            user: session.user,
-            initializing: false,
-            loading: false,
-          }))
-
-          // Fetch profile with retry logic
-          let retries = 3
-          const fetchWithRetry = async (): Promise<void> => {
-            try {
-              const profile = await fetchUserProfile(session.user)
-              if (!mounted) return
-              setAuthState(prev => ({ ...prev, profile }))
-            } catch (error) {
-              console.error('Profile fetch failed, retries left:', retries - 1)
-              if (retries > 1) {
-                retries--
-                setTimeout(fetchWithRetry, 1000)
-              }
-            }
-          }
-          fetchWithRetry()
-        } else {
-          console.log('ℹ️ No session found')
-          if (!mounted) return
-          setAuthState(prev => ({ ...prev, initializing: false }))
-        }
-      } catch (error) {
-        console.error('❌ Auth initialization failed:', error)
-        if (!mounted) return
-        setAuthState(prev => ({ ...prev, initializing: false }))
+    // IMMEDIATE auth resolution - no waiting, no hanging
+    console.log('🚀 Setting auth as ready immediately')
+    setAuthState(prev => ({ ...prev, initializing: false }))
+    
+    // Try to get session in background without blocking UI
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return
+      if (error) {
+        console.error('❌ Background getSession error:', error)
+        return
       }
-    }
-
-    // Start auth initialization
-    initializeAuth()
+      if (session?.user) {
+        console.log('✅ Background session found, user:', session.user.id)
+        setAuthState(prev => ({
+          ...prev,
+          session,
+          user: session.user,
+        }))
+        // Fetch profile in background
+        fetchUserProfile(session.user).then((profile) => {
+          if (!mounted) return
+          setAuthState(prev => ({ ...prev, profile }))
+        }).catch(console.error)
+      }
+    }).catch((error) => {
+      console.error('❌ Background auth check failed:', error)
+    })
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -238,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sessionCheckInterval) clearInterval(sessionCheckInterval)
       subscription.unsubscribe()
     }
-  }, [router, authState.session])
+  }, [router])
 
   const setLoading = (loading: boolean) => {
     setAuthState(prev => ({ ...prev, loading }))
