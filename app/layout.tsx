@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   creator: 'Predictive Play',
   publisher: 'Predictive Play',
   metadataBase: new URL('https://www.predictive-play.com'),
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
   openGraph: {
     title: 'Predictive Play - AI-Powered Sports Betting Predictions',
     description: 'Smart betting with AI-powered predictions and advanced analytics',
