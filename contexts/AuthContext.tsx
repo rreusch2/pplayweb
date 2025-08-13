@@ -104,15 +104,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const session = result && 'data' in result ? (result.data?.session ?? null) : null
           // Only set session if we actually have one; otherwise just stop initializing
           if (session?.user) {
-            const userProfile = await fetchUserProfile(session.user)
+            // Immediately set auth ready without waiting for profile
             if (!mounted) return
             setAuthState(prev => ({
               ...prev,
               session,
               user: session.user,
-              profile: userProfile,
               initializing: false,
+              loading: false,
             }))
+            // Fetch profile in the background
+            fetchUserProfile(session.user).then((userProfile) => {
+              if (!mounted) return
+              setAuthState(prev => ({ ...prev, profile: userProfile }))
+            })
           } else {
             if (!mounted) return
             setAuthState(prev => ({ ...prev, initializing: false }))
@@ -133,20 +138,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         console.log('🔄 Auth state change:', { event, hasSession: !!session })
         
-        let userProfile = null
-        if (session?.user) {
-          userProfile = await fetchUserProfile(session.user)
-        }
-
         if (!mounted) return
         setAuthState(prev => ({
           ...prev,
           session: session ?? prev.session,
           user: session?.user ?? null,
-          profile: userProfile ?? (session ? prev.profile : null),
           initializing: false,
           loading: false,
         }))
+
+        // Background profile fetch/update so UI doesn't block
+        if (session?.user) {
+          fetchUserProfile(session.user).then((userProfile) => {
+            if (!mounted) return
+            setAuthState(prev => ({ ...prev, profile: userProfile }))
+          })
+        } else {
+          // Clear profile when signed out
+          setAuthState(prev => ({ ...prev, profile: null }))
+        }
 
         if (event === 'SIGNED_OUT') {
           // Avoid redirecting during initial resolution to prevent flicker
