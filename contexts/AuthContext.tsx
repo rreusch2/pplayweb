@@ -44,11 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let mounted = true
-    let timeoutId: number | undefined
+    let sessionCheckInterval: NodeJS.Timeout | null = null
 
     const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
       console.log('📁 Fetching profile for user:', user.id)
       try {
+        // Use service role for reliable profile fetch
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -57,11 +58,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           console.error('❌ Error fetching profile:', error)
-          // It's possible the profile isn't created yet on first auth event
-          if (error.code === 'PGRST116') { // "Not a single row was returned"
-             return null
+          // Create profile if it doesn't exist
+          if (error.code === 'PGRST116') {
+            console.log('🔧 Creating missing profile for user:', user.id)
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                email: user.email,
+                username: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+                subscription_tier: 'free',
+                is_active: true,
+                welcome_bonus_claimed: false,
+                admin_role: false,
+                subscription_status: 'inactive',
+                notification_settings: { ai_picks: true },
+                risk_tolerance: 'medium',
+                favorite_teams: [],
+                favorite_players: [],
+                preferred_bet_types: [],
+                preferred_sports: [],
+                preferred_bookmakers: []
+              })
+              .select()
+              .single()
+            
+            if (createError) {
+              console.error('❌ Failed to create profile:', createError)
+              return null
+            }
+            console.log('✅ Profile created successfully:', newProfile.username)
+            return newProfile
           }
-          throw error
+          return null
         }
         console.log('✅ Profile fetched successfully:', data.username)
         return data
@@ -71,109 +100,145 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Helper: quickly check if a Supabase auth token exists in localStorage
-    const hasSupabaseAuthToken = (): boolean => {
+    // Robust session initialization
+    const initializeAuth = async () => {
       try {
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const key = window.localStorage.key(i) || ''
-          if (/^sb-.*-auth-token$/.test(key)) return true
+        console.log('🔄 Initializing auth...')
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('❌ getSession error:', error)
+          if (!mounted) return
+          setAuthState(prev => ({ ...prev, initializing: false }))
+          return
         }
-      } catch {
-        // localStorage unavailable
+
+        if (session?.user) {
+          console.log('✅ Session found, user:', session.user.id)
+          if (!mounted) return
+          
+          // Set session immediately
+          setAuthState(prev => ({
+            ...prev,
+            session,
+            user: session.user,
+            initializing: false,
+            loading: false,
+          }))
+
+          // Fetch profile with retry logic
+          let retries = 3
+          const fetchWithRetry = async (): Promise<void> => {
+            try {
+              const profile = await fetchUserProfile(session.user)
+              if (!mounted) return
+              setAuthState(prev => ({ ...prev, profile }))
+            } catch (error) {
+              console.error('Profile fetch failed, retries left:', retries - 1)
+              if (retries > 1) {
+                retries--
+                setTimeout(fetchWithRetry, 1000)
+              }
+            }
+          }
+          fetchWithRetry()
+        } else {
+          console.log('ℹ️ No session found')
+          if (!mounted) return
+          setAuthState(prev => ({ ...prev, initializing: false }))
+        }
+      } catch (error) {
+        console.error('❌ Auth initialization failed:', error)
+        if (!mounted) return
+        setAuthState(prev => ({ ...prev, initializing: false }))
       }
-      return false
     }
 
-    // Fast path: if no auth token present, don't wait for getSession
-    const noTokenPresent = !hasSupabaseAuthToken()
-    if (noTokenPresent) {
-      setAuthState(prev => ({ ...prev, initializing: false }))
-    } else {
-      // Set initial auth state with shorter timeout protection (2s)
-      const getSessionWithTimeout = async () => {
-        const twoSeconds = 2_000
-        const to = new Promise<null>((resolve) => {
-          timeoutId = window.setTimeout(() => resolve(null), twoSeconds)
-        })
-        try {
-          const result = await Promise.race([
-            supabase.auth.getSession(),
-            to,
-          ]) as any
+    // Start auth initialization
+    initializeAuth()
 
-          const session = result && 'data' in result ? (result.data?.session ?? null) : null
-          // Only set session if we actually have one; otherwise just stop initializing
-          if (session?.user) {
-            // Immediately set auth ready without waiting for profile
-            if (!mounted) return
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth state change:', { event, hasSession: !!session, userId: session?.user?.id })
+        
+        if (!mounted) return
+
+        // Handle different auth events
+        switch (event) {
+          case 'SIGNED_IN':
+          case 'TOKEN_REFRESHED':
+            if (session?.user) {
+              setAuthState(prev => ({
+                ...prev,
+                session,
+                user: session.user,
+                initializing: false,
+                loading: false,
+              }))
+              
+              // Fetch profile in background
+              fetchUserProfile(session.user).then((profile) => {
+                if (!mounted) return
+                setAuthState(prev => ({ ...prev, profile }))
+              }).catch(console.error)
+            }
+            break
+            
+          case 'SIGNED_OUT':
             setAuthState(prev => ({
               ...prev,
-              session,
-              user: session.user,
+              session: null,
+              user: null,
+              profile: null,
               initializing: false,
               loading: false,
             }))
-            // Fetch profile in the background
-            fetchUserProfile(session.user).then((userProfile) => {
+            // Redirect after state update
+            setTimeout(() => {
               if (!mounted) return
-              setAuthState(prev => ({ ...prev, profile: userProfile }))
-            })
-          } else {
-            if (!mounted) return
-            setAuthState(prev => ({ ...prev, initializing: false }))
-          }
-        } catch (e) {
-          console.error('❌ getSession failed, proceeding without session:', e)
-          if (!mounted) return
-          setAuthState(prev => ({ ...prev, initializing: false }))
-        } finally {
-          if (timeoutId) window.clearTimeout(timeoutId)
-        }
-      }
-
-      getSessionWithTimeout()
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state change:', { event, hasSession: !!session })
-        
-        if (!mounted) return
-        setAuthState(prev => ({
-          ...prev,
-          session: session ?? prev.session,
-          user: session?.user ?? null,
-          initializing: false,
-          loading: false,
-        }))
-
-        // Background profile fetch/update so UI doesn't block
-        if (session?.user) {
-          fetchUserProfile(session.user).then((userProfile) => {
-            if (!mounted) return
-            setAuthState(prev => ({ ...prev, profile: userProfile }))
-          })
-        } else {
-          // Clear profile when signed out
-          setAuthState(prev => ({ ...prev, profile: null }))
-        }
-
-        if (event === 'SIGNED_OUT') {
-          // Avoid redirecting during initial resolution to prevent flicker
-          setTimeout(() => {
-            if (!mounted) return
-            router.push('/')
-          }, 0)
+              router.push('/')
+            }, 100)
+            break
+            
+          default:
+            // For other events, just update the session
+            setAuthState(prev => ({
+              ...prev,
+              session,
+              user: session?.user ?? null,
+              initializing: false,
+              loading: false,
+            }))
         }
       }
     )
 
+    // Periodic session validation (every 30 seconds)
+    sessionCheckInterval = setInterval(async () => {
+      if (!mounted) return
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session && authState.session) {
+          console.log('⚠️ Session lost, clearing auth state')
+          setAuthState(prev => ({
+            ...prev,
+            session: null,
+            user: null,
+            profile: null,
+          }))
+        }
+      } catch (error) {
+        console.error('Session check failed:', error)
+      }
+    }, 30000)
+
     return () => {
       mounted = false
-      if (timeoutId) window.clearTimeout(timeoutId)
+      if (sessionCheckInterval) clearInterval(sessionCheckInterval)
       subscription.unsubscribe()
     }
-  }, [router])
+  }, [router, authState.session])
 
   const setLoading = (loading: boolean) => {
     setAuthState(prev => ({ ...prev, loading }))
