@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
@@ -21,6 +22,122 @@ import {
 } from 'lucide-react'
 import TierEnhancedUI, { TierGatedContent, NoUpgradePrompts, TierButton } from '@/components/TierEnhancedUI'
 import { getTierStyling } from '@/lib/subscriptionUtils'
+
+// Row component for virtualized list
+const PredictionRow = memo(function PredictionRow({
+  prediction,
+  subscriptionTier,
+  onClick,
+}: {
+  prediction: any
+  subscriptionTier: 'free' | 'pro' | 'elite' | string
+  onClick: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.25 }}
+      className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group mb-4"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className={`w-3 h-3 rounded-full ${
+              (prediction?.confidence ?? 0) >= 80 ? 'bg-green-500' :
+              (prediction?.confidence ?? 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}></div>
+            <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
+              {prediction?.match || prediction?.match_teams || prediction?.title || 'Prediction'}
+            </h3>
+            {prediction?.sport || prediction?.league ? (
+              <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">
+                {prediction?.sport || prediction?.league}
+              </span>
+            ) : null}
+            {(prediction?.confidence ?? 0) >= 80 && (
+              <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full flex items-center">
+                <Sparkles className="w-3 h-3 mr-1" />
+                HIGH CONFIDENCE
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+            <div>
+              <p className="text-gray-400 text-sm">Pick</p>
+              <p className="text-white font-medium">{prediction?.pick ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Odds</p>
+              <p className="text-white font-medium">{prediction?.odds ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Confidence</p>
+              <p className={`font-bold ${
+                (prediction?.confidence ?? 0) >= 80 ? 'text-green-400' :
+                (prediction?.confidence ?? 0) >= 60 ? 'text-yellow-400' : 'text-red-400'
+              }`}>
+                {prediction?.confidence ?? 0}%
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Value</p>
+              <p className="text-green-400 font-medium">
+                {prediction?.value_percentage ? `${prediction.value_percentage}%` : 'TBD'}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">ROI Est.</p>
+              <p className="text-blue-400 font-medium">
+                {prediction?.roi_estimate ? `${prediction.roi_estimate}%` : 'TBD'}
+              </p>
+            </div>
+          </div>
+
+          {prediction?.reasoning && (
+            <div className="bg-black/20 rounded-lg p-3 mb-3">
+              <p className="text-gray-300 text-sm line-clamp-2 group-hover:line-clamp-none transition-all">
+                {prediction.reasoning}
+              </p>
+            </div>
+          )}
+
+          {subscriptionTier !== 'free' && prediction?.key_factors && (
+            <div className="flex flex-wrap gap-2">
+              {prediction.key_factors.slice(0, 3).map((factor: string, idx: number) => (
+                <span key={idx} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full">
+                  {factor}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <MessageCircle className="w-5 h-5 text-blue-400" />
+        </div>
+      </div>
+
+      {subscriptionTier === 'free' && (
+        <div className="mt-4 p-3 bg-gray-600/20 rounded-lg border border-gray-600/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Lock className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-400">Advanced analytics locked</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Crown className="w-3 h-3 text-yellow-400" />
+              <span className="text-xs text-gray-400">Pro Feature</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+})
 
 export default function PredictionsPage() {
   const { user, profile } = useAuth()
@@ -241,7 +358,7 @@ export default function PredictionsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        className="mb-8"
+        className="mb-8 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-black/20 bg-black/10 rounded-lg"
       >
         <div className="flex space-x-1 bg-white/5 backdrop-blur-sm rounded-lg p-1">
           <button
@@ -277,9 +394,8 @@ export default function PredictionsPage() {
         </div>
       </motion.div>
 
-      {/* Predictions Display */}
-      <div className="space-y-4">
-        {/* Loading State */}
+      {/* Predictions Display (Virtualized) */}
+      <div className="min-h-[300px]">
         {currentLoading && (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center space-x-3">
@@ -289,7 +405,6 @@ export default function PredictionsPage() {
           </div>
         )}
 
-        {/* Empty State */}
         {!currentLoading && currentPredictions.length === 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -300,120 +415,24 @@ export default function PredictionsPage() {
             <h3 className="text-xl font-bold text-white mb-2">
               No {activeTab === 'all' ? '' : activeTab === 'team' ? 'team ' : 'player props '}predictions available
             </h3>
-            <p className="text-gray-400 mb-4">
-              Check back soon for the latest AI predictions
-            </p>
+            <p className="text-gray-400 mb-4">Check back soon for the latest AI predictions</p>
           </motion.div>
         )}
 
-        {/* Predictions List */}
         {!currentLoading && currentPredictions.length > 0 && (
-          <div className="space-y-4">
-            {currentPredictions.map((prediction, index) => (
-              <motion.div
+          <Virtuoso
+            data={currentPredictions}
+            style={{ height: 'calc(100vh - 320px)' }}
+            itemContent={(index, prediction) => (
+              <PredictionRow
                 key={prediction.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-                className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
+                prediction={prediction}
+                subscriptionTier={subscriptionTier as any}
                 onClick={() => openChatWithContext({ selectedPrediction: prediction }, prediction)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        prediction.confidence >= 80 ? 'bg-green-500' :
-                        prediction.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}></div>
-                      <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
-                        {prediction.match || prediction.match_teams}
-                      </h3>
-                      <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full">
-                        {prediction.sport || prediction.league}
-                      </span>
-                      {prediction.confidence >= 80 && (
-                        <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full flex items-center">
-                          <Sparkles className="w-3 h-3 mr-1" />
-                          HIGH CONFIDENCE
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                      <div>
-                        <p className="text-gray-400 text-sm">Pick</p>
-                        <p className="text-white font-medium">{prediction.pick}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Odds</p>
-                        <p className="text-white font-medium">{prediction.odds}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Confidence</p>
-                        <p className={`font-bold ${
-                          prediction.confidence >= 80 ? 'text-green-400' :
-                          prediction.confidence >= 60 ? 'text-yellow-400' : 'text-red-400'
-                        }`}>
-                          {prediction.confidence}%
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Value</p>
-                        <p className="text-green-400 font-medium">
-                          {prediction.value_percentage ? `${prediction.value_percentage}%` : 'TBD'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">ROI Est.</p>
-                        <p className="text-blue-400 font-medium">
-                          {prediction.roi_estimate ? `${prediction.roi_estimate}%` : 'TBD'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {prediction.reasoning && (
-                      <div className="bg-black/20 rounded-lg p-3 mb-3">
-                        <p className="text-gray-300 text-sm">
-                          {prediction.reasoning}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Pro/Elite Features */}
-                    {subscriptionTier !== 'free' && prediction.key_factors && (
-                      <div className="flex flex-wrap gap-2">
-                        {prediction.key_factors.slice(0, 3).map((factor, idx) => (
-                          <span key={idx} className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full">
-                            {factor}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MessageCircle className="w-5 h-5 text-blue-400" />
-                  </div>
-                </div>
-
-                {/* Locked features for free users */}
-                {subscriptionTier === 'free' && (
-                  <div className="mt-4 p-3 bg-gray-600/20 rounded-lg border border-gray-600/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Lock className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-400">Advanced analytics locked</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Crown className="w-3 h-3 text-yellow-400" />
-                        <span className="text-xs text-gray-400">Pro Feature</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
+              />
+            )}
+            increaseViewportBy={{ top: 200, bottom: 400 }}
+          />
         )}
       </div>
       </div>

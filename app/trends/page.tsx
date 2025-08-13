@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
@@ -22,6 +23,91 @@ import {
 import TrendChart from '@/components/TrendChart'
 import { supabase } from '@/lib/supabase'
 import { getTierCapabilities } from '@/lib/subscriptionUtils'
+
+const TrendRow = memo(function TrendRow({
+  trend,
+  activeTab,
+  onClick,
+}: {
+  trend: Trend
+  activeTab: 'player' | 'team'
+  onClick: () => void
+}) {
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 80) return 'text-green-400'
+    if (confidence >= 60) return 'text-yellow-400'
+    return 'text-red-400'
+  }
+  const getTrendCategoryIcon = (category?: string) => {
+    switch (category) {
+      case 'streak': return <Trophy className="w-4 h-4" />
+      case 'form': return <TrendingUp className="w-4 h-4" />
+      case 'matchup': return <Target className="w-4 h-4" />
+      default: return <Activity className="w-4 h-4" />
+    }
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.25 }}
+      className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group mb-4"
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className={`p-2 rounded-lg ${
+              activeTab === 'player' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'
+            }`}>
+              {getTrendCategoryIcon(trend.trend_category)}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
+                {trend.title || trend.headline}
+              </h3>
+              <p className="text-gray-400 text-sm">
+                {trend.sport} • {trend.trend_category || 'General'}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className={`text-lg font-bold ${getConfidenceColor(trend.confidence_score)}`}>
+                {trend.confidence_score}%
+              </div>
+              <div className="text-xs text-gray-400">Confidence</div>
+            </div>
+          </div>
+          <p className="text-gray-300 mb-4">{trend.trend_text}</p>
+          {trend.key_stats && (
+            <div className="flex items-center space-x-6 text-sm">
+              {trend.key_stats.recent_games && (
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <span className="text-gray-400">Last {trend.key_stats.recent_games} games</span>
+                </div>
+              )}
+              {trend.key_stats.success_rate && (
+                <div className="flex items-center space-x-1">
+                  <BarChart3 className="w-4 h-4 text-green-400" />
+                  <span className="text-gray-400">{trend.key_stats.success_rate}% success rate</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Eye className="w-5 h-5 text-blue-400" />
+        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-between">
+        <button className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+          View Full Trend
+        </button>
+      </div>
+    </motion.div>
+  )
+})
 
 interface Trend {
   id: string
@@ -139,6 +225,8 @@ export default function TrendsPage() {
   const capabilities = getTierCapabilities(subscriptionTier as any)
   const trendLimit = capabilities.dailyTrends
 
+  const limitedTrends = filteredTrends.slice(0, trendLimit)
+
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 80) return 'text-green-400'
     if (confidence >= 60) return 'text-yellow-400'
@@ -195,7 +283,7 @@ export default function TrendsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         transition={{ duration: 0.6, delay: 0.1 }}
-        className="mb-6"
+        className="mb-6 sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-black/20 bg-black/10 rounded-lg"
       >
         <div className="flex items-center space-x-1 bg-white/5 backdrop-blur-sm rounded-lg p-1">
           {['All', 'MLB', 'NBA', 'NFL', 'NHL'].map((sport) => (
@@ -242,7 +330,7 @@ export default function TrendsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="mb-8"
+        className="mb-8 sticky top-[56px] z-10 backdrop-blur supports-[backdrop-filter]:bg-black/20 bg-black/10 rounded-lg"
       >
         <div className="flex space-x-1 bg-white/5 backdrop-blur-sm rounded-lg p-1">
           <button
@@ -270,8 +358,8 @@ export default function TrendsPage() {
         </div>
       </motion.div>
 
-      {/* Trends Grid */}
-      <div className="space-y-4">
+      {/* Trends List (Virtualized) */}
+      <div className="min-h-[300px]">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center space-x-3">
@@ -279,121 +367,45 @@ export default function TrendsPage() {
               <span className="text-white font-medium">Loading trends...</span>
             </div>
           </div>
-        ) : filteredTrends.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10 text-center"
-          >
-            <TrendingUp className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">
-              No {activeTab} trends found
-            </h3>
-            <p className="text-gray-400">
-              Check back later for new insights and patterns
-            </p>
-          </motion.div>
         ) : (
-          filteredTrends.slice(0, trendLimit).map((trend, index) => (
-            <motion.div
-              key={trend.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
-              className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
-              onClick={() => setSelectedTrend(trend)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <div className={`p-2 rounded-lg ${
-                      activeTab === 'player' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'
-                    }`}>
-                      {getTrendCategoryIcon(trend.trend_category)}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-semibold group-hover:text-blue-400 transition-colors">
-                        {trend.title || trend.headline}
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        {trend.sport} • {trend.trend_category || 'General'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-bold ${getConfidenceColor(trend.confidence_score)}`}>
-                        {trend.confidence_score}%
-                      </div>
-                      <div className="text-xs text-gray-400">Confidence</div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-300 mb-4">
-                    {trend.trend_text}
-                  </p>
-
-                  {trend.key_stats && (
-                    <div className="flex items-center space-x-6 text-sm">
-                      {trend.key_stats.recent_games && (
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4 text-blue-400" />
-                          <span className="text-gray-400">Last {trend.key_stats.recent_games} games</span>
-                        </div>
-                      )}
-                      {trend.key_stats.success_rate && (
-                        <div className="flex items-center space-x-1">
-                          <BarChart3 className="w-4 h-4 text-green-400" />
-                          <span className="text-gray-400">{trend.key_stats.success_rate}% success rate</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Eye className="w-5 h-5 text-blue-400" />
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <button className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
-                  View Full Trend
-                </button>
-                {subscriptionTier === 'free' && (
-                  <div className="flex items-center space-x-1">
-                    <Lock className="w-3 h-3 text-gray-400" />
-                    <span className="text-xs text-gray-400">Detailed analysis locked</span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ))
+          <Virtuoso
+            data={limitedTrends}
+            style={{ height: 'calc(100vh - 340px)' }}
+            increaseViewportBy={{ top: 200, bottom: 400 }}
+            itemContent={(index, trend) => (
+              <TrendRow
+                key={trend.id}
+                trend={trend}
+                activeTab={activeTab}
+                onClick={() => setSelectedTrend(trend)}
+              />
+            )}
+          />
         )}
 
-        {/* Show locked trends for free users */}
-        {subscriptionTier === 'free' && filteredTrends.length > trendLimit && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 0.4, delay: filteredTrends.length * 0.05 }}
-            className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-xl p-6 border border-purple-500/30"
-          >
-            <div className="text-center">
-              <Crown className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">
-                {filteredTrends.length - trendLimit} More Premium Trends Available
-              </h3>
-              <p className="text-gray-300 mb-4">
-                Unlock unlimited trend analysis with advanced insights and detailed breakdowns
-              </p>
-              <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200">
-                Upgrade to Pro
-              </button>
-            </div>
-          </motion.div>
-        )}
       </div>
-
-      {/* Trend Detail Modal */}
+      {/* Show locked trends for free users */}
+      {subscriptionTier === 'free' && filteredTrends.length > trendLimit && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.4, delay: filteredTrends.length * 0.05 }}
+          className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-xl p-6 border border-purple-500/30"
+        >
+          <div className="text-center">
+            <Crown className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">
+              {filteredTrends.length - trendLimit} More Premium Trends Available
+            </h3>
+            <p className="text-gray-300 mb-4">
+              Unlock unlimited trend analysis with advanced insights and detailed breakdowns
+            </p>
+            <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200">
+              Upgrade to Pro
+            </button>
+          </div>
+        </motion.div>
+      )}
       <AnimatePresence>
         {selectedTrend && (
           <motion.div
@@ -413,15 +425,15 @@ export default function TrendsPage() {
               <div className="flex items-start justify-between mb-6">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white mb-2">
-                    {selectedTrend.title || selectedTrend.headline}
+                    {selectedTrend!.title || selectedTrend!.headline}
                   </h2>
                   <div className="flex items-center space-x-4 text-sm text-gray-400">
-                    <span>{selectedTrend.sport}</span>
+                    <span>{selectedTrend!.sport}</span>
                     <span>•</span>
-                    <span>{selectedTrend.trend_category || 'General'}</span>
+                    <span>{selectedTrend!.trend_category || 'General'}</span>
                     <span>•</span>
-                    <span className={getConfidenceColor(selectedTrend.confidence_score)}>
-                      {selectedTrend.confidence_score}% confidence
+                    <span className={getConfidenceColor(selectedTrend!.confidence_score)}>
+                      {selectedTrend!.confidence_score}% confidence
                     </span>
                   </div>
                 </div>
@@ -436,46 +448,46 @@ export default function TrendsPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-2">Overview</h3>
-                  <p className="text-gray-300">{selectedTrend.trend_text}</p>
+                  <p className="text-gray-300">{selectedTrend!.trend_text}</p>
                 </div>
 
-                {selectedTrend.description && (
+                {selectedTrend!.description && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-2">Analysis</h3>
-                    <p className="text-gray-300">{selectedTrend.description}</p>
+                    <p className="text-gray-300">{selectedTrend!.description}</p>
                   </div>
                 )}
 
-                {selectedTrend.insight && (
+                {selectedTrend!.insight && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-2">Key Insight</h3>
                     <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
-                      <p className="text-blue-100">{selectedTrend.insight}</p>
+                      <p className="text-blue-100">{selectedTrend!.insight}</p>
                     </div>
                   </div>
                 )}
 
-                {selectedTrend.supporting_data && (
+                {selectedTrend!.supporting_data && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-2">Supporting Data</h3>
-                    <p className="text-gray-300">{selectedTrend.supporting_data}</p>
+                    <p className="text-gray-300">{selectedTrend!.supporting_data}</p>
                   </div>
                 )}
 
                 {/* Chart Section */}
-                {selectedTrend.chart_data && selectedTrend.visual_data && (
+                {selectedTrend!.chart_data && selectedTrend!.visual_data && (
                   <div>
-                    <TrendChart trendId={selectedTrend.id} />
+                    <TrendChart trendId={selectedTrend!.id} />
                   </div>
                 )}
 
                 {/* Key Statistics Section */}
-                {selectedTrend.key_stats && Object.keys(selectedTrend.key_stats).length > 0 && (
+                {selectedTrend!.key_stats && Object.keys(selectedTrend!.key_stats).length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-3">Key Statistics</h3>
                     <div className="bg-gray-800 rounded-lg p-4">
                       <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(selectedTrend.key_stats).map(([key, value]) => (
+                        {Object.entries(selectedTrend!.key_stats).map(([key, value]) => (
                           <div key={key} className="text-center">
                             <p className="text-xs text-gray-400 uppercase tracking-wide">{key}</p>
                             <p className="text-lg font-semibold text-white mt-1">{String(value)}</p>
