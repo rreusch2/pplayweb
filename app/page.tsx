@@ -124,18 +124,16 @@ export default function LandingPage() {
                 href="https://apps.apple.com/us/app/predictive-play/id6748275790"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-5 py-3 rounded-xl bg-white text-black hover:bg-gray-100 transition-colors shadow-md"
+                className="hover:opacity-80 transition-opacity"
                 aria-label="Download on the App Store"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" className="h-8 w-auto">
-                  <rect width="120" height="40" rx="8" fill="currentColor" className="text-black" />
-                  <g transform="translate(12,8)" fill="white">
-                    <path d="M19.5 3.9c1.2-1.4 1.9-3.1 1.7-4.9-1.7.1-3.7 1.2-4.9 2.6-1.1 1.3-1.9 3.1-1.7 4.9 1.8.2 3.7-1.1 4.9-2.6z" transform="translate(-6,4)"/>
-                    <path d="M17.8 7.1c-2-.1-3.8 1.1-4.8 1.1s-2.5-1.1-4.1-1.1c-2.1 0-4 1.2-5 3.1-2.2 3.8-.6 9.4 1.6 12.5 1.1 1.6 2.4 3.3 4.1 3.3 1.7-.1 2.3-1.1 4.3-1.1s2.5 1.1 4.2 1.1c1.8 0 3-1.6 4.1-3.2.8-1.2 1.5-2.6 2-4 0 0-3.9-1.5-3.9-5.7 0-3.6 3-5 3-5-1.8-2.7-4.5-2.9-5.5-3z" transform="translate(-6,4)"/>
-                    <text x="38" y="9" font-size="6" font-weight="600">Download on the</text>
-                    <text x="38" y="20" font-size="11" font-weight="800">App Store</text>
-                  </g>
-                </svg>
+                <Image
+                  src="/app-store-badge.svg"
+                  alt="Download on the App Store"
+                  width={180}
+                  height={60}
+                  className="h-14 w-auto"
+                />
               </a>
             </div>
 
@@ -292,10 +290,16 @@ export default function LandingPage() {
                 href="https://apps.apple.com/us/app/predictive-play/id6748275790"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white text-black hover:bg-gray-100 transition-colors text-sm"
+                className="hover:opacity-80 transition-opacity"
                 aria-label="Download on the App Store"
               >
-                <span className="font-semibold">App Store</span>
+                <Image
+                  src="/app-store-badge.svg"
+                  alt="Download on the App Store"
+                  width={120}
+                  height={40}
+                  className="h-8 w-auto"
+                />
               </a>
             </div>
           </div>
