@@ -17,9 +17,7 @@ import {
   Settings,
   MessageCircle,
   Crown,
-  Bell,
   LogOut,
-  RefreshCw,
   Shield,
   User,
   ChevronDown,
@@ -31,7 +29,6 @@ const navigation = [
   { name: 'Games', href: '/games', icon: Calendar },
   { name: 'Predictions', href: '/predictions', icon: Zap },
   { name: 'Trends', href: '/trends', icon: TrendingUp },
-  { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export default function Navigation() {
@@ -149,16 +146,6 @@ export default function Navigation() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
-            {/* Coins / Invite Button */}
-            <button
-              onClick={() => setShowInvite(true)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25 transition-all duration-200 border border-yellow-500/30"
-              title="Invite friends & earn coins"
-            >
-              <HandCoins className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm font-medium">Coins</span>
-              <span className="text-xs bg-yellow-500/20 px-2 py-0.5 rounded-full">{coins}</span>
-            </button>
 
             {/* Professor Lock Chat Button */}
             <button 
@@ -174,15 +161,7 @@ export default function Navigation() {
               )}
             </button>
             
-            {/* Refresh Button */}
-            <button 
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all duration-200 disabled:opacity-50"
-              title="Refresh Data"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            {/* Removed Refresh Button */}
 
             {/* Subscription Badge */}
             <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -196,10 +175,7 @@ export default function Navigation() {
               {subscriptionTier.charAt(0).toUpperCase() + subscriptionTier.slice(1)}
             </div>
 
-            {/* Notifications */}
-            <button className="p-2 rounded-lg bg-white/10 text-gray-300 hover:text-white hover:bg-white/20 transition-all duration-200">
-              <Bell className="w-4 h-4" />
-            </button>
+            {/* Removed Notifications Bell */}
 
             {/* User Menu */}
             <div className="relative" ref={userMenuRef}>
@@ -227,6 +203,32 @@ export default function Navigation() {
                       <p className="text-xs text-gray-400 capitalize">{subscriptionTier} User</p>
                     </div>
 
+                    {/* Coins & Invite */}
+                    <div className="px-4 py-2 flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-yellow-300">
+                        <HandCoins className="w-4 h-4" />
+                        <span className="text-sm">Coins</span>
+                      </div>
+                      <span className="text-xs bg-yellow-500/20 px-2 py-0.5 rounded-full border border-yellow-500/30">{coins}</span>
+                    </div>
+                    <button
+                      onClick={() => { setShowInvite(true); setShowUserMenu(false) }}
+                      className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-yellow-300 hover:bg-yellow-500/10 transition-colors"
+                    >
+                      <HandCoins className="w-4 h-4" />
+                      <span>Invite & Earn Coins</span>
+                    </button>
+
+                    {/* Settings Link */}
+                    <Link
+                      href="/settings"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center space-x-3 px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
+                    </Link>
+
                     {/* Admin Link - Only show for admin users */}
                     {profile?.admin_role && (
                       <Link
@@ -238,6 +240,8 @@ export default function Navigation() {
                         <span>Admin Dashboard</span>
                       </Link>
                     )}
+
+                    <div className="my-2 border-t border-white/10" />
 
                     {/* Logout */}
                     <button

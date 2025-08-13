@@ -102,7 +102,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
               <button
                 onClick={() => openAuthModal('signup')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center space-x-2 group"
@@ -116,6 +116,27 @@ export default function LandingPage() {
               >
                 Sign In
               </button>
+            </div>
+
+            {/* App Store Button */}
+            <div className="flex justify-center mb-12">
+              <a
+                href="https://apps.apple.com/us/app/predictive-play/id6748275790"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-5 py-3 rounded-xl bg-white text-black hover:bg-gray-100 transition-colors shadow-md"
+                aria-label="Download on the App Store"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" className="h-8 w-auto">
+                  <rect width="120" height="40" rx="8" fill="currentColor" className="text-black" />
+                  <g transform="translate(12,8)" fill="white">
+                    <path d="M19.5 3.9c1.2-1.4 1.9-3.1 1.7-4.9-1.7.1-3.7 1.2-4.9 2.6-1.1 1.3-1.9 3.1-1.7 4.9 1.8.2 3.7-1.1 4.9-2.6z" transform="translate(-6,4)"/>
+                    <path d="M17.8 7.1c-2-.1-3.8 1.1-4.8 1.1s-2.5-1.1-4.1-1.1c-2.1 0-4 1.2-5 3.1-2.2 3.8-.6 9.4 1.6 12.5 1.1 1.6 2.4 3.3 4.1 3.3 1.7-.1 2.3-1.1 4.3-1.1s2.5 1.1 4.2 1.1c1.8 0 3-1.6 4.1-3.2.8-1.2 1.5-2.6 2-4 0 0-3.9-1.5-3.9-5.7 0-3.6 3-5 3-5-1.8-2.7-4.5-2.9-5.5-3z" transform="translate(-6,4)"/>
+                    <text x="38" y="9" font-size="6" font-weight="600">Download on the</text>
+                    <text x="38" y="20" font-size="11" font-weight="800">App Store</text>
+                  </g>
+                </svg>
+              </a>
             </div>
 
           </div>
@@ -251,12 +272,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-white" />
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden ring-2 ring-white/10">
+                <Image src="/icon.png" alt="Predictive Play" width={32} height={32} className="w-full h-full object-cover" />
               </div>
-              <span className="text-xl font-bold text-white">
-                Predictive Play
-              </span>
+              <span className="text-xl font-bold text-white">Predictive Play</span>
             </div>
             
             <div className="flex items-center space-x-6 text-gray-400">
@@ -268,6 +287,15 @@ export default function LandingPage() {
               </a>
               <a href="mailto:predictiveplay2025@gmail.com" className="hover:text-white transition-colors">
                 Contact
+              </a>
+              <a
+                href="https://apps.apple.com/us/app/predictive-play/id6748275790"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1.5 rounded-lg bg-white text-black hover:bg-gray-100 transition-colors text-sm"
+                aria-label="Download on the App Store"
+              >
+                <span className="font-semibold">App Store</span>
               </a>
             </div>
           </div>
@@ -327,13 +355,12 @@ const pricingPlans = [
     name: 'Free',
     price: 0,
     period: 'month',
-    description: 'Perfect for getting started',
+    description: 'Get started with core features',
     popular: false,
     features: [
-      '3 AI predictions per day',
-      'Basic analytics',
-      'Mobile app access',
-      'Community support'
+      '2 daily AI picks',
+      'Basic trends & insights',
+      'Mobile app access'
     ]
   },
   {
@@ -343,27 +370,23 @@ const pricingPlans = [
     description: 'Most popular for serious bettors',
     popular: true,
     features: [
-      'Unlimited AI predictions',
-      'Advanced analytics',
-      'AI chat assistant', 
-      'Live game updates',
-      'Priority support',
-      'Injury reports'
+      'More daily AI picks',
+      'Advanced trends & analytics',
+      'Professor Lock chat', 
+      'Real-time updates'
     ]
   },
   {
     name: 'Elite',
-    price: 49.99,
+    price: 29.99,
     period: 'month',
-    description: 'For professional bettors',
+    description: 'Premium tools & insights',
     popular: false,
     features: [
-      'Everything in Pro',
-      'Elite lock of the day',
-      'Professor insights',
-      'Advanced parlays',
-      'VIP support',
-      'Early access features'
+      'Maximum daily AI picks',
+      'Premium analytics & insights',
+      'Lock of the Day',
+      'Early feature access'
     ]
   }
 ]
