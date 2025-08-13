@@ -71,41 +71,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Set initial auth state with timeout protection
-    const getSessionWithTimeout = async () => {
-      const tenSeconds = 10_000
-      const to = new Promise<null>((resolve) => {
-        timeoutId = window.setTimeout(() => resolve(null), tenSeconds)
-      })
+    // Helper: quickly check if a Supabase auth token exists in localStorage
+    const hasSupabaseAuthToken = (): boolean => {
       try {
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          to,
-        ]) as any
-
-        const session = result && 'data' in result ? (result.data?.session ?? null) : null
-        let userProfile = null
-        if (session?.user) {
-          userProfile = await fetchUserProfile(session.user)
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i) || ''
+          if (/^sb-.*-auth-token$/.test(key)) return true
         }
-        if (!mounted) return
-        setAuthState(prev => ({
-          ...prev,
-          session,
-          user: session?.user ?? null,
-          profile: userProfile,
-          initializing: false,
-        }))
-      } catch (e) {
-        console.error('❌ getSession failed, proceeding without session:', e)
-        if (!mounted) return
-        setAuthState(prev => ({ ...prev, initializing: false }))
-      } finally {
-        if (timeoutId) window.clearTimeout(timeoutId)
+      } catch {
+        // localStorage unavailable
       }
+      return false
     }
 
-    getSessionWithTimeout()
+    // Fast path: if no auth token present, don't wait for getSession
+    const noTokenPresent = !hasSupabaseAuthToken()
+    if (noTokenPresent) {
+      setAuthState(prev => ({ ...prev, initializing: false }))
+    } else {
+      // Set initial auth state with shorter timeout protection (2s)
+      const getSessionWithTimeout = async () => {
+        const twoSeconds = 2_000
+        const to = new Promise<null>((resolve) => {
+          timeoutId = window.setTimeout(() => resolve(null), twoSeconds)
+        })
+        try {
+          const result = await Promise.race([
+            supabase.auth.getSession(),
+            to,
+          ]) as any
+
+          const session = result && 'data' in result ? (result.data?.session ?? null) : null
+          let userProfile = null
+          if (session?.user) {
+            userProfile = await fetchUserProfile(session.user)
+          }
+          if (!mounted) return
+          setAuthState(prev => ({
+            ...prev,
+            session,
+            user: session?.user ?? null,
+            profile: userProfile,
+            initializing: false,
+          }))
+        } catch (e) {
+          console.error('❌ getSession failed, proceeding without session:', e)
+          if (!mounted) return
+          setAuthState(prev => ({ ...prev, initializing: false }))
+        } finally {
+          if (timeoutId) window.clearTimeout(timeoutId)
+        }
+      }
+
+      getSessionWithTimeout()
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
