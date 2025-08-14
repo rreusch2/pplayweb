@@ -243,19 +243,57 @@ export default function AdminDashboard() {
     
     setUpdating(userId)
     try {
+      // Prepare comprehensive update data to match payment flow
+      const now = new Date().toISOString()
+      
+      const updateData: any = {
+        subscription_tier: newTier,
+        subscription_status: newTier === 'free' ? 'inactive' : 'active',
+        updated_at: now
+      }
+
+      if (newTier === 'free') {
+        // Downgrade to free - clear all subscription fields
+        updateData.max_daily_picks = 2
+        updateData.subscription_plan_type = null
+        updateData.subscription_product_id = null
+        updateData.subscription_expires_at = null
+        updateData.auto_renew_enabled = null
+        updateData.revenuecat_customer_id = null
+      } else if (newTier === 'pro') {
+        // Upgrade to Pro - set Pro-specific fields
+        updateData.max_daily_picks = 20
+        updateData.subscription_plan_type = 'admin_manual'
+        updateData.subscription_product_id = 'admin_override_pro'
+        updateData.subscription_expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+        updateData.auto_renew_enabled = false
+        updateData.subscription_started_at = now
+        updateData.subscription_renewed_at = now
+        updateData.revenuecat_customer_id = `admin_${userId}`
+      } else if (newTier === 'elite') {
+        // Upgrade to Elite - set Elite-specific fields
+        updateData.max_daily_picks = 30
+        updateData.subscription_plan_type = 'admin_manual'
+        updateData.subscription_product_id = 'admin_override_elite'
+        updateData.subscription_expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+        updateData.auto_renew_enabled = false
+        updateData.subscription_started_at = now
+        updateData.subscription_renewed_at = now
+        updateData.revenuecat_customer_id = `admin_${userId}`
+      }
+
+      console.log('🔧 Admin: Updating user subscription with comprehensive data:', updateData)
+
       const { error } = await supabase
         .from('profiles')
-        .update({ 
-          subscription_tier: newTier,
-          subscription_status: newTier === 'free' ? 'inactive' : 'active'
-        })
+        .update(updateData)
         .eq('id', userId)
 
       if (error) throw error
 
       // Refresh data
       await loadDashboardData()
-      alert(`✅ User subscription updated to ${newTier}!`)
+      alert(`✅ User subscription updated to ${newTier}! All subscription fields have been properly set.`)
     } catch (error) {
       console.error('Error updating user tier:', error)
       alert('❌ Error updating user subscription')
