@@ -55,7 +55,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   return (
     <>
-      {showNav && <Navigation />}
+      {showNav && <Navigation onOpenAIChat={() => setShowAIChat(true)} />}
       <main className={!showNav ? 'h-full' : 'pt-16 sm:pt-20'}>
         {children}
       </main>

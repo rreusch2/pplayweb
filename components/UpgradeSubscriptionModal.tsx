@@ -7,10 +7,9 @@ import { createCheckoutSession, redirectToCheckout } from '@/lib/stripe'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 
-interface TieredSubscriptionModalProps {
+interface UpgradeSubscriptionModalProps {
   isOpen: boolean
   onClose: () => void
-  onContinueFree?: () => void
 }
 
 // Group plans by tier for easier rendering
@@ -22,11 +21,10 @@ const groupedPlans = PLANS.reduce<Record<'pro' | 'elite', Plan[]>>(
   { pro: [], elite: [] }
 )
 
-export default function TieredSubscriptionModal({
+export default function UpgradeSubscriptionModal({
   isOpen,
   onClose,
-  onContinueFree,
-}: TieredSubscriptionModalProps) {
+}: UpgradeSubscriptionModalProps) {
   const [selectedTier, setSelectedTier] = useState<'pro' | 'elite'>('pro')
   const [selectedPlan, setSelectedPlan] = useState<Plan>(groupedPlans.pro[0])
   const [loading, setLoading] = useState(false)
@@ -46,7 +44,6 @@ export default function TieredSubscriptionModal({
 
   const handleSubscribe = async () => {
     if (!user) {
-      // Should not happen – gate behind auth elsewhere
       alert('Please sign in to subscribe.')
       return
     }
@@ -91,53 +88,30 @@ export default function TieredSubscriptionModal({
               enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100"
               leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-left align-middle shadow-2xl transition-all border border-slate-700">
+              <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-left align-middle shadow-2xl transition-all border border-slate-700">
                 {/* Header */}
                 <div className="text-center mb-6">
-                  <div className="flex justify-center mb-4">
-                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-2xl animate-pulse">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex justify-center mb-3">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-xl">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                     </div>
                   </div>
-                  <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-3">
-                    🚀 Join 50,000+ Winners
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                    🚀 Upgrade Your Plan
                   </h3>
-                  <p className="text-slate-300 text-lg mb-3">Get AI-powered predictions that beat the sportsbooks</p>
-                  
-                  {/* Social Proof */}
-                  <div className="flex items-center justify-center space-x-8 mb-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">73%</div>
-                      <div className="text-xs text-slate-400">Win Rate</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400">$2.1M</div>
-                      <div className="text-xs text-slate-400">Won This Month</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">50K+</div>
-                      <div className="text-xs text-slate-400">Active Users</div>
-                    </div>
-                  </div>
-                  
-                  {/* Urgency */}
-                  <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4">
-                    <p className="text-red-200 text-sm font-semibold">
-                      ⏰ Limited Time: 50% OFF First Month - Expires in 23:59:45
-                    </p>
-                  </div>
+                  <p className="text-slate-300 text-base mb-3">Get more AI picks and advanced features</p>
                 </div>
 
                 {/* Tier Switcher */}
-                <div className="flex justify-center mb-10">
-                  <div className="bg-slate-800/50 p-2 rounded-2xl border border-slate-700">
+                <div className="flex justify-center mb-8">
+                  <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700">
                     {(['pro', 'elite'] as const).map((tier) => (
                       <button
                         key={tier}
                         onClick={() => handleTierChange(tier)}
-                        className={`relative px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+                        className={`relative px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
                           selectedTier === tier 
                             ? tier === 'pro' 
                               ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
@@ -162,63 +136,41 @@ export default function TieredSubscriptionModal({
                             POPULAR
                           </span>
                         )}
-                        {tier === 'elite' && selectedTier === 'elite' && (
-                          <span className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-2 py-0.5 rounded-full font-bold">
-                            PREMIUM
-                          </span>
-                        )}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Plan Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
                   {groupedPlans[selectedTier].map((plan) => {
                     const isSelected = plan.id === selectedPlan.id
-                    const tierColor = selectedTier === 'pro' ? 'blue' : 'purple'
                     
                     return (
                       <div
                         key={plan.id}
                         onClick={() => handlePlanSelect(plan)}
-                        className={`relative cursor-pointer rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl ${
+                        className={`relative cursor-pointer rounded-xl p-4 transition-all duration-300 transform hover:scale-[1.02] ${
                           isSelected 
                             ? selectedTier === 'pro'
-                              ? 'bg-gradient-to-br from-blue-600/20 to-blue-900/40 border-2 border-blue-500 shadow-xl shadow-blue-500/20'
-                              : 'bg-gradient-to-br from-purple-600/20 to-pink-900/40 border-2 border-purple-500 shadow-xl shadow-purple-500/20'
+                              ? 'bg-gradient-to-br from-blue-600/20 to-blue-900/40 border-2 border-blue-500 shadow-lg shadow-blue-500/20'
+                              : 'bg-gradient-to-br from-purple-600/20 to-pink-900/40 border-2 border-purple-500 shadow-lg shadow-purple-500/20'
                             : 'bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-slate-600'
                         }`}
                       >
                         {/* Savings Badge */}
                         {plan.savings && (
-                          <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                          <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
                             {plan.savings}
                           </div>
                         )}
 
                         {/* Plan Header */}
-                        <div className="text-center mb-6">
-                          <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-                            selectedTier === 'pro' 
-                              ? 'bg-gradient-to-r from-blue-500 to-blue-600' 
-                              : 'bg-gradient-to-r from-purple-500 to-pink-500'
-                          }`}>
-                            {plan.interval === 'one_time' ? (
-                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                              </svg>
-                            ) : (
-                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            )}
-                          </div>
+                        <div className="text-center mb-4">
+                          <h4 className="text-lg font-bold text-white mb-2">{plan.name}</h4>
                           
-                          <h4 className="text-xl font-bold text-white mb-2">{plan.name}</h4>
-                          
-                          <div className="mb-4">
-                            <div className="text-4xl font-black text-white mb-1">
+                          <div className="mb-3">
+                            <div className="text-3xl font-black text-white mb-1">
                               ${plan.price.toFixed(2)}
                             </div>
                             {plan.interval !== 'one_time' && (
@@ -229,12 +181,12 @@ export default function TieredSubscriptionModal({
                           </div>
 
                           {isSelected && (
-                            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
+                            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
                               selectedTier === 'pro' 
                                 ? 'bg-blue-500 text-white' 
                                 : 'bg-purple-500 text-white'
                             }`}>
-                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                               Selected
@@ -243,13 +195,13 @@ export default function TieredSubscriptionModal({
                         </div>
 
                         {/* Features */}
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {plan.features.map((feature, i) => (
                             <div key={i} className="flex items-center text-sm">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center mr-2 ${
                                 selectedTier === 'pro' ? 'bg-blue-500/20' : 'bg-purple-500/20'
                               }`}>
-                                <svg className={`w-3 h-3 ${
+                                <svg className={`w-2 h-2 ${
                                   selectedTier === 'pro' ? 'text-blue-400' : 'text-purple-400'
                                 }`} fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -269,7 +221,7 @@ export default function TieredSubscriptionModal({
                   <button
                     disabled={loading || subscriptionTier !== 'free'}
                     onClick={handleSubscribe}
-                    className={`w-full md:w-auto inline-flex items-center justify-center px-12 py-4 rounded-2xl text-lg font-bold text-white shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${
+                    className={`w-full md:w-auto inline-flex items-center justify-center px-8 py-3 rounded-xl text-base font-bold text-white shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${
                       selectedTier === 'pro'
                         ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 shadow-blue-500/25'
                         : 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 hover:from-purple-600 hover:via-pink-600 hover:to-purple-700 shadow-purple-500/25'
@@ -285,29 +237,21 @@ export default function TieredSubscriptionModal({
                       </>
                     ) : (
                       <>
-                        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        Start {selectedTier === 'pro' ? 'Pro' : 'Elite'} {selectedPlan.interval === 'one_time' ? 'Access' : 'Subscription'}
-                        <svg className="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        Upgrade to {selectedTier === 'pro' ? 'Pro' : 'Elite'}
+                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </>
                     )}
                   </button>
-                  {onContinueFree && (
-                    <button
-                      onClick={onContinueFree}
-                      className="mt-4 inline-flex items-center justify-center px-6 py-2 text-sm font-semibold rounded-md text-blue-500 bg-white bg-opacity-10 hover:bg-opacity-20 transition"
-                    >
-                      Continue for Free (2 picks daily)
-                    </button>
-                  )}
                   
                   {subscriptionTier !== 'free' && (
-                    <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                      <div className="flex items-center justify-center text-amber-400">
-                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                      <div className="flex items-center justify-center text-amber-400 text-sm">
+                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                         You already have an active subscription
@@ -316,22 +260,11 @@ export default function TieredSubscriptionModal({
                   )}
 
                   {/* Money Back Guarantee */}
-                  <div className="mt-6 flex items-center justify-center text-sm text-slate-400">
-                    <svg className="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="mt-4 flex items-center justify-center text-xs text-slate-400">
+                    <svg className="w-3 h-3 mr-1 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     30-day money-back guarantee
-                  </div>
-                </div>
-
-                {/* Footer Links */}
-                <div className="mt-8 pt-6 border-t border-slate-700 text-center">
-                  <div className="text-xs text-slate-500 space-x-4">
-                    <a href="https://rreusch2.github.io/ppwebsite/terms.html" className="hover:text-slate-300 transition-colors" target="_blank" rel="noreferrer">Terms of Service</a>
-                    <span>•</span>
-                    <a href="https://rreusch2.github.io/ppwebsite/privacy.html" className="hover:text-slate-300 transition-colors" target="_blank" rel="noreferrer">Privacy Policy</a>
-                    <span>•</span>
-                    <span>Secure checkout powered by Stripe</span>
                   </div>
                 </div>
               </Dialog.Panel>

@@ -31,7 +31,11 @@ const navigation = [
   { name: 'Trends', href: '/trends', icon: TrendingUp },
 ]
 
-export default function Navigation() {
+interface NavigationProps {
+  onOpenAIChat: () => void
+}
+
+export default function Navigation({ onOpenAIChat }: NavigationProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut, profile } = useAuth()
@@ -149,7 +153,7 @@ export default function Navigation() {
 
             {/* Professor Lock Chat Button */}
             <button 
-              onClick={() => setShowAIChat(true)}
+              onClick={onOpenAIChat}
               className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 transition-all duration-200 shadow-lg"
             >
               <MessageCircle className="w-4 h-4" />

@@ -213,27 +213,181 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id)
-  // Handle subscription creation logic here
+  
+  try {
+    const customerId = subscription.customer as string
+    const userId = subscription.metadata.user_id
+    
+    if (userId) {
+      // Get subscription plan details from metadata or price ID
+      const subscriptionType = subscription.metadata.subscription_type
+      const subscriptionData = getSubscriptionData(subscriptionType)
+      
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: subscriptionData.tier,
+          subscription_status: 'active',
+          subscription_plan_type: subscriptionData.planType,
+          subscription_started_at: new Date().toISOString(),
+          subscription_expires_at: subscriptionData.expiresAt,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating profile on subscription creation:', error)
+      } else {
+        console.log(`Subscription created for user ${userId}: ${subscriptionType}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling subscription creation:', error)
+  }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Subscription updated:', subscription.id)
-  // Handle subscription update logic here
+  
+  try {
+    const userId = subscription.metadata.user_id
+    
+    if (userId) {
+      let updateData: any = {
+        subscription_status: subscription.status,
+        updated_at: new Date().toISOString()
+      }
+
+      // If subscription is canceled or past_due, handle accordingly
+      if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        updateData.subscription_tier = 'free'
+        updateData.subscription_expires_at = new Date().toISOString()
+      } else if (subscription.status === 'active') {
+        // Renew subscription
+        const subscriptionType = subscription.metadata.subscription_type
+        const subscriptionData = getSubscriptionData(subscriptionType)
+        updateData.subscription_tier = subscriptionData.tier
+        updateData.subscription_expires_at = subscriptionData.expiresAt
+      }
+
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating profile on subscription update:', error)
+      } else {
+        console.log(`Subscription updated for user ${userId}: ${subscription.status}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling subscription update:', error)
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('Subscription deleted:', subscription.id)
-  // Handle subscription deletion logic here
+  
+  try {
+    const userId = subscription.metadata.user_id
+    
+    if (userId) {
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: 'free',
+          subscription_status: 'canceled',
+          subscription_expires_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating profile on subscription deletion:', error)
+      } else {
+        console.log(`Subscription canceled for user ${userId}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error handling subscription deletion:', error)
+  }
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('Invoice payment succeeded:', invoice.id)
-  // Handle successful invoice payment here
+  
+  try {
+    // Cast invoice to access subscription property
+    const invoiceWithSub = invoice as any
+    const subscriptionId = invoiceWithSub.subscription
+    
+    if (subscriptionId) {
+      // Get subscription details to renew user access
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const userId = subscription.metadata.user_id
+      
+      if (userId) {
+        const subscriptionType = subscription.metadata.subscription_type
+        const subscriptionData = getSubscriptionData(subscriptionType)
+        
+        const { error } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            subscription_tier: subscriptionData.tier,
+            subscription_status: 'active',
+            subscription_expires_at: subscriptionData.expiresAt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+
+        if (error) {
+          console.error('Error renewing subscription on invoice payment:', error)
+        } else {
+          console.log(`Subscription renewed for user ${userId}`)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling invoice payment success:', error)
+  }
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log('Invoice payment failed:', invoice.id)
-  // Handle failed invoice payment here
+  
+  try {
+    // Cast invoice to access subscription property
+    const invoiceWithSub = invoice as any
+    const subscriptionId = invoiceWithSub.subscription
+    
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const userId = subscription.metadata.user_id
+      
+      if (userId) {
+        // Mark subscription as past_due, but don't immediately downgrade
+        // Let the subscription status update handle the downgrade
+        const { error } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            subscription_status: 'past_due',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+
+        if (error) {
+          console.error('Error updating profile on invoice payment failure:', error)
+        } else {
+          console.log(`Marked subscription as past_due for user ${userId}`)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling invoice payment failure:', error)
+  }
 }
 
 function getSubscriptionData(subscriptionType: string) {
@@ -243,29 +397,53 @@ function getSubscriptionData(subscriptionType: string) {
   let planType: string
 
   switch (subscriptionType) {
+    // Pro Plans
+    case 'pro_daypass':
+      tier = 'pro'
+      planType = 'day'
+      expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours
+      break
+    case 'pro_weekly':
+      tier = 'pro'
+      planType = 'week'
+      expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      break
     case 'pro_monthly':
       tier = 'pro'
-      planType = 'monthly'
+      planType = 'month'
       expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
       break
     case 'pro_yearly':
       tier = 'pro'
-      planType = 'yearly'
+      planType = 'year'
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 365 days
+      break
+    case 'pro_lifetime':
+      tier = 'pro'
+      planType = 'one_time'
+      expiresAt = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 years (lifetime)
+      break
+    
+    // Elite Plans
+    case 'elite_weekly':
+      tier = 'elite'
+      planType = 'week'
+      expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
       break
     case 'elite_monthly':
       tier = 'elite'
-      planType = 'monthly'
+      planType = 'month'
       expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
       break
     case 'elite_yearly':
       tier = 'elite'
-      planType = 'yearly'
+      planType = 'year'
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 365 days
       break
+    
     default:
       tier = 'free'
-      planType = 'monthly'
+      planType = 'month'
       expiresAt = now
   }
 
