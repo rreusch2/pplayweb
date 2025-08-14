@@ -260,6 +260,9 @@ export default function AdminDashboard() {
         updateData.subscription_expires_at = null
         updateData.auto_renew_enabled = null
         updateData.revenuecat_customer_id = null
+        // Clear welcome bonus to prevent UI override
+        updateData.welcome_bonus_claimed = false
+        updateData.welcome_bonus_expires_at = null
       } else if (newTier === 'pro') {
         // Upgrade to Pro - set Pro-specific fields
         updateData.max_daily_picks = 20
@@ -270,6 +273,9 @@ export default function AdminDashboard() {
         updateData.subscription_started_at = now
         updateData.subscription_renewed_at = now
         updateData.revenuecat_customer_id = `admin_${userId}`
+        // Clear welcome bonus to prevent UI override
+        updateData.welcome_bonus_claimed = false
+        updateData.welcome_bonus_expires_at = null
       } else if (newTier === 'elite') {
         // Upgrade to Elite - set Elite-specific fields
         updateData.max_daily_picks = 30
@@ -280,6 +286,9 @@ export default function AdminDashboard() {
         updateData.subscription_started_at = now
         updateData.subscription_renewed_at = now
         updateData.revenuecat_customer_id = `admin_${userId}`
+        // Clear welcome bonus to prevent UI override
+        updateData.welcome_bonus_claimed = false
+        updateData.welcome_bonus_expires_at = null
       }
 
       console.log('🔧 Admin: Updating user subscription with comprehensive data:', updateData)
