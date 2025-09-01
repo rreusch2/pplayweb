@@ -13,7 +13,7 @@ import {
   ChevronRight,
   X
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+// Removed direct Supabase import - using backend API instead
 
 interface LockPrediction {
   id: string
@@ -46,27 +46,42 @@ export default function LockOfTheDay({ userId }: LockOfTheDayProps) {
   const fetchLockOfTheDay = async () => {
     setLoading(true)
     try {
-      // Get the prediction with the highest confidence for today (global predictions, not user-specific)
-      const today = new Date().toISOString().split('T')[0]
+      // Get backend URL from environment
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://zooming-rebirth-production-a305.up.railway.app'
       
-      const { data, error } = await supabase
-        .from('ai_predictions')
-        .select('*')
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
-        .order('confidence', { ascending: false })
-        .limit(1)
+      // Get the highest confidence pick for today via backend API
+      const response = await fetch(`${backendUrl}/api/ai/predictions/latest?limit=1&orderBy=confidence`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (error) {
-        console.error('Error fetching lock of the day:', error)
+      if (!response.ok) {
+        console.error('Backend error:', response.status)
         return
       }
 
-      if (data && data.length > 0) {
-        setLockPick(data[0])
+      const result = await response.json()
+
+      if (result.success && result.predictions && result.predictions.length > 0) {
+        // Transform the data to match our interface
+        const prediction = result.predictions[0]
+        setLockPick({
+          id: prediction.id,
+          match_teams: prediction.match_teams || prediction.match,
+          pick: prediction.pick,
+          odds: prediction.odds,
+          confidence: prediction.confidence,
+          sport: prediction.sport || 'MLB',
+          event_time: prediction.event_time || prediction.created_at,
+          reasoning: prediction.reasoning || prediction.analysis || '',
+          bet_type: prediction.bet_type,
+          key_factors: prediction.key_factors || prediction.metadata
+        })
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error fetching lock of the day:', error)
     } finally {
       setLoading(false)
     }

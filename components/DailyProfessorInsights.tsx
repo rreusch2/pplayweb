@@ -23,7 +23,6 @@ import {
   Lock
 } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { supabase } from '@/lib/supabase'
 
 interface DailyInsight {
   id: string
@@ -77,34 +76,40 @@ export default function DailyProfessorInsights({ sport = 'MLB', limit }: DailyPr
       setLoading(true)
       setError(null)
 
-      const today = new Date().toISOString().split('T')[0]
+      // Get backend URL from environment
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://zooming-rebirth-production-a305.up.railway.app'
       
-      const { data, error: queryError } = await supabase
-        .from('daily_professor_insights')
-        .select('*')
-        .eq('date_generated', today)
-        .order('insight_order', { ascending: true })
-        .limit(insightsLimit)
+      const response = await fetch(`${backendUrl}/api/insights/daily-professor-lock`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (queryError) {
-        console.error('Error fetching insights:', queryError)
-        setError('Failed to load insights')
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error || 'Failed to load insights')
         return
       }
 
-      if (!data || data.length === 0) {
+      if (!result.insights || result.insights.length === 0) {
         setError('No insights available today')
         return
       }
 
       // Extract daily message and insights
-      const { message, remainingInsights } = extractDailyMessage(data)
+      const { message, remainingInsights } = extractDailyMessage(result.insights)
       setDailyMessage(message)
       setInsights(remainingInsights.slice(0, insightsLimit))
-      setLastGenerated(new Date(data[0]?.created_at))
+      setLastGenerated(new Date(result.insights[0]?.created_at))
       
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error fetching insights:', error)
       setError('Failed to load insights')
     } finally {
       setLoading(false)
