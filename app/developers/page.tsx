@@ -26,7 +26,7 @@ export default function DevelopersPage() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup')
   const [mounted, setMounted] = useState(false)
   const [copiedCode, setCopiedCode] = useState('')
-  const [activeTab, setActiveTab] = useState('javascript')
+  const [activeTab, setActiveTab] = useState<'javascript' | 'python' | 'curl'>('javascript')
   const { user } = useAuth()
   const router = useRouter()
 
@@ -179,7 +179,7 @@ export default function DevelopersPage() {
             {/* Code Tabs */}
             <div className="border-b border-white/10 bg-black/40">
               <div className="flex space-x-1 p-2">
-                {['javascript', 'python', 'curl'].map((tab) => (
+                {(['javascript', 'python', 'curl'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -449,7 +449,7 @@ export default function DevelopersPage() {
 }
 
 // Code Examples
-const codeExamples = {
+const codeExamples: Record<'javascript' | 'python' | 'curl', string> = {
   javascript: `// Install: npm install axios
 import axios from 'axios';
 
