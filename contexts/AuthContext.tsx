@@ -17,7 +17,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   clearJustSignedUp: () => void
-  signUp: (email: string, password: string, username: string) => Promise<{ user: User | null }>
+  signUp: (email: string, password: string, username: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
@@ -262,12 +262,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
            toast.success('Account created successfully!')
         }
-        
-        return { user: data.user }
       } else {
         // Handle cases where sign up doesn't return a user (e.g. email verification required)
         toast.success('Confirmation email sent! Please check your inbox.')
-        return { user: null }
       }
     } catch (error: any) {
       console.error('Sign up error:', error)
