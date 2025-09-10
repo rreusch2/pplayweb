@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -67,39 +68,41 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <div className="min-h-full">
-              <LayoutWrapper>
-                {children}
-              </LayoutWrapper>
-            </div>
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
+        <AnalyticsProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <div className="min-h-full">
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </div>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
                   style: {
-                    background: '#10B981',
-                    color: '#ffffff',
+                    background: '#363636',
+                    color: '#fff',
                   },
-                },
-                error: {
-                  duration: 5000,
-                  style: {
-                    background: '#EF4444',
-                    color: '#ffffff',
+                  success: {
+                    duration: 3000,
+                    style: {
+                      background: '#10B981',
+                      color: '#ffffff',
+                    },
                   },
-                },
-              }}
-            />
-          </SubscriptionProvider>
-        </AuthProvider>
+                  error: {
+                    duration: 5000,
+                    style: {
+                      background: '#EF4444',
+                      color: '#ffffff',
+                    },
+                  },
+                }}
+              />
+            </SubscriptionProvider>
+          </AuthProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   )

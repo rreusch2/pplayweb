@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/AuthModal'
+import { trackSignupStart, trackAppStoreClick, trackCTAClick } from '@/lib/analytics'
 import Image from 'next/image'
 
 export default function LandingPage() {
@@ -39,6 +40,17 @@ export default function LandingPage() {
   const openAuthModal = (mode: 'login' | 'signup') => {
     setAuthMode(mode)
     setAuthModalOpen(true)
+    
+    // Track signup intent
+    if (mode === 'signup') {
+      trackSignupStart()
+      trackCTAClick('Signup Button')
+    }
+  }
+
+  const handleAppStoreClick = () => {
+    trackAppStoreClick()
+    trackCTAClick('App Store Download')
   }
 
   return (
@@ -124,6 +136,7 @@ export default function LandingPage() {
                 href="https://apps.apple.com/us/app/predictive-play/id6748275790"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleAppStoreClick}
                 className="hover:opacity-80 transition-opacity"
                 aria-label="Download on the App Store"
               >
@@ -290,6 +303,7 @@ export default function LandingPage() {
                 href="https://apps.apple.com/us/app/predictive-play/id6748275790"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleAppStoreClick}
                 className="hover:opacity-80 transition-opacity"
                 aria-label="Download on the App Store"
               >
