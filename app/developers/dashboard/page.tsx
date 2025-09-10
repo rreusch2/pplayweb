@@ -20,12 +20,39 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
+interface ApiKey {
+  id: string
+  user_id: string
+  key_hash: string
+  key_prefix: string
+  name: string
+  is_active: boolean
+  current_month_usage: number
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+}
+
+interface DailyUsage {
+  date: string
+  calls: number
+  label: string
+}
+
+interface UsageData {
+  currentUsage: number
+  monthlyLimit: number
+  subscriptionTier: string
+  dailyUsage: DailyUsage[]
+  totalCalls: number
+}
+
 export default function DeveloperDashboard() {
-  const [apiKeys, setApiKeys] = useState([])
-  const [usage, setUsage] = useState(null)
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+  const [usage, setUsage] = useState<UsageData | null>(null)
   const [showNewKeyModal, setShowNewKeyModal] = useState(false)
   const [newKeyName, setNewKeyName] = useState('')
-  const [revealedKeys, setRevealedKeys] = useState(new Set())
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
   const [copiedKey, setCopiedKey] = useState('')
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
@@ -42,6 +69,8 @@ export default function DeveloperDashboard() {
   }, [user])
 
   const fetchAPIKeys = async () => {
+    if (!user?.id) return
+    
     try {
       const { data, error } = await supabase
         .from('api_keys')
@@ -57,6 +86,8 @@ export default function DeveloperDashboard() {
   }
 
   const fetchUsageData = async () => {
+    if (!user?.id) return
+    
     try {
       const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
       
@@ -70,7 +101,7 @@ export default function DeveloperDashboard() {
       
       // Get user subscription info
       const { data: userData, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('api_subscription_tier, api_monthly_limit, api_current_usage')
         .eq('id', user.id)
         .single()
@@ -92,14 +123,14 @@ export default function DeveloperDashboard() {
     }
   }
 
-  const processDailyUsage = (usageData) => {
+  const processDailyUsage = (usageData: any[]) => {
     const last7Days = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       
-      const dayUsage = usageData.filter(call => 
+      const dayUsage = usageData.filter((call: any) => 
         call.timestamp?.startsWith(dateStr)
       ).length
       
@@ -123,6 +154,8 @@ export default function DeveloperDashboard() {
   }
 
   const createAPIKey = async () => {
+    if (!user?.id) return
+    
     try {
       const newKey = generateAPIKey()
       const keyPrefix = newKey.substring(0, 12) + '...'
@@ -151,7 +184,7 @@ export default function DeveloperDashboard() {
     }
   }
 
-  const deleteAPIKey = async (keyId) => {
+  const deleteAPIKey = async (keyId: string) => {
     if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return
     
     try {
@@ -167,7 +200,7 @@ export default function DeveloperDashboard() {
     }
   }
 
-  const toggleKeyVisibility = (keyId) => {
+  const toggleKeyVisibility = (keyId: string) => {
     const newRevealed = new Set(revealedKeys)
     if (newRevealed.has(keyId)) {
       newRevealed.delete(keyId)
@@ -177,7 +210,7 @@ export default function DeveloperDashboard() {
     setRevealedKeys(newRevealed)
   }
 
-  const copyToClipboard = (text, keyId) => {
+  const copyToClipboard = (text: string, keyId: string) => {
     navigator.clipboard.writeText(text)
     setCopiedKey(keyId)
     setTimeout(() => setCopiedKey(''), 2000)
@@ -188,7 +221,7 @@ export default function DeveloperDashboard() {
     return Math.min((usage.currentUsage / usage.monthlyLimit) * 100, 100)
   }
 
-  const getSubscriptionColor = (tier) => {
+  const getSubscriptionColor = (tier: string) => {
     switch (tier) {
       case 'enterprise': return 'text-purple-400'
       case 'startup': return 'text-blue-400'
@@ -221,8 +254,8 @@ export default function DeveloperDashboard() {
               <span className="text-gray-300">
                 {user?.email}
               </span>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium bg-white/10 ${getSubscriptionColor(usage?.subscriptionTier)}`}>
-                {usage?.subscriptionTier?.charAt(0).toUpperCase() + usage?.subscriptionTier?.slice(1) || 'Free'}
+              <div className={`px-3 py-1 rounded-full text-sm font-medium bg-white/10 ${getSubscriptionColor(usage?.subscriptionTier || 'free')}`}>
+                {usage?.subscriptionTier ? usage.subscriptionTier.charAt(0).toUpperCase() + usage.subscriptionTier.slice(1) : 'Free'}
               </div>
             </div>
           </div>
@@ -275,8 +308,8 @@ export default function DeveloperDashboard() {
               <h3 className="text-lg font-semibold text-white">Subscription</h3>
               <CreditCard className="w-5 h-5 text-purple-400" />
             </div>
-            <div className={`text-2xl font-bold mb-2 ${getSubscriptionColor(usage?.subscriptionTier)}`}>
-              {usage?.subscriptionTier?.charAt(0).toUpperCase() + usage?.subscriptionTier?.slice(1) || 'Free'}
+            <div className={`text-2xl font-bold mb-2 ${getSubscriptionColor(usage?.subscriptionTier || 'free')}`}>
+              {usage?.subscriptionTier ? usage.subscriptionTier.charAt(0).toUpperCase() + usage.subscriptionTier.slice(1) : 'Free'}
             </div>
             <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
               Upgrade Plan
@@ -288,13 +321,13 @@ export default function DeveloperDashboard() {
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
           <h3 className="text-lg font-semibold text-white mb-6">7-Day Usage</h3>
           <div className="grid grid-cols-7 gap-2">
-            {usage?.dailyUsage?.map((day, index) => (
+            {usage?.dailyUsage?.map((day: DailyUsage, index: number) => (
               <div key={index} className="text-center">
                 <div className="bg-gray-700 rounded-lg p-4 mb-2 relative">
                   <div 
                     className="bg-blue-500 rounded-lg absolute bottom-0 left-0 right-0 transition-all duration-300"
                     style={{ 
-                      height: `${Math.max((day.calls / (usage.monthlyLimit / 30)) * 100, 2)}%` 
+                      height: `${Math.max((day.calls / ((usage?.monthlyLimit || 1000) / 30)) * 100, 2)}%` 
                     }}
                   />
                   <div className="relative text-white text-sm font-medium">
