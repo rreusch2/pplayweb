@@ -18,7 +18,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface ApiKey {
   id: string
@@ -57,7 +57,10 @@ export default function DeveloperDashboard() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     if (!user) {
