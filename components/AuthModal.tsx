@@ -3,7 +3,6 @@ import { useState, Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { X, Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { trackSignupComplete } from '@/lib/analytics'
 import { toast } from 'react-hot-toast'
 
 interface AuthModalProps {
@@ -114,12 +113,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         await signIn(email, password)
       } else {
         // For signup, handle differently
-        const result = await signUp(email, password, username)
-        
-        // Track successful signup completion
-        if (result?.user?.id) {
-          trackSignupComplete(result.user.id)
-        }
+        await signUp(email, password, username)
         
         // Delay closing modal to ensure localStorage flag is set
         // This gives the auth context time to set the needsOnboarding flag
