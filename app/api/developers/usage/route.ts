@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            const cookieStore = await cookies()
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -16,7 +27,7 @@ export async function GET(request: Request) {
 
     // Get user subscription info
     const { data: userData, error: userError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('api_subscription_tier, api_monthly_limit, api_current_usage')
       .eq('id', user.id)
       .single()

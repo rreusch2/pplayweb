@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-07-30.basil',
 })
 
 const supabase = createClient(
@@ -77,7 +77,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 
   await supabase
-    .from('users')
+    .from('profiles')
     .update({
       api_subscription_tier: subscriptionTier,
       api_subscription_id: session.subscription,
@@ -106,7 +106,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const finalTier = isActive ? subscriptionTier : 'free'
 
   await supabase
-    .from('users')
+    .from('profiles')
     .update({
       api_subscription_tier: finalTier,
       api_subscription_id: isActive ? subscription.id : null,
@@ -125,7 +125,7 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
 
   // Downgrade to free tier
   await supabase
-    .from('users')
+    .from('profiles')
     .update({
       api_subscription_tier: 'free',
       api_subscription_id: null,
@@ -137,7 +137,9 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = typeof (invoice as any).subscription === 'string' 
+    ? (invoice as any).subscription 
+    : (invoice as any).subscription?.id
   if (!subscriptionId) return
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
@@ -148,7 +150,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
   // Reset monthly usage on successful payment (new billing cycle)
   await supabase
-    .from('users')
+    .from('profiles')
     .update({
       api_current_usage: 0
     })
@@ -166,7 +168,9 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = typeof (invoice as any).subscription === 'string' 
+    ? (invoice as any).subscription 
+    : (invoice as any).subscription?.id
   if (!subscriptionId) return
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)

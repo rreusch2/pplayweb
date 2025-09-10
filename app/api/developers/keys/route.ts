@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            const cookieStore = await cookies()
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -32,7 +43,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { name } = await request.json()
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            const cookieStore = await cookies()
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -90,13 +112,24 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const keyId = searchParams.get('keyId')
+    const keyId = searchParams.get('id')
     
     if (!keyId) {
-      return NextResponse.json({ error: 'API key ID required' }, { status: 400 })
+      return NextResponse.json({ error: 'Key ID is required' }, { status: 400 })
     }
-
-    const supabase = createRouteHandlerClient({ cookies })
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            const cookieStore = await cookies()
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
