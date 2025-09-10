@@ -15,12 +15,19 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 
+interface TestResult {
+  error?: string
+  data?: any
+  success?: boolean
+  message?: string
+}
+
 export default function APIDocs() {
   const [activeSection, setActiveSection] = useState('getting-started')
-  const [activeTab, setActiveTab] = useState('javascript')
+  const [activeTab, setActiveTab] = useState<'javascript' | 'python' | 'curl'>('javascript')
   const [copiedCode, setCopiedCode] = useState('')
   const [testQuery, setTestQuery] = useState('LeBron James career points')
-  const [testResult, setTestResult] = useState(null)
+  const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [testLoading, setTestLoading] = useState(false)
 
   const copyCode = (code: string, id: string) => {
@@ -259,7 +266,7 @@ export default function APIDocs() {
                     {/* Language Tabs */}
                     <div className="border-b border-white/10 bg-black/40">
                       <div className="flex space-x-1 p-2">
-                        {Object.keys(codeExamples).map((lang) => (
+                        {(Object.keys(codeExamples) as Array<keyof typeof codeExamples>).map((lang) => (
                           <button
                             key={lang}
                             onClick={() => setActiveTab(lang)}
