@@ -212,6 +212,72 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
   }
 }
 
+// Handle successful completion of Stripe Checkout
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  try {
+    console.log('Checkout session completed:', session.id)
+    const userId = (session.client_reference_id as string) || (session.metadata?.userId as string) || ''
+
+    if (!userId) return
+
+    // One-time payment flow (daypass/lifetime) -> no subscription
+    if (session.mode === 'payment') {
+      const piId = session.payment_intent as string | null
+      if (!piId) return
+      const paymentIntent = await stripe.paymentIntents.retrieve(piId)
+      const subscriptionType = (paymentIntent.metadata?.subscription_type as string) || ''
+      if (!subscriptionType) return
+
+      const subData = getSubscriptionData(subscriptionType)
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: subData.tier,
+          subscription_status: 'active',
+          subscription_plan_type: subData.planType,
+          subscription_started_at: new Date().toISOString(),
+          subscription_expires_at: subData.expiresAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating profile after checkout (payment):', error)
+      }
+      return
+    }
+
+    // Subscription flow -> use Stripe subscription current period end
+    if (session.mode === 'subscription' && session.subscription) {
+      const subId = session.subscription as string
+      const subscriptionResp = await stripe.subscriptions.retrieve(subId)
+      const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
+      const subscriptionType = (subscription.metadata?.subscription_type as string) || ''
+      const currentPeriodEnd = subscription.current_period_end
+      const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
+      const tier = subscriptionType.startsWith('elite') ? 'elite' : 'pro'
+
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: tier,
+          subscription_status: subscription.status,
+          subscription_plan_type: interval,
+          subscription_started_at: new Date().toISOString(),
+          subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error updating profile after checkout (subscription):', error)
+      }
+    }
+  } catch (error) {
+    console.error('Error in handleCheckoutSessionCompleted:', error)
+  }
+}
+
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id)
   
