@@ -42,7 +42,7 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const { subscriptionTier } = useSubscription();
-  const [selectedBook, setSelectedBook] = useState<BookmakerOdds>(game.bookmakers[0]);
+  const [selectedBook, setSelectedBook] = useState<BookmakerOdds | null>(game.bookmakers?.[0] ?? null);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -50,11 +50,18 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   };
 
   const getOdds = (marketKey: 'h2h' | 'spreads' | 'totals') => {
-    const market = selectedBook?.markets.find(m => m.key === marketKey);
+    const market = selectedBook?.markets?.find(m => m.key === marketKey);
     if (!market) return { home: null, away: null };
-    
-    const homeOutcome = market.outcomes.find(o => o.name === game.home_team);
-    const awayOutcome = market.outcomes.find(o => o.name === game.away_team);
+
+    // For totals, outcomes are typically 'Over' / 'Under'
+    if (marketKey === 'totals') {
+      const over = market.outcomes.find(o => o.name?.toLowerCase() === 'over') || null;
+      const under = market.outcomes.find(o => o.name?.toLowerCase() === 'under') || null;
+      return { home: over, away: under };
+    }
+
+    const homeOutcome = market.outcomes.find(o => o.name === game.home_team) || null;
+    const awayOutcome = market.outcomes.find(o => o.name === game.away_team) || null;
 
     return { home: homeOutcome, away: awayOutcome };
   };
@@ -73,7 +80,9 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
               <OddsDisplay homeOutcome={moneyline.home} awayOutcome={moneyline.away} marketName="Moneyline" />
               <OddsDisplay homeOutcome={total.home} awayOutcome={total.away} marketName="Total" />
             </div>
-            <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
+            {game.bookmakers.length > 0 && (
+              <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
+            )}
           </>
         );
       case 'pro':
@@ -84,7 +93,9 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
                     <OddsDisplay homeOutcome={moneyline.home} awayOutcome={moneyline.away} marketName="Moneyline" />
                     <OddsDisplay homeOutcome={total.home} awayOutcome={total.away} marketName="Total" />
                 </div>
-                <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
+                {game.bookmakers.length > 0 && (
+                  <SportsbookSelector bookmakers={game.bookmakers} selectedBook={selectedBook} onSelectBook={(book) => setSelectedBook(book as BookmakerOdds)} />
+                )}
             </>
         );
       case 'free':

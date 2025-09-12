@@ -77,15 +77,37 @@ export default function GamesPage() {
         
         console.log(`Filtered games: ${upcomingGamesList.length} upcoming games (${todayGames.length} today, ${tomorrowGames.length} tomorrow) from ${allGames.length} total`);
         
-        const formattedGames = upcomingGamesList.map(game => ({
-          id: game.id,
-          sport_key: game.sport_key,
-          sport_title: game.sport,
-          commence_time: game.start_time,
-          home_team: game.home_team,
-          away_team: game.away_team,
-          bookmakers: game.metadata?.full_data?.bookmakers || [],
-        }));
+        const formattedGames = upcomingGamesList.map(game => {
+          const rawBooks = (game as any)?.metadata?.full_data?.bookmakers
+          const safeBooks = Array.isArray(rawBooks)
+            ? rawBooks
+                .filter((b: any) => b && typeof b.key === 'string')
+                .map((b: any) => ({
+                  key: b.key,
+                  title: b.title || b.key,
+                  last_update: b.last_update || b.lastUpdate || '',
+                  markets: Array.isArray(b.markets)
+                    ? b.markets
+                        .filter((m: any) => m && typeof m.key === 'string')
+                        .map((m: any) => ({
+                          key: m.key,
+                          last_update: m.last_update || m.lastUpdate || '',
+                          outcomes: Array.isArray(m.outcomes) ? m.outcomes : []
+                        }))
+                    : []
+                }))
+            : []
+
+          return {
+            id: game.id,
+            sport_key: (game as any).sport_key,
+            sport_title: (game as any).sport,
+            commence_time: (game as any).start_time,
+            home_team: game.home_team,
+            away_team: game.away_team,
+            bookmakers: safeBooks,
+          }
+        });
         setGames(formattedGames);
       }
       setLoading(false);
