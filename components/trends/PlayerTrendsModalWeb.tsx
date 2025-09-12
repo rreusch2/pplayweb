@@ -45,6 +45,7 @@ export default function PlayerTrendsModalWeb({ open, onClose, player }: PlayerTr
   const [selectedProp, setSelectedProp] = useState<string>('')
   const [gameStats, setGameStats] = useState<GameStat[]>([])
   const [currentLine, setCurrentLine] = useState<number | null>(null)
+  const [recentLines, setRecentLines] = useState<Array<any>>([])
 
   useEffect(() => {
     if (!open || !player) return
@@ -62,6 +63,23 @@ export default function PlayerTrendsModalWeb({ open, onClose, player }: PlayerTr
       }
     }
     fetchPropTypes()
+  }, [open, player?.id])
+
+  // Fetch latest sportsbook lines for this player (distinct by prop type)
+  useEffect(() => {
+    if (!open || !player) return
+    const fetchRecentLines = async () => {
+      try {
+        const { data } = await apiClient.get(`/api/players/${player.id}/prop-lines`, {
+          params: { limit: 4, upcomingOnly: true }
+        })
+        setRecentLines(Array.isArray(data?.propLines) ? data.propLines : [])
+      } catch (e) {
+        console.error('Failed to load recent prop lines', e)
+        setRecentLines([])
+      }
+    }
+    fetchRecentLines()
   }, [open, player?.id])
 
   useEffect(() => {
@@ -84,6 +102,23 @@ export default function PlayerTrendsModalWeb({ open, onClose, player }: PlayerTr
     }
     fetchStats()
   }, [open, player?.id, selectedProp])
+
+  // Map backend prop_key to UI prop keys
+  const propKeyToUiKey = (propKey: string): string => {
+    const map: Record<string, string> = {
+      batter_hits: 'hits',
+      batter_home_runs: 'home_runs',
+      batter_rbis: 'rbis',
+      batter_runs_scored: 'runs_scored',
+      batter_total_bases: 'total_bases',
+      player_points: 'points',
+      player_rebounds: 'rebounds',
+      player_assists: 'assists',
+      three_pointers: 'three_pointers',
+      pitcher_strikeouts: 'strikeouts',
+    }
+    return map[propKey] || propKey
+  }
 
   const formattedData = useMemo(() => {
     return gameStats.map(g => {
@@ -207,6 +242,39 @@ export default function PlayerTrendsModalWeb({ open, onClose, player }: PlayerTr
             </div>
           )}
         </div>
+
+        {/* Latest sportsbook lines */}
+        {recentLines.length > 0 && (
+          <div className="mt-6">
+            <div className="mb-2 text-sm font-semibold text-white">Latest Sportsbook Lines</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {recentLines.map((l: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedProp(propKeyToUiKey(String(l.prop_key || '')))}
+                  className="group rounded-lg border border-white/10 bg-white/5 p-3 text-left transition hover:border-amber-400/40 hover:bg-white/10"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-white font-medium">{l.prop_type || l.prop_key}</div>
+                    <div className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">{l.line}</div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-gray-300">
+                    <div>O {l.over_odds ?? '—'} / U {l.under_odds ?? '—'}</div>
+                    <div className="text-gray-400">{l.bookmaker_name || l.bookmaker_key || ''}</div>
+                  </div>
+                  {l.matchup && (
+                    <div className="mt-2 text-xs text-gray-400">{l.matchup}</div>
+                  )}
+                  {l.event_start_time && (
+                    <div className="text-[11px] text-gray-500">
+                      {(() => { try { return new Date(l.event_start_time).toLocaleString() } catch { return '' } })()}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Game by game */}
         {gameStats.length > 0 && (
