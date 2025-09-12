@@ -4,9 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 
 // Initialize Stripe with secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil',
-})
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 // Create Supabase client with service role key for admin operations
 const supabaseAdmin = createClient(
@@ -63,6 +61,9 @@ export async function POST(request: NextRequest) {
 
     // Handle the event
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
+        break
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
         break
@@ -215,24 +216,24 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id)
   
   try {
-    const customerId = subscription.customer as string
     const userId = subscription.metadata.user_id
     
     if (userId) {
       // Get subscription plan details from metadata or price ID
-      const subscriptionType = subscription.metadata.subscription_type
-      const subscriptionData = getSubscriptionData(subscriptionType)
-      
+      const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
+      const subscriptionType = subscriptionObj.metadata.subscription_type
+      const currentPeriodEnd = subscriptionObj.current_period_end
+      const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
+      const tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
+
       const { error } = await supabaseAdmin
         .from('profiles')
         .update({
-          subscription_tier: subscriptionData.tier,
+          subscription_tier: tier,
           subscription_status: 'active',
-          subscription_plan_type: subscriptionData.planType,
+          subscription_plan_type: interval,
           subscription_started_at: new Date().toISOString(),
-          subscription_expires_at: subscriptionData.expiresAt,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscription.id,
+          subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)
@@ -264,12 +265,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
         updateData.subscription_tier = 'free'
         updateData.subscription_expires_at = new Date().toISOString()
-      } else if (subscription.status === 'active') {
-        // Renew subscription
-        const subscriptionType = subscription.metadata.subscription_type
-        const subscriptionData = getSubscriptionData(subscriptionType)
-        updateData.subscription_tier = subscriptionData.tier
-        updateData.subscription_expires_at = subscriptionData.expiresAt
+      } else if (subscription.status === 'active' || subscription.status === 'trialing') {
+        // Renew/extend subscription from Stripe period
+        const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
+        const subscriptionType = subscriptionObj.metadata.subscription_type
+        const currentPeriodEnd = subscriptionObj.current_period_end
+        const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
+        updateData.subscription_tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
+        updateData.subscription_plan_type = interval
+        updateData.subscription_expires_at = new Date(currentPeriodEnd * 1000).toISOString()
       }
 
       const { error } = await supabaseAdmin
@@ -326,19 +330,21 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     
     if (subscriptionId) {
       // Get subscription details to renew user access
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const subscriptionResp = await stripe.subscriptions.retrieve(subscriptionId)
+      const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
       const userId = subscription.metadata.user_id
       
       if (userId) {
         const subscriptionType = subscription.metadata.subscription_type
-        const subscriptionData = getSubscriptionData(subscriptionType)
-        
+        const currentPeriodEnd = subscription.current_period_end
+        const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
         const { error } = await supabaseAdmin
           .from('profiles')
           .update({
-            subscription_tier: subscriptionData.tier,
+            subscription_tier: subscriptionType?.startsWith('elite') ? 'elite' : 'pro',
             subscription_status: 'active',
-            subscription_expires_at: subscriptionData.expiresAt,
+            subscription_plan_type: interval,
+            subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('id', userId)

@@ -54,17 +54,36 @@ export default function TrendsSearch() {
         const { data } = await apiClient.get('/api/players/search', {
           params: { query: q, sport, limit: 20 },
         })
-        const list = (data?.players || []) as WebPlayer[]
+        const list = (data?.players || []) as any[]
+
+        // Deduplicate by name+sport; prefer more recent games, headshot, longer team, has position
+        const score = (p: any) =>
+          (p.recent_games_count || 0) * 1000 +
+          (p.has_headshot ? 500 : 0) +
+          ((p.team && p.team.length > 3) ? 100 : 0) +
+          (p.position ? 50 : 0)
+
+        const dedup: Record<string, any> = {}
+        for (const p of list) {
+          const key = `${(p.name || '').toLowerCase()}|${p.sport || ''}`
+          if (!dedup[key] || score(p) > score(dedup[key])) dedup[key] = p
+        }
+        const deduped = Object.values(dedup) as WebPlayer[]
+
         // sort prefix matches first
         const ql = q.toLowerCase()
-        list.sort((a, b) => {
+        deduped.sort((a: any, b: any) => {
           const aStarts = a.name?.toLowerCase().startsWith(ql)
           const bStarts = b.name?.toLowerCase().startsWith(ql)
           if (aStarts && !bStarts) return -1
           if (!aStarts && bStarts) return 1
+          // Secondary: higher score first to show better record
+          const sa = score(a)
+          const sb = score(b)
+          if (sa !== sb) return sb - sa
           return a.name.localeCompare(b.name)
         })
-        setPlayers(list)
+        setPlayers(deduped)
       } else {
         const { data } = await apiClient.get('/api/teams/search', {
           params: { query: q, sport, limit: 20 },
