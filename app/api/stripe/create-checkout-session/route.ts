@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
     const subscriptionType = resolveSubscriptionType(priceId)
     const isOneTimeProduct = subscriptionType === 'pro_lifetime' || subscriptionType === 'pro_daypass'
     
-    // Create Stripe checkout session with appropriate mode
-    const session = await stripe.checkout.sessions.create({
+    // Build params conditionally to avoid passing payment_intent_data in subscription mode
+    const baseParams: any = {
       mode: isOneTimeProduct ? 'payment' : 'subscription',
       payment_method_types: ['card'],
       line_items: [
@@ -60,26 +60,29 @@ export async function POST(req: NextRequest) {
         subscription_type: subscriptionType || 'unknown',
         price_id: priceId,
       },
-      // Ensure metadata flows into the resulting PaymentIntent and Subscription
-      payment_intent_data: {
+      customer_email: undefined, // You can add user email here if available
+      allow_promotion_codes: true,
+    }
+
+    if (isOneTimeProduct) {
+      baseParams.payment_intent_data = {
         metadata: {
           user_id: userId,
           subscription_type: subscriptionType || 'unknown',
           price_id: priceId,
         },
-      },
-      subscription_data: isOneTimeProduct
-        ? undefined
-        : {
-            metadata: {
-              user_id: userId,
-              subscription_type: subscriptionType || 'unknown',
-              price_id: priceId,
-            },
-          },
-      customer_email: undefined, // You can add user email here if available
-      allow_promotion_codes: true,
-    })
+      }
+    } else {
+      baseParams.subscription_data = {
+        metadata: {
+          user_id: userId,
+          subscription_type: subscriptionType || 'unknown',
+          price_id: priceId,
+        },
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(baseParams)
 
     return NextResponse.json({ sessionId: session.id })
   } catch (error: any) {
