@@ -142,17 +142,24 @@ export class AIService {
   // New method: Fetch full predictions from ai_predictions table with tier-based limits
   async getFullPredictions(userId: string, userTier: string): Promise<AIPrediction[]> {
     try {
-      console.log('🎯 Fetching full predictions from ai_predictions table...', { userId, userTier })
+      console.log('🎯 Fetching full predictions using daily-picks-combined (same as iOS)...', { userId, userTier })
+      // Use the same endpoint as iOS app since predictions are global, not user-specific
       const params = new URLSearchParams()
       if (userId) params.append('userId', userId)
       if (userTier) params.append('userTier', userTier)
       
-      const response = await apiClient.get(`/api/ai/predictions?${params.toString()}`)
-      const predictions = response.data || []
+      const response = await apiClient.get(`/api/ai/daily-picks-combined?${params.toString()}`)
+      const data = response.data || {}
       
-      console.log('📊 Received full predictions:', predictions.length)
+      // Combine team picks and player props picks
+      const allPicks = [
+        ...(data.team_picks || []),
+        ...(data.player_props_picks || [])
+      ]
       
-      return predictions.map((prediction: any) => ({
+      console.log('📊 Received full predictions:', allPicks.length)
+      
+      return allPicks.map((prediction: any) => ({
         id: prediction.id,
         match: prediction.match_teams || prediction.match || '',
         pick: prediction.pick || '',
@@ -177,33 +184,23 @@ export class AIService {
   // New method: Get Lock of the Day (highest confidence pick)
   async getLockOfTheDay(userId: string): Promise<AIPrediction | null> {
     try {
-      console.log('🔒 Fetching Lock of the Day (highest confidence pick)...', { userId })
-      const response = await apiClient.get(`/api/ai/lock-of-the-day?userId=${userId}`)
-      const lockPick = response.data
+      console.log('🔒 Fetching Lock of the Day from daily picks...', { userId })
+      // Get all today's predictions and find highest confidence
+      const allPredictions = await this.getTodaysPredictions(userId, 'pro') // Get full set
       
-      if (!lockPick) {
-        console.log('No lock of the day found')
+      if (!allPredictions || allPredictions.length === 0) {
+        console.log('No predictions available for Lock of the Day')
         return null
       }
       
+      // Find highest confidence pick
+      const lockPick = allPredictions.reduce((highest, current) => {
+        return (current.confidence > highest.confidence) ? current : highest
+      })
+      
       console.log('🔒 Lock of the Day found:', lockPick.confidence + '% confidence')
       
-      return {
-        id: lockPick.id,
-        match: lockPick.match_teams || lockPick.match || '',
-        pick: lockPick.pick || '',
-        odds: lockPick.odds || '',
-        confidence: lockPick.confidence || 0,
-        sport: lockPick.sport || 'MLB',
-        eventTime: lockPick.event_time || lockPick.created_at,
-        reasoning: lockPick.reasoning || '',
-        value_percentage: lockPick.value_percentage,
-        roi_estimate: lockPick.roi_estimate,
-        bet_type: lockPick.bet_type || '',
-        status: lockPick.status || 'pending',
-        game_id: lockPick.game_id || '',
-        metadata: lockPick.metadata || {}
-      }
+      return lockPick
     } catch (error) {
       console.error('Error fetching Lock of the Day:', error)
       return null

@@ -91,12 +91,12 @@ export function usePredictions({
   const fetchFullPredictions = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     try {
-      if (!userId) {
-        console.warn('No userId provided for full predictions')
-        return []
-      }
+      // Use the same logic as getTodaysPredictions but with full tier limits
+      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
+      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
       
-      const allPredictions = await aiService.getFullPredictions(userId, subscriptionTier)
+      // Get all predictions using the working daily-picks-combined endpoint
+      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
       
       setState(prev => ({ 
         ...prev, 
@@ -113,7 +113,7 @@ export function usePredictions({
       }))
       return []
     }
-  }, [userId, subscriptionTier])
+  }, [userId, subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
 
   // Fetch team picks (ML, spreads, totals)
   const fetchTeamPicks = useCallback(async () => {
@@ -122,8 +122,10 @@ export function usePredictions({
       const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
       const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
       const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
-      // Filter for team bets (not player props)
-      const allTeamPicks = allPredictions.filter(p => 
+      
+      // Since daily-picks-combined already returns tier-filtered picks, 
+      // just filter by bet type locally
+      const teamPicks = allPredictions.filter(p => 
         p.bet_type && !p.bet_type.toLowerCase().includes('prop') &&
         (p.bet_type.includes('ML') || 
          p.bet_type.includes('spread') || 
@@ -132,11 +134,6 @@ export function usePredictions({
          p.bet_type.includes('over') ||
          p.bet_type.includes('under'))
       )
-      
-      const capabilities = getTierCapabilities(subscriptionTier)
-      const teamPicksLimit = isWelcomeBonus ? Math.ceil(5 / 2) : capabilities.teamPicks
-      
-      const teamPicks = allTeamPicks.slice(0, teamPicksLimit)
       
       setState(prev => ({ 
         ...prev, 
@@ -153,7 +150,7 @@ export function usePredictions({
       }))
       return []
     }
-  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
+  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt, userId])
 
   // Fetch player props picks
   const fetchPlayerPropsPicks = useCallback(async () => {
@@ -162,8 +159,10 @@ export function usePredictions({
       const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
       const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
       const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
-      // Filter for player props
-      const allPropsPicks = allPredictions.filter(p => 
+      
+      // Since daily-picks-combined already returns tier-filtered picks, 
+      // just filter by bet type locally
+      const propsPicks = allPredictions.filter(p => 
         p.bet_type && (
           p.bet_type.toLowerCase().includes('prop') ||
           p.bet_type.toLowerCase().includes('hit') ||
@@ -174,11 +173,6 @@ export function usePredictions({
           p.bet_type.toLowerCase().includes('rebound')
         )
       )
-      
-      const capabilities = getTierCapabilities(subscriptionTier)
-      const propsPicksLimit = isWelcomeBonus ? Math.floor(5 / 2) : capabilities.playerPropPicks
-      
-      const propsPicks = allPropsPicks.slice(0, propsPicksLimit)
       
       setState(prev => ({ 
         ...prev, 
@@ -195,7 +189,7 @@ export function usePredictions({
       }))
       return []
     }
-  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
+  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt, userId])
 
   // Fetch predictions by sport
   const fetchPredictionsBySport = useCallback(async (sport: string) => {
@@ -222,12 +216,7 @@ export function usePredictions({
   // NEW: Fetch Lock of the Day (highest confidence pick)
   const fetchLockOfTheDay = useCallback(async () => {
     try {
-      if (!userId) {
-        console.warn('No userId provided for Lock of the Day')
-        return null
-      }
-      
-      const lockPick = await aiService.getLockOfTheDay(userId)
+      const lockPick = await aiService.getLockOfTheDay(userId || 'default')
       return lockPick
     } catch (error) {
       console.error('Error fetching Lock of the Day:', error)
