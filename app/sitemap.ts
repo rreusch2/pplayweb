@@ -16,8 +16,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency']
   }> = [
     { path: '/', priority: 1.0, changeFrequency: 'daily' },
-    { path: '/privacy', priority: 0.2, changeFrequency: 'yearly' },
-    { path: '/terms', priority: 0.2, changeFrequency: 'yearly' },
   ]
 
   return routes.map((r) => ({

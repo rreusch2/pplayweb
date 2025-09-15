@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/AuthModal'
 import { trackSignupStart, trackAppStoreClick, trackCTAClick } from '@/lib/analytics'
 import Image from 'next/image'
+import PredictionsPreview from '@/components/PredictionsPreview'
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -184,6 +185,79 @@ export default function LandingPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              How Predictive Play Works
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Daily AI sports betting predictions powered by multi-source data and transparent scoring — built for smarter decisions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Data Ingestion */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Multi‑Source Data</h3>
+              <p className="text-gray-300 text-sm">
+                Aggregates live odds, line movements, injuries, and verified trends to keep the model up‑to‑date.
+              </p>
+            </div>
+
+            {/* AI Scoring */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">AI Value Scoring</h3>
+              <p className="text-gray-300 text-sm">
+                Each pick is scored with confidence, value %, and an EV/ROI estimate based on matchup factors and market context.
+              </p>
+            </div>
+
+            {/* Smart Allocation */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Smart Slate Coverage</h3>
+              <p className="text-gray-300 text-sm">
+                Distributes picks intelligently across MLB, NFL, WNBA and CFB based on slate depth and opportunity.
+              </p>
+            </div>
+
+            {/* Transparency & Safety */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Transparent & Practical</h3>
+              <p className="text-gray-300 text-sm">
+                Clear confidence and risk signals. Educational, not financial advice. You’re always in control.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Predictions Today */}
+      <section className="py-10 px-4 sm:px-6 lg:px-8 bg-black/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Featured Predictions Today</h2>
+            <p className="text-gray-300">Preview a couple of today’s AI picks. Create an account to see more.</p>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <PredictionsPreview limit={2} />
           </div>
         </div>
       </section>

@@ -30,10 +30,10 @@ export const metadata: Metadata = {
     siteName: 'Predictive Play',
     images: [
       {
-        url: '/icon.png',
+        url: '/og-banner.png',
         width: 1200,
         height: 630,
-        alt: 'Predictive Play Logo',
+        alt: 'Daily AI Sports Betting Predictions – Predictive Play',
         type: 'image/png',
       },
     ],
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AI Sports Betting Predictions – Predictive Play',
     description: 'Daily AI-driven betting predictions with transparent accuracy and advanced analytics.',
-    images: ['/icon.png'],
+    images: ['/og-banner.png'],
   },
   robots: {
     index: true,
