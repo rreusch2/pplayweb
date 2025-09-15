@@ -51,11 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🚀 Fetching profile via Railway backend for user:', user.id)
       try {
         // Fetch profile from Railway backend API like mobile app does
-        const response = await apiClient.get(`/api/user/profile`)
+        const response = await apiClient.get(`/api/user/profile`, { params: { userId: user.id } })
         
-        if (response.data) {
-          console.log('✅ Profile fetched from backend:', response.data.username || response.data.email)
-          return response.data
+        const profile = response?.data?.profile || null
+        if (profile) {
+          console.log('✅ Profile fetched from backend:', profile.username || profile.email)
+          return profile as UserProfile
         }
         
         console.log('⚠️ No profile data returned from backend')

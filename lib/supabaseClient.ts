@@ -7,4 +7,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase URL or anonymous key')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Re-export the unified Supabase client to prevent multiple instances
+// This avoids the warning: "Multiple GoTrueClient instances detected"
+export { supabase } from './supabase'
