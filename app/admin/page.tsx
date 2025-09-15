@@ -41,6 +41,7 @@ import FeedbackSection from './components/FeedbackSection'
 import SupportRequestsSection from './components/SupportRequestsSection'
 import TodaysPicksModal from './components/TodaysPicksModal'
 import ReportsModal from './components/ReportsModal'
+import SendNotificationModal from './components/SendNotificationModal'
 
 
 interface UserData {
@@ -102,6 +103,7 @@ export default function AdminDashboard() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [showTodaysPicksModal, setShowTodaysPicksModal] = useState(false)
   const [showReportsModal, setShowReportsModal] = useState(false)
+  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false)
   const pageSize = 20
 
   // Check admin access
@@ -311,8 +313,8 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleSendNotification = async () => {
-    alert('📧 Notification feature would be implemented here')
+  const handleSendNotification = () => {
+    setShowSendNotificationModal(true)
   }
 
   const handleExportData = async () => {
@@ -722,6 +724,14 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Send Notification Modal */}
+        {showSendNotificationModal && (
+          <SendNotificationModal 
+            open={showSendNotificationModal} 
+            onClose={() => setShowSendNotificationModal(false)} 
+          />
         )}
 
         {/* Feedback Section */}
