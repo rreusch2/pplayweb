@@ -1,11 +1,36 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Brain } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy – Predictive Play',
+  description:
+    'Read the Predictive Play Privacy Policy: data collection, usage, security, and your rights (Effective Jan 1, 2025).',
+  alternates: {
+    canonical: 'https://www.predictive-play.com/privacy',
+  },
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+    },
+  },
+}
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      {/* Skip link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-600 text-white px-3 py-2 rounded"
+      >
+        Skip to main content
+      </a>
       {/* Header */}
-      <nav className="bg-black/20 backdrop-blur-md border-b border-white/10">
+      <nav role="navigation" className="bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link href="/" className="flex items-center space-x-3">
@@ -28,12 +53,12 @@ export default function PrivacyPolicy() {
       </nav>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main id="main-content" role="main" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10">
           <h1 className="text-4xl font-bold text-white mb-8">Privacy Policy</h1>
           
           <div className="prose prose-invert prose-blue max-w-none">
-            <div className="text-gray-300 space-y-6">
+            <div className="text-gray-200 space-y-6">
               <p><strong>Effective Date:</strong> January 1, 2025</p>
               
               <p>
@@ -122,7 +147,7 @@ export default function PrivacyPolicy() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

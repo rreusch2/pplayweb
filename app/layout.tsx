@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
+import ScrollDepthTracker from '@/components/ScrollDepthTracker'
 import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -99,7 +100,14 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-600 text-white px-3 py-2 rounded"
+        >
+          Skip to main content
+        </a>
         <AnalyticsProvider>
+          <ScrollDepthTracker />
           <AuthProvider>
             <SubscriptionProvider>
               <div className="min-h-full">
