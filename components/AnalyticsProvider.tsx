@@ -14,10 +14,10 @@ export default function AnalyticsProvider({ children }: { children: React.ReactN
     }
 
     // Initialize Google Analytics (recommended additional tracking)
-    const gaId = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+    const gaId = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
     if (gaId) {
       initGoogleAnalytics(gaId)
-      console.log('✅ Google Analytics initialized:', gaId)
+      console.log('✅ Google Analytics initialized (GA4 Measurement ID):', gaId)
     }
   }, [])
 

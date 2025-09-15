@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     siteName: 'Predictive Play',
     images: [
       {
-        url: '/logo.png',
+        url: '/icon.png',
         width: 800,
         height: 600,
         alt: 'Predictive Play Logo',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Predictive Play - AI-Powered Sports Betting Predictions',
     description: 'Smart betting with AI-powered predictions and advanced analytics',
-    images: ['/logo.png'],
+    images: ['/icon.png'],
   },
   robots: {
     index: true,
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'your-google-verification-code',
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
 }
 
