@@ -57,7 +57,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 relative">
 
       {/* Navigation */}
-      <nav className="relative z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+      <nav role="navigation" className="relative z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             {/* Logo and Brand - Matching Internal Nav */}
@@ -98,7 +98,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 overflow-hidden py-20 px-4 sm:px-6 lg:px-8">
+      <section role="banner" className="relative z-10 overflow-hidden py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             {/* Removed animation for hero text as requested */}
@@ -106,11 +106,12 @@ export default function LandingPage() {
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
                 <span className="gradient-text">AI-Powered</span>
                 <br />
-                Sports Betting
+                Sports Betting Predictions
               </h1>
               <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                Smarter betting with advanced AI predictions, real-time analytics, 
-                and expert insights for all major sports.
+                Predictive Play uses machine learning models trained on historical odds, team stats,
+                and live feeds to deliver daily NBA, NFL, MLB & Premier League forecasts with
+                <span className="font-semibold"> 72%+ accuracy</span>.
               </p>
             </div>
 

@@ -10,9 +10,9 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Predictive Play - AI-Powered Sports Betting Predictions',
-  description: 'Smart betting with AI-powered predictions, advanced analytics, and expert insights for all major sports.',
-  keywords: 'sports betting, AI predictions, betting analytics, sports analysis, betting tips',
+  title: 'AI Sports Betting Predictions | NBA, NFL & Soccer Odds Forecasts – Predictive Play',
+  description: 'Get daily AI-driven NBA, NFL & Premier League betting predictions. 72%+ accuracy, advanced analytics & expert tips — start winning today.',
+  keywords: 'AI sports betting predictions, daily betting predictions, sports betting analytics, NBA predictions, NFL predictions, Premier League predictions, soccer odds forecasts',
   authors: [{ name: 'Predictive Play' }],
   creator: 'Predictive Play',
   publisher: 'Predictive Play',
@@ -23,16 +23,17 @@ export const metadata: Metadata = {
     apple: '/icon.png',
   },
   openGraph: {
-    title: 'Predictive Play - AI-Powered Sports Betting Predictions',
-    description: 'Smart betting with AI-powered predictions and advanced analytics',
+    title: 'AI Sports Betting Predictions | NBA, NFL & Soccer Odds Forecasts – Predictive Play',
+    description: 'Daily AI-driven betting predictions with transparent accuracy and advanced analytics.',
     url: 'https://www.predictive-play.com',
     siteName: 'Predictive Play',
     images: [
       {
         url: '/icon.png',
-        width: 800,
-        height: 600,
+        width: 1200,
+        height: 630,
         alt: 'Predictive Play Logo',
+        type: 'image/png',
       },
     ],
     locale: 'en_US',
@@ -40,8 +41,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Predictive Play - AI-Powered Sports Betting Predictions',
-    description: 'Smart betting with AI-powered predictions and advanced analytics',
+    title: 'AI Sports Betting Predictions – Predictive Play',
+    description: 'Daily AI-driven betting predictions with transparent accuracy and advanced analytics.',
     images: ['/icon.png'],
   },
   robots: {
@@ -65,8 +66,38 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Predictive Play',
+    url: 'https://www.predictive-play.com',
+    logo: 'https://www.predictive-play.com/icon.png',
+  }
+
+  const websiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    url: 'https://www.predictive-play.com',
+    name: 'Predictive Play',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://www.predictive-play.com/trends?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
     <html lang="en" className="h-full">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+      </head>
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
         <AnalyticsProvider>
           <AuthProvider>

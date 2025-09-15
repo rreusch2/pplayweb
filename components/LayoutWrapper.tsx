@@ -39,7 +39,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     }
   }, [initializing, user, isPublicRoute, isAuthRoute, router, pathname])
 
-  if (initializing) {
+  // Do not block public routes with a loading screen; render content immediately for SEO/UX
+  if (initializing && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
@@ -56,7 +57,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <>
       {showNav && <Navigation onOpenAIChat={() => setShowAIChat(true)} />}
-      <main className={!showNav ? 'h-full' : 'pt-16 sm:pt-20'}>
+      <main role="main" className={!showNav ? 'h-full' : 'pt-16 sm:pt-20'}>
         {children}
       </main>
       {showNav && (
