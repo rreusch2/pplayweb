@@ -41,17 +41,6 @@ export default function Navigation({ onOpenAIChat }: NavigationProps) {
   const { user, signOut, profile } = useAuth()
   const { subscriptionTier } = useSubscription()
   const { setShowAIChat, freeUserMessageCount } = useAIChat()
-  
-  // Debug logging for admin access
-  useEffect(() => {
-    if (profile) {
-      console.log('🔍 Navigation profile data:', {
-        email: profile.email,
-        admin_role: profile.admin_role,
-        subscription_tier: profile.subscription_tier
-      })
-    }
-  }, [profile])
   const [refreshing, setRefreshing] = useState(false)
   const [coins, setCoins] = useState<number>(0)
   const [showInvite, setShowInvite] = useState(false)
@@ -254,24 +243,6 @@ export default function Navigation({ onOpenAIChat }: NavigationProps) {
                         <Shield className="w-4 h-4" />
                         <span>Admin Dashboard</span>
                       </Link>
-                    )}
-                    
-                    {/* Debug: Force Profile Refresh (remove in production) */}
-                    {user?.email === 'reid.reusch1@gmail.com' && (
-                      <button
-                        onClick={async () => {
-                          console.log('🔄 Force refreshing profile...')
-                          // Force refresh profile data
-                          if (typeof window !== 'undefined') {
-                            localStorage.removeItem('sb-iriaegoipkjtktitpary-auth-token')
-                            window.location.reload()
-                          }
-                        }}
-                        className="flex items-center space-x-3 px-4 py-2 text-sm text-yellow-300 hover:bg-yellow-500/10 transition-colors"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span>Force Refresh Profile</span>
-                      </button>
                     )}
 
                     <div className="my-2 border-t border-white/10" />

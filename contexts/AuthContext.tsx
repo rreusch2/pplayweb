@@ -56,6 +56,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = response?.data?.profile || null
         if (profile) {
           console.log('✅ Profile fetched from backend:', profile.username || profile.email)
+          // Ensure admin_role is present even if backend omitted it
+          if (typeof (profile as any).admin_role === 'undefined') {
+            try {
+              const { data: adminCheck, error: adminErr } = await supabase
+                .from('profiles')
+                .select('admin_role')
+                .eq('id', user.id)
+                .single()
+              if (!adminErr) {
+                (profile as any).admin_role = adminCheck?.admin_role ?? false
+              }
+            } catch (e) {
+              console.warn('⚠️ Could not load admin_role from Supabase directly')
+            }
+          }
           return profile as UserProfile
         }
         
