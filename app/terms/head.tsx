@@ -26,7 +26,7 @@ export default function Head() {
         name: 'How can I terminate my account?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'You can terminate your account at any time through the app settings. For assistance, contact predictiveplay2025@gmail.com.'
+          text: 'You can terminate your account at any time through the app settings. For assistance, contact support@predictive-play.com.'
         }
       },
       {

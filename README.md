@@ -145,7 +145,7 @@ All data syncs automatically:
 
 ## 🆘 Support
 
-Need help? Email: predictiveplay2025@gmail.com
+Need help? Email: support@predictive-play.com
 
 ---
 

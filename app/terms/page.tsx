@@ -180,7 +180,7 @@ export default function TermsOfService() {
                 For questions about these Terms, contact us at:
               </p>
               <div className="bg-blue-900/30 p-4 rounded-lg mt-4">
-                <p><strong>Email:</strong> predictiveplay2025@gmail.com</p>
+                <p><strong>Email:</strong> support@predictive-play.com</p>
                 <p><strong>Address:</strong> Predictive Play Legal Team</p>
               </div>
 

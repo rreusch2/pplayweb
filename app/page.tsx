@@ -371,7 +371,7 @@ export default function LandingPage() {
               <a href="/terms" className="hover:text-white transition-colors">
                 Terms of Service
               </a>
-              <a href="mailto:predictiveplay2025@gmail.com" className="hover:text-white transition-colors">
+              <a href="mailto:support@predictive-play.com" className="hover:text-white transition-colors">
                 Contact
               </a>
               <a
