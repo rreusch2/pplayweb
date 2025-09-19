@@ -42,6 +42,7 @@ import SupportRequestsSection from './components/SupportRequestsSection'
 import TodaysPicksModal from './components/TodaysPicksModal'
 import ReportsModal from './components/ReportsModal'
 import SendNotificationModal from './components/SendNotificationModal'
+import RedditAdsAnalytics from './components/RedditAdsAnalytics'
 
 
 interface UserData {
@@ -733,6 +734,22 @@ export default function AdminDashboard() {
             onClose={() => setShowSendNotificationModal(false)} 
           />
         )}
+
+        {/* Reddit Ads Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
+              <BarChart3 className="w-6 h-6 text-red-400" />
+              <span>Reddit Ads Analytics</span>
+            </h2>
+          </div>
+          <RedditAdsAnalytics />
+        </motion.div>
 
         {/* Feedback Section */}
         <motion.div
