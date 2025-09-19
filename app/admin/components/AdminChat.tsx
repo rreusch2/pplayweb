@@ -467,7 +467,9 @@ export default function AdminChat({ className = '' }: AdminChatProps) {
                         {message.user_profile?.username || message.user_profile?.email || 'Admin'}
                       </span>
                       {message.user_profile?.admin_role && (
-                        <Crown className="w-3 h-3 text-yellow-400" title="Administrator" />
+                        <span title="Administrator">
+                          <Crown className="w-3 h-3 text-yellow-400" />
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
