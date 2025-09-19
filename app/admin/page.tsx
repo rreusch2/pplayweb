@@ -44,6 +44,7 @@ import ReportsModal from './components/ReportsModal'
 import SendNotificationModal from './components/SendNotificationModal'
 import RedditAdsAnalytics from './components/RedditAdsAnalytics'
 import AdminChat from './components/AdminChat'
+import ProceedsAnalytics from './components/ProceedsAnalytics'
 
 
 interface UserData {
@@ -750,6 +751,22 @@ export default function AdminDashboard() {
             </h2>
           </div>
           <RedditAdsAnalytics />
+        </motion.div>
+
+        {/* App Proceeds Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.77 }}
+          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
+              <DollarSign className="w-6 h-6 text-green-400" />
+              <span>App Proceeds Analytics</span>
+            </h2>
+          </div>
+          <ProceedsAnalytics />
         </motion.div>
 
         {/* Admin Chat Section */}
