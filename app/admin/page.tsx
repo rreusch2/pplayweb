@@ -337,7 +337,19 @@ export default function AdminDashboard() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
+    try {
+      const dt = new Date((dateString || '').replace(' ', 'T'))
+      return dt.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return 'N/A'
+    }
   }
 
   const getTierBadgeColor = (tier: string) => {
@@ -636,6 +648,13 @@ export default function AdminDashboard() {
                           className="px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors"
                         >
                           Make Elite
+                        </button>
+                        <button
+                          onClick={() => updateUserTier(user.id, 'free')}
+                          disabled={updating === user.id || user.subscription_tier === 'free'}
+                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors"
+                        >
+                          Make Free
                         </button>
                         <button
                           onClick={() => setSelectedUser(user)}

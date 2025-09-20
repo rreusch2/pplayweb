@@ -22,7 +22,6 @@ export default function PredictionsCenter() {
   const [sport, setSport] = useState<SportKey>('NFL')
   const [nflOnly, setNflOnly] = useState(false)
   const [nflWeek, setNflWeek] = useState(false)
-  const [verbose, setVerbose] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [resp, setResp] = useState<RunResult | null>(null)
 
@@ -42,7 +41,6 @@ export default function PredictionsCenter() {
       if (nflWeek) parts.push('--nfl-week')
       if (nflOnly || sport === 'NFL') parts.push('--nfl-only')
     }
-    if (verbose) parts.push('-v')
     return parts.join(' ')
   }
 
@@ -145,7 +143,7 @@ export default function PredictionsCenter() {
           <select
             value={sport}
             onChange={e=>setSport(e.target.value as SportKey)}
-            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            className="w-full px-3 py-2 bg-white border border-white/20 rounded-lg text-black"
           >
             <option value="NFL">NFL</option>
             <option value="CFB">CFB</option>
@@ -189,10 +187,6 @@ export default function PredictionsCenter() {
           <button onClick={()=>setNflOnly(v=>!v)} className={`px-3 py-2 rounded border ${nflOnly?'bg-emerald-600 text-white border-emerald-500':'bg-white/10 text-white border-white/20'}`}>Toggle</button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-300">Verbose</label>
-          <button onClick={()=>setVerbose(v=>!v)} className={`px-3 py-2 rounded border ${verbose?'bg-emerald-600 text-white border-emerald-500':'bg-white/10 text-white border-white/20'}`}>Toggle</button>
-        </div>
       </div>
 
       {/* Preview */}
