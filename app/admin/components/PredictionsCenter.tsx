@@ -81,6 +81,39 @@ export default function PredictionsCenter() {
     }
   }
 
+  const runWithLiveLogs = async () => {
+    try {
+      if (!session?.access_token) {
+        toast.error('Not authenticated')
+        return
+      }
+      const command = buildCommand()
+      setResp(null)
+      const es = new EventSource(`/api/admin/predictions/stream?command=${encodeURIComponent(command)}`, { withCredentials: false } as any)
+
+      es.onopen = () => toast.success('Streaming started')
+      es.addEventListener('start', (e: MessageEvent) => {
+        // noop: command announced
+      })
+      es.addEventListener('stdout', (e: MessageEvent) => {
+        setResp(prev => ({ success: true, output: `${(prev?.output || '')}${e.data}\n` }))
+      })
+      es.addEventListener('stderr', (e: MessageEvent) => {
+        setResp(prev => ({ success: true, output: `${(prev?.output || '')}${e.data}\n` }))
+      })
+      es.addEventListener('done', (e: MessageEvent) => {
+        toast.success('Execution finished')
+        es.close()
+      })
+      es.onerror = () => {
+        toast.error('Stream error')
+        es.close()
+      }
+    } catch (e) {
+      toast.error('Unable to start stream')
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -182,6 +215,13 @@ export default function PredictionsCenter() {
         >
           {isRunning ? <RefreshCw className="w-4 h-4 animate-spin"/> : <Play className="w-4 h-4"/>}
           Run Now
+        </button>
+        <button
+          onClick={runWithLiveLogs}
+          className="px-4 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-500/30 flex items-center gap-2"
+        >
+          <Play className="w-4 h-4"/>
+          Run with Live Logs
         </button>
         <div className="text-gray-400 text-sm flex items-center gap-2"><Wand2 className="w-4 h-4"/>Runs on Railway script service</div>
       </div>
