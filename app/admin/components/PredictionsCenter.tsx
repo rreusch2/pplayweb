@@ -39,7 +39,6 @@ export default function PredictionsCenter() {
       if (nflWeek) parts.push('--nfl-week')
       if (nflOnly || sport === 'NFL') parts.push('--nfl-only')
     } else {
-      // teams_enhanced supports --nfl-week and --nfl-only as well
       if (nflWeek) parts.push('--nfl-week')
       if (nflOnly || sport === 'NFL') parts.push('--nfl-only')
     }
@@ -89,12 +88,10 @@ export default function PredictionsCenter() {
       }
       const command = buildCommand()
       setResp(null)
-      const es = new EventSource(`/api/admin/predictions/stream?command=${encodeURIComponent(command)}`, { withCredentials: false } as any)
+      const url = `/api/admin/predictions/stream?command=${encodeURIComponent(command)}&token=${encodeURIComponent(session.access_token)}`
+      const es = new EventSource(url)
 
       es.onopen = () => toast.success('Streaming started')
-      es.addEventListener('start', (e: MessageEvent) => {
-        // noop: command announced
-      })
       es.addEventListener('stdout', (e: MessageEvent) => {
         setResp(prev => ({ success: true, output: `${(prev?.output || '')}${e.data}\n` }))
       })

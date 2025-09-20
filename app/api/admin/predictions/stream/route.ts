@@ -5,15 +5,16 @@ import { supabase } from '@/lib/supabase'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const command = searchParams.get('command') || ''
+  const tokenParam = searchParams.get('token') || ''
   if (!command) {
     return new Response('Command is required', { status: 400 })
   }
 
   const authHeader = req.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split(' ')[1] : tokenParam
+  if (!token) {
     return new Response('Unauthorized', { status: 401 })
   }
-  const token = authHeader.split(' ')[1]
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) {
     return new Response('Unauthorized', { status: 401 })
