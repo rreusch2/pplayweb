@@ -352,6 +352,20 @@ export default function AdminDashboard() {
     }
   }
 
+  const formatDateOnly = (dateString: string) => {
+    try {
+      const dt = new Date((dateString || '').replace(' ', 'T'))
+      return dt.toLocaleDateString('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return 'N/A'
+    }
+  }
+
   const getTierBadgeColor = (tier: string) => {
     switch (tier) {
       case 'pro': return 'bg-blue-500'
@@ -628,7 +642,7 @@ export default function AdminDashboard() {
                       {user.subscription_plan_type || 'N/A'}
                     </td>
                     <td className="py-4 text-gray-300">
-                      {user.subscription_expires_at ? formatDate(user.subscription_expires_at) : 'N/A'}
+                      {user.subscription_expires_at ? formatDateOnly(user.subscription_expires_at) : 'N/A'}
                     </td>
                     <td className="py-4 text-gray-300">
                       {formatDate(user.created_at)}
