@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import AdminCommandPanel from './components/AdminCommandPanel'
+import PredictionsCenter from './components/PredictionsCenter'
 import QuickActions from './components/QuickActions'
 import FeedbackSection from './components/FeedbackSection'
 import SupportRequestsSection from './components/SupportRequestsSection'
@@ -526,7 +527,7 @@ export default function AdminDashboard() {
             onOpenTodaysPicks={handleOpenTodaysPicks}
             onOpenReports={handleOpenReports}
           />
-          <AdminCommandPanel />
+          <PredictionsCenter />
         </div>
 
 
