@@ -20,10 +20,11 @@ import {
   Maximize2,
   Minimize2
 } from 'lucide-react'
-import { CopilotKit } from '@copilotkit/react-core'
+import { CopilotKit, useCopilotAction } from '@copilotkit/react-core'
 import { CopilotSidebar } from '@copilotkit/react-ui'
 import '@copilotkit/react-ui/styles.css'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { supabase } from '@/lib/supabase'
 
 interface ProfessorLockCopilotProps {
   isOpen: boolean
@@ -84,6 +85,364 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
     { icon: AlertTriangle, label: "Injury Reports", desc: "Real-time injury updates" },
     { icon: DollarSign, label: "Value Detection", desc: "Identify profitable betting opportunities" }
   ]
+
+  // Define AI Prediction Actions
+  useCopilotAction({
+    name: "get_ai_predictions",
+    description: "Fetch the latest AI predictions and picks from our advanced analytics system",
+    parameters: [
+      {
+        name: "sport",
+        type: "string",
+        description: "Sport to filter by (e.g., MLB, NBA, NFL, NHL)",
+        required: false,
+      },
+      {
+        name: "limit",
+        type: "number",
+        description: "Number of predictions to fetch (default 10)",
+        required: false,
+      },
+      {
+        name: "confidence_min",
+        type: "number",
+        description: "Minimum confidence threshold (0-100)",
+        required: false,
+      },
+    ],
+    handler: async ({ sport, limit = 10, confidence_min = 60 }) => {
+      try {
+        let query = supabase
+          .from('ai_predictions')
+          .select(`
+            id,
+            match_teams,
+            pick,
+            odds,
+            confidence,
+            sport,
+            event_time,
+            reasoning,
+            value_percentage,
+            roi_estimate,
+            bet_type,
+            line_value,
+            prediction_value,
+            risk_level,
+            key_factors,
+            created_at
+          `)
+          .gte('confidence', confidence_min)
+          .order('confidence', { ascending: false })
+          .limit(limit);
+
+        if (sport) {
+          query = query.eq('sport', sport);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        return {
+          success: true,
+          predictions: data || [],
+          count: data?.length || 0,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          predictions: [],
+        };
+      }
+    },
+  });
+
+  // Get Upcoming Games
+  useCopilotAction({
+    name: "get_upcoming_games",
+    description: "Get upcoming sports events and games with betting odds",
+    parameters: [
+      {
+        name: "sport",
+        type: "string",
+        description: "Sport to filter by",
+        required: false,
+      },
+      {
+        name: "days_ahead",
+        type: "number",
+        description: "Number of days ahead to look (default 3)",
+        required: false,
+      },
+      {
+        name: "limit",
+        type: "number",
+        description: "Number of games to fetch",
+        required: false,
+      },
+    ],
+    handler: async ({ sport, days_ahead = 3, limit = 15 }) => {
+      try {
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + days_ahead);
+
+        let query = supabase
+          .from('sports_events')
+          .select(`
+            id,
+            sport,
+            league,
+            home_team,
+            away_team,
+            start_time,
+            odds,
+            status,
+            venue,
+            weather_conditions
+          `)
+          .gte('start_time', new Date().toISOString())
+          .lte('start_time', futureDate.toISOString())
+          .eq('status', 'scheduled')
+          .order('start_time', { ascending: true })
+          .limit(limit);
+
+        if (sport) {
+          query = query.eq('sport', sport);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        return {
+          success: true,
+          games: data || [],
+          count: data?.length || 0,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          games: [],
+        };
+      }
+    },
+  });
+
+  // Search Players
+  useCopilotAction({
+    name: "search_players",
+    description: "Search for players and get their recent stats and prop betting trends",
+    parameters: [
+      {
+        name: "query",
+        type: "string",
+        description: "Player name to search for",
+        required: true,
+      },
+      {
+        name: "sport",
+        type: "string",
+        description: "Sport to filter by",
+        required: false,
+      },
+      {
+        name: "limit",
+        type: "number",
+        description: "Number of players to return",
+        required: false,
+      },
+    ],
+    handler: async ({ query, sport, limit = 5 }) => {
+      try {
+        let playerQuery = supabase
+          .from('players')
+          .select(`
+            id,
+            name,
+            position,
+            team,
+            sport,
+            active,
+            metadata
+          `)
+          .ilike('name', `%${query}%`)
+          .eq('active', true)
+          .limit(limit);
+
+        if (sport) {
+          playerQuery = playerQuery.eq('sport', sport);
+        }
+
+        const { data: players, error: playersError } = await playerQuery;
+
+        if (playersError) throw playersError;
+
+        // Get recent stats for each player
+        const playersWithStats = await Promise.all(
+          (players || []).map(async (player) => {
+            const { data: recentStats } = await supabase
+              .from('player_recent_stats')
+              .select('*')
+              .eq('player_id', player.id)
+              .order('game_date', { ascending: false })
+              .limit(10);
+
+            const { data: trends } = await supabase
+              .from('ai_trends')
+              .select('*')
+              .eq('player_id', player.id)
+              .order('created_at', { ascending: false })
+              .limit(3);
+
+            return {
+              ...player,
+              recent_stats: recentStats || [],
+              trends: trends || [],
+            };
+          })
+        );
+
+        return {
+          success: true,
+          players: playersWithStats,
+          count: playersWithStats.length,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          players: [],
+        };
+      }
+    },
+  });
+
+  // Get Daily Insights
+  useCopilotAction({
+    name: "get_daily_insights",
+    description: "Get today's daily Professor Lock insights and analysis",
+    parameters: [
+      {
+        name: "limit",
+        type: "number",
+        description: "Number of insights to fetch",
+        required: false,
+      },
+    ],
+    handler: async ({ limit = 10 }) => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data, error } = await supabase
+          .from('daily_professor_insights')
+          .select(`
+            id,
+            title,
+            description,
+            insight_text,
+            category,
+            confidence,
+            impact,
+            research_sources,
+            teams,
+            game_info,
+            created_at
+          `)
+          .eq('date_generated', today)
+          .order('insight_order', { ascending: true })
+          .limit(limit);
+
+        if (error) throw error;
+
+        return {
+          success: true,
+          insights: data || [],
+          count: data?.length || 0,
+          date: today,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          insights: [],
+        };
+      }
+    },
+  });
+
+  // Get Injury Reports
+  useCopilotAction({
+    name: "get_injury_reports",
+    description: "Get current injury reports that might affect betting decisions",
+    parameters: [
+      {
+        name: "sport",
+        type: "string",
+        description: "Sport to filter injuries by",
+        required: false,
+      },
+      {
+        name: "team",
+        type: "string",
+        description: "Team to filter injuries by",
+        required: false,
+      },
+      {
+        name: "limit",
+        type: "number",
+        description: "Number of injury reports to fetch",
+        required: false,
+      },
+    ],
+    handler: async ({ sport, team, limit = 10 }) => {
+      try {
+        let query = supabase
+          .from('injury_reports')
+          .select(`
+            player_name,
+            team_name,
+            position,
+            injury_status,
+            estimated_return_date,
+            description,
+            sport,
+            source,
+            scraped_at
+          `)
+          .eq('is_active', true)
+          .order('scraped_at', { ascending: false })
+          .limit(limit);
+
+        if (sport) {
+          query = query.eq('sport', sport);
+        }
+
+        if (team) {
+          query = query.eq('team_name', team);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        return {
+          success: true,
+          injuries: data || [],
+          count: data?.length || 0,
+          filters: { sport, team },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: (error as Error).message,
+          injuries: [],
+        };
+      }
+    },
+  });
 
   return (
     <AnimatePresence>
