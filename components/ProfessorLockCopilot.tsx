@@ -97,7 +97,6 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
         instructions={instructions}
         labels={{ title, initial: 'Need any help?' }}
         className="[&_.ck-popup]:bg-gradient-to-br [&_.ck-popup]:from-gray-900 [&_.ck-popup]:via-blue-900/50 [&_.ck-popup]:to-gray-900 [&_.ck-popup]:border [&_.ck-popup]:border-white/10 [&_.ck-popup]:rounded-2xl"
-        onClose={onClose}
       />
     </div>
   )
