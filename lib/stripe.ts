@@ -5,12 +5,14 @@ let stripePromise: Promise<Stripe | null>
 const getStripe = () => {
   if (!stripePromise) {
     const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-    
+    // Do not throw at module load/build time; the getter will be called client-side only.
+    // If missing, surface a clear console error and return a rejected promise when actually used.
     if (!publishableKey) {
-      throw new Error('Missing Stripe publishable key')
+      console.error('Missing Stripe publishable key (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)')
+      stripePromise = Promise.resolve(null)
+    } else {
+      stripePromise = loadStripe(publishableKey)
     }
-    
-    stripePromise = loadStripe(publishableKey)
   }
   
   return stripePromise

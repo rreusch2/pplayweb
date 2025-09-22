@@ -1,17 +1,16 @@
 import { NextRequest } from "next/server";
-import { CopilotRuntime, groq } from "@copilotkit/runtime";
+import { CopilotRuntime } from "@copilotkit/runtime";
+import { OpenAIAdapter } from "@copilotkit/runtime";
 import { supabase } from "@/lib/supabase";
 
 const XAI_API_KEY = process.env.XAI_API_KEY;
 
-if (!XAI_API_KEY) {
-  throw new Error("XAI_API_KEY environment variable is required");
-}
-
 // Custom XAI/Grok implementation for CopilotKit
-const customGroqAdapter = groq({
+// Use OpenAI-compatible adapter for xAI Grok endpoint
+// xAI Grok exposes an OpenAI-compatible API; set env OPENAI_BASE_URL on Vercel if needed.
+const customGroqAdapter = new OpenAIAdapter({
+  apiKey: XAI_API_KEY || "",
   model: "grok-3-latest",
-  apiKey: XAI_API_KEY,
 });
 
 const runtime = new CopilotRuntime({
