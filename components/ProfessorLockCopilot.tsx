@@ -24,7 +24,6 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
     name: 'getDailyInsights',
     description: 'Fetch and display daily Professor Lock insights',
     parameters: [],
-    render: ({ status }) => null,
     handler: async () => {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://zooming-rebirth-production-a305.up.railway.app'
       const res = await fetch(`${backendUrl}/api/insights/daily-professor-lock`)
@@ -39,7 +38,6 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
     name: 'getTodaysPicks',
     description: 'Fetch and display today\'s AI picks',
     parameters: [{ name: 'userId', type: 'string', required: false }],
-    render: ({ status }) => null,
     handler: async ({ userId }: any) => {
       const picks = await aiService.getTodaysPredictions(undefined, subscriptionTier)
       const limit = subscriptionTier === 'elite' ? 30 : subscriptionTier === 'pro' ? 20 : 2
@@ -51,7 +49,6 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
     name: 'liveOddsLookup',
     description: 'Lookup current odds for a matchup/team',
     parameters: [{ name: 'query', type: 'string', required: true }],
-    render: () => null,
     handler: async ({ query }: any) => {
       if (subscriptionTier === 'free') {
         return { upgradeRequired: true, feature: 'live_odds' }
@@ -71,7 +68,6 @@ export default function ProfessorLockCopilot({ isOpen, onClose }: ProfessorLockC
       { name: 'team', type: 'string', required: true },
       { name: 'sport', type: 'string', required: false }
     ],
-    render: () => null,
     handler: async ({ team, sport }: any) => {
       if (subscriptionTier === 'free') {
         return { upgradeRequired: true, feature: 'team_analysis' }
