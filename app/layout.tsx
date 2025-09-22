@@ -4,7 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
-import CopilotKitClientProvider from '@/components/CopilotKitClientProvider'
+import { CopilotKit } from '@copilotkit/react-core'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import ScrollDepthTracker from '@/components/ScrollDepthTracker'
 import { Toaster } from 'react-hot-toast'
@@ -111,13 +111,13 @@ export default function RootLayout({
           <ScrollDepthTracker />
           <AuthProvider>
             <SubscriptionProvider>
-              <CopilotKitClientProvider>
-                <div className="min-h-full">
+              <div className="min-h-full">
+                <CopilotKit runtimeUrl="/api/copilot">
                   <LayoutWrapper>
                     {children}
                   </LayoutWrapper>
-                </div>
-              </CopilotKitClientProvider>
+                </CopilotKit>
+              </div>
               <Toaster
                 position="top-right"
                 toastOptions={{

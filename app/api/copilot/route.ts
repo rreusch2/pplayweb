@@ -1,31 +1,25 @@
-import { CopilotRuntime, copilotRuntimeNextJSAppRouterEndpoint, OpenAIAdapter } from '@copilotkit/runtime'
-import OpenAI from 'openai'
+import { NextRequest } from 'next/server'
+import { CopilotRuntime, OpenAIAdapter, copilotRuntimeNextJSAppRouterEndpoint } from '@copilotkit/runtime'
 
-// Use an OpenAI-compatible adapter pointing at xAI base URL, key provided via env
-// xAI on Vercel: set XAI_API_KEY and XAI_BASE_URL (defaults provided below)
-const xaiBaseUrl = process.env.XAI_BASE_URL || 'https://api.x.ai/v1'
-const xaiApiKey = process.env.XAI_API_KEY
+// Configure Copilot Runtime to use xAI (OpenAI-compatible)
+// Ensure XAI_API_KEY is set in Vercel/Env
+const runtime = new CopilotRuntime({})
 
-const openai = new OpenAI({
-  apiKey: xaiApiKey,
-  baseURL: xaiBaseUrl,
-})
+export const POST = async (req: NextRequest) => {
+  const xaiApiKey = process.env.XAI_API_KEY
+  if (!xaiApiKey) {
+    return new Response(JSON.stringify({ error: 'XAI_API_KEY is not configured' }), { status: 500 })
+  }
 
-const serviceAdapter = new OpenAIAdapter({
-  openai,
-  model: process.env.XAI_MODEL || 'grok-2-latest'
-})
+  // You can override model and baseUrl per request via headers if desired
+  const baseUrl = process.env.XAI_BASE_URL || 'https://api.x.ai/v1'
 
-const runtime = new CopilotRuntime()
+  return copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    provider: new OpenAIAdapter({ apiKey: xaiApiKey, baseUrl }),
+  })(req)
+}
 
-const handler = copilotRuntimeNextJSAppRouterEndpoint({
-  runtime,
-  serviceAdapter,
-  endpoint: '/api/copilot',
-})
-
-export const GET = handler.GET
-export const POST = handler.POST
-export const OPTIONS = handler.OPTIONS
+export const GET = POST
 
 
