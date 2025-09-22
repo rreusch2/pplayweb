@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server'
 import { CopilotRuntime, copilotRuntimeNextJSAppRouterEndpoint, OpenAIAdapter } from '@copilotkit/runtime'
 import OpenAI from 'openai'
 
@@ -17,13 +16,16 @@ const serviceAdapter = new OpenAIAdapter({
   model: process.env.XAI_MODEL || 'grok-2-latest'
 })
 
-const runtime = new CopilotRuntime({
+const runtime = new CopilotRuntime()
+
+const handler = copilotRuntimeNextJSAppRouterEndpoint({
+  runtime,
   serviceAdapter,
-  // Keep defaults for guardrails and logging
+  endpoint: '/api/copilot',
 })
 
-export const POST = async (req: NextRequest) => {
-  return copilotRuntimeNextJSAppRouterEndpoint({ runtime })(req)
-}
+export const GET = handler.GET
+export const POST = handler.POST
+export const OPTIONS = handler.OPTIONS
 
 
