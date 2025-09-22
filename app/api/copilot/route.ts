@@ -1,23 +1,28 @@
 import { NextRequest } from "next/server";
 import { CopilotRuntime } from "@copilotkit/runtime";
+import { copilotRuntimeNextJSAppRouterEndpoint } from "@copilotkit/runtime/lib/integrations";
 import { OpenAIAdapter } from "@copilotkit/runtime";
+import OpenAI from "openai";
 import { supabase } from "@/lib/supabase";
+import { copilotRuntimeNextJSAppRouterEndpoint } from "@copilotkit/runtime";
 
 const XAI_API_KEY = process.env.XAI_API_KEY;
 
 // Custom XAI/Grok implementation for CopilotKit
 // Use OpenAI-compatible adapter for xAI Grok endpoint
 // xAI Grok exposes an OpenAI-compatible API; set env OPENAI_BASE_URL on Vercel if needed.
-const customGroqAdapter = new OpenAIAdapter({
+const openai = new OpenAI({
   apiKey: XAI_API_KEY || "",
+  // If you configure an OpenAI-compatible base URL for xAI on Vercel, set it via environment.
+  baseURL: process.env.OPENAI_BASE_URL,
+});
+
+const customGroqAdapter = new OpenAIAdapter({
+  openai,
   model: "grok-3-latest",
 });
 
-const runtime = new CopilotRuntime({
-  langfuseSecretKey: undefined,
-  langfusePublicKey: undefined,
-  langfuseHost: undefined,
-});
+const runtime = new CopilotRuntime();
 
 // Define powerful sports betting tools
 const tools = [
@@ -43,7 +48,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ sport, limit = 10, confidence_min = 60 }) => {
+    handler: async ({ sport, limit = 10, confidence_min = 60 }: { sport?: string; limit?: number; confidence_min?: number }) => {
       try {
         let query = supabase
           .from('ai_predictions')
@@ -113,7 +118,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ sport, days_ahead = 3, limit = 15 }) => {
+    handler: async ({ sport, days_ahead = 3, limit = 15 }: { sport?: string; days_ahead?: number; limit?: number }) => {
       try {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + days_ahead);
@@ -181,7 +186,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ query, sport, limit = 5 }) => {
+    handler: async ({ query, sport, limit = 5 }: { query: string; sport?: string; limit?: number }) => {
       try {
         let playerQuery = supabase
           .from('players')
@@ -258,7 +263,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ limit = 10 }) => {
+    handler: async ({ limit = 10 }: { limit?: number }) => {
       try {
         const today = new Date().toISOString().split('T')[0];
 
@@ -316,7 +321,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ query, type = "news" }) => {
+    handler: async ({ query, type = "news" }: { query: string; type?: "news" | "odds" | "injuries" | "analysis" }) => {
       try {
         // This would integrate with web search APIs in production
         // For now, we'll return sports news from our scraped data
@@ -343,7 +348,7 @@ const tools = [
 
         return {
           success: true,
-          results: data || [],
+          results: news || [],
           query,
           type,
           timestamp: new Date().toISOString(),
@@ -378,7 +383,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ team_name, sport, games_back = 10 }) => {
+    handler: async ({ team_name, sport, games_back = 10 }: { team_name: string; sport: string; games_back?: number }) => {
       try {
         // Get team recent performance
         const { data: teamStats, error: teamError } = await supabase
@@ -459,7 +464,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ player_name, prop_type, line, sport }) => {
+    handler: async ({ player_name, prop_type, line, sport }: { player_name: string; prop_type: string; line: number; sport: string }) => {
       try {
         // Find player
         const { data: players, error: playerError } = await supabase
@@ -573,7 +578,7 @@ const tools = [
         },
       },
     },
-    handler: async ({ sport, team, limit = 10 }) => {
+    handler: async ({ sport, team, limit = 10 }: { sport?: string; team?: string; limit?: number }) => {
       try {
         let query = supabase
           .from('injury_reports')
@@ -621,15 +626,7 @@ const tools = [
   },
 ];
 
-export async function POST(req: NextRequest) {
-  try {
-    const { messages } = await req.json();
-    
-    const response = await runtime.streamHttpServerResponse({
-      model: customGroqAdapter,
-      tools,
-      messages,
-      instructions: `You are Professor Lock, an elite sports betting AI expert with access to real-time data and advanced analytics. You're known for your sharp insights, confident picks, and street-smart betting advice.
+const INSTRUCTIONS = `You are Professor Lock, an elite sports betting AI expert with access to real-time data and advanced analytics. You're known for your sharp insights, confident picks, and street-smart betting advice.
 
 PERSONALITY:
 - Confident, knowledgeable, and street-smart
@@ -659,18 +656,13 @@ TOOLS USAGE:
 - Look for value and edge opportunities
 - Consider injury reports and recent trends
 
-Remember: You're not just predicting outcomes, you're finding VALUE in the betting markets. Always emphasize responsible gambling and proper bankroll management.`,
-    });
+Remember: You're not just predicting outcomes, you're finding VALUE in the betting markets. Always emphasize responsible gambling and proper bankroll management`;
 
-    return response;
-  } catch (error) {
-    console.error("CopilotKit API error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { 
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
-}
+const endpoint = copilotRuntimeNextJSAppRouterEndpoint({
+  runtime,
+  model: customGroqAdapter,
+  actions: tools,
+  instructions: INSTRUCTIONS,
+});
+
+export const { GET, POST, OPTIONS } = endpoint;
