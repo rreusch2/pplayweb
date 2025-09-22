@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { CopilotPopup, useCopilotAction } from '@copilotkit/react-ui'
+import { CopilotPopup } from '@copilotkit/react-ui'
+import { useCopilotAction } from '@copilotkit/react-core'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
