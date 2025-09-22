@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
-import ProfessorLockCopilot from '@/components/ProfessorLockCopilot'
+import AIChatModal from '@/components/AIChatModal'
 import LockOfTheDay from '@/components/LockOfTheDay'
 import DailyProfessorInsights from '@/components/DailyProfessorInsights'
 import TierEnhancedUI, { TierGatedContent, NoUpgradePrompts, TierButton } from '@/components/TierEnhancedUI'
@@ -339,8 +339,8 @@ export default function Dashboard() {
       onContinueFree={() => setSubscriptionModalOpen(false)}
     />
 
-    {/* 🔥 Professor Lock Copilot */}
-    <ProfessorLockCopilot 
+    {/* 🔥 AI Chat Modal (Professor Lock) */}
+    <AIChatModal 
       isOpen={showAIChat}
       onClose={() => setShowAIChat(false)}
     />
