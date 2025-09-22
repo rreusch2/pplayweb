@@ -2,7 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useAIChat } from '@/shared/hooks/useAIChat'
 import Navigation from './Navigation'
-import ProfessorLockCopilot from './ProfessorLockCopilot'
+import AIChatModal from './AIChatModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
@@ -61,7 +61,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         {children}
       </main>
       {showNav && (
-        <ProfessorLockCopilot
+        <AIChatModal
           isOpen={showAIChat}
           onClose={() => setShowAIChat(false)}
         />
