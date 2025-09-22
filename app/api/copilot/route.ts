@@ -9,8 +9,8 @@ const baseUrl = process.env.XAI_BASE_URL || 'https://api.x.ai/v1'
 
 const endpoint = copilotRuntimeNextJSAppRouterEndpoint({
   runtime,
-  provider: new OpenAIAdapter({ apiKey: xaiApiKey, baseUrl }),
-  instructions: 'You are Professor Lock, an expert AI betting assistant. Be sharp, concise, and data-driven.'
+  serviceAdapter: new OpenAIAdapter({ apiKey: xaiApiKey, baseUrl }),
+  endpoint: '/api/copilot'
 })
 
 export const GET = endpoint.GET
