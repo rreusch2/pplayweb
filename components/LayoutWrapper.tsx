@@ -1,8 +1,6 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
-import { useAIChat } from '@/shared/hooks/useAIChat'
 import Navigation from './Navigation'
-import ProfessorLockCopilot from './ProfessorLockCopilot'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
@@ -17,7 +15,6 @@ const authRoutes = ['/signin', '/signup']
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { showAIChat, setShowAIChat } = useAIChat()
   const { initializing, user } = useAuth()
 
   const isPublicRoute = publicRoutes.includes(pathname)
@@ -56,16 +53,10 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   return (
     <>
-      {showNav && <Navigation onOpenAIChat={() => setShowAIChat(true)} />}
+      {showNav && <Navigation />}
       <main id="main-content" role="main" className={!showNav ? 'h-full' : 'pt-16 sm:pt-20'}>
         {children}
       </main>
-      {showNav && (
-        <ProfessorLockCopilot
-          isOpen={showAIChat}
-          onClose={() => setShowAIChat(false)}
-        />
-      )}
     </>
   )
 }

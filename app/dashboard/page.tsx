@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
-import AIChatModal from '@/components/AIChatModal'
 import LockOfTheDay from '@/components/LockOfTheDay'
 import DailyProfessorInsights from '@/components/DailyProfessorInsights'
 import TierEnhancedUI, { TierGatedContent, NoUpgradePrompts, TierButton } from '@/components/TierEnhancedUI'
@@ -15,7 +14,6 @@ import OnboardingFlow from '@/components/OnboardingFlow'
 import WelcomeBonusBanner from '@/components/WelcomeBonusBanner'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import { usePredictions } from '@/shared/hooks/usePredictions'
-import { useAIChat } from '@/shared/hooks/useAIChat'
 import { AIPrediction } from '@/shared/services/aiService'
 import { 
   getTierCapabilities, 
@@ -71,10 +69,6 @@ export default function Dashboard() {
     userId: user?.id
   })
 
-  const {
-    showAIChat,
-    setShowAIChat
-  } = useAIChat()
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -339,11 +333,6 @@ export default function Dashboard() {
       onContinueFree={() => setSubscriptionModalOpen(false)}
     />
 
-    {/* 🔥 AI Chat Modal (Professor Lock) */}
-    <AIChatModal 
-      isOpen={showAIChat}
-      onClose={() => setShowAIChat(false)}
-    />
 
     {/* 🎯 ONBOARDING FLOW */}
     <OnboardingFlow

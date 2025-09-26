@@ -558,155 +558,48 @@ export default function AdminDashboard() {
 
 
 
-        {/* Users Management */}
+        {/* User Management Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
+          className="bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-md rounded-xl border border-blue-500/30 p-6 mb-8"
         >
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-2 flex items-center space-x-3">
+                <Users className="w-8 h-8 text-blue-400" />
+                <span>User Management</span>
+              </h3>
+              <p className="text-blue-200 mb-4">
+                Comprehensive user administration with advanced filtering, editing, and bulk operations
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-blue-200 text-sm">Total Users</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-purple-200 text-sm">Pro + Elite</p>
+                  <p className="text-2xl font-bold text-white">{stats.proUsers + stats.eliteUsers}</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-green-200 text-sm">Active Subs</p>
+                  <p className="text-2xl font-bold text-white">{stats.activeSubscriptions}</p>
+                </div>
+              </div>
             </div>
-            <select
-              value={tierFilter}
-              onChange={(e) => setTierFilter(e.target.value as any)}
-              className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Tiers</option>
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-              <option value="elite">Elite</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          {/* Users Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="pb-3 text-gray-300 font-medium">User</th>
-                  <th className="pb-3 text-gray-300 font-medium">Tier</th>
-                  <th className="pb-3 text-gray-300 font-medium">Status</th>
-                  <th className="pb-3 text-gray-300 font-medium">Plan Type</th>
-                  <th className="pb-3 text-gray-300 font-medium">Expires</th>
-                  <th className="pb-3 text-gray-300 font-medium">Joined</th>
-                  <th className="pb-3 text-gray-300 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user, index) => (
-                  <tr key={user.id} className="border-b border-white/5">
-                    <td className="py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium text-sm">
-                            {user.email?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-white font-medium">{user.username || 'No username'}</p>
-                          <p className="text-gray-400 text-sm">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getTierBadgeColor(user.subscription_tier)}`}>
-                        {user.subscription_tier.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusBadgeColor(user.subscription_status)}`}>
-                        {user.subscription_status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-4 text-gray-300 capitalize">
-                      {user.subscription_plan_type || 'N/A'}
-                    </td>
-                    <td className="py-4 text-gray-300">
-                      {user.subscription_expires_at ? formatDateOnly(user.subscription_expires_at) : 'N/A'}
-                    </td>
-                    <td className="py-4 text-gray-300">
-                      {formatDate(user.created_at)}
-                    </td>
-                    <td className="py-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => updateUserTier(user.id, 'pro')}
-                          disabled={updating === user.id || user.subscription_tier === 'pro'}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors"
-                        >
-                          Make Pro
-                        </button>
-                        <button
-                          onClick={() => updateUserTier(user.id, 'elite')}
-                          disabled={updating === user.id || user.subscription_tier === 'elite'}
-                          className="px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors"
-                        >
-                          Make Elite
-                        </button>
-                        <button
-                          onClick={() => updateUserTier(user.id, 'free')}
-                          disabled={updating === user.id || user.subscription_tier === 'free'}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors"
-                        >
-                          Make Free
-                        </button>
-                        <button
-                          onClick={() => setSelectedUser(user)}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded transition-colors"
-                        >
-                          <Eye className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-gray-400 text-sm">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, stats.totalUsers)} of {stats.totalUsers} users
-            </p>
-            <div className="flex space-x-2">
+            <div className="text-right">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 bg-white/10 hover:bg-white/20 disabled:bg-white/5 disabled:text-gray-500 text-white rounded transition-colors"
+                onClick={() => router.push('/admin/users')}
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <Users className="w-5 h-5" />
+                <span>Manage Users</span>
               </button>
-              <span className="px-3 py-1 bg-blue-600 text-white rounded">
-                {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 bg-white/10 hover:bg-white/20 disabled:bg-white/5 disabled:text-gray-500 text-white rounded transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <p className="text-blue-200 text-sm mt-2">
+                Advanced user management tools
+              </p>
             </div>
           </div>
         </motion.div>

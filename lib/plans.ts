@@ -69,7 +69,7 @@ export const PLANS: Plan[] = [
     name: 'Weekly Elite',
     price: 14.99,
     interval: 'week',
-    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced Professor Lock', 'Premium Analytics', 'Lock of the Day'],
+    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day'],
   },
   {
     id: 'elite_monthly',
@@ -78,7 +78,7 @@ export const PLANS: Plan[] = [
     name: 'Monthly Elite',
     price: 29.99,
     interval: 'month',
-    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced Professor Lock', 'Premium Analytics', 'Lock of the Day'],
+    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day'],
     savings: 'Save 17%',
   },
   {
@@ -88,7 +88,7 @@ export const PLANS: Plan[] = [
     name: 'Yearly Elite',
     price: 199.99,
     interval: 'year',
-    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced Professor Lock', 'Premium Analytics', 'Lock of the Day', '3-Day Free Trial'],
+    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day', '3-Day Free Trial'],
     savings: 'Save 50%',
   },
 ]

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { useAIChat } from '@/shared/hooks/useAIChat'
 import { coinsService } from '@/shared/services/coinsService'
 import InviteReferralModal from './InviteReferralModal'
 import Image from 'next/image'
@@ -31,16 +30,13 @@ const navigation = [
   { name: 'Trends', href: '/trends', icon: TrendingUp },
 ]
 
-interface NavigationProps {
-  onOpenAIChat: () => void
-}
+interface NavigationProps {}
 
-export default function Navigation({ onOpenAIChat }: NavigationProps) {
+export default function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut, profile } = useAuth()
   const { subscriptionTier } = useSubscription()
-  const { setShowAIChat, freeUserMessageCount } = useAIChat()
   const [refreshing, setRefreshing] = useState(false)
   const [coins, setCoins] = useState<number>(0)
   const [showInvite, setShowInvite] = useState(false)
@@ -151,19 +147,6 @@ export default function Navigation({ onOpenAIChat }: NavigationProps) {
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
 
-            {/* Professor Lock Chat Button */}
-            <button 
-              onClick={onOpenAIChat}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 transition-all duration-200 shadow-lg"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm font-medium">Professor Lock</span>
-              {subscriptionTier === 'free' && (
-                <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                  {3 - freeUserMessageCount}
-                </span>
-              )}
-            </button>
             
             {/* Removed Refresh Button */}
 

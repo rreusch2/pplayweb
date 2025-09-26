@@ -174,7 +174,7 @@ export default function EliteLockOfTheDay({ onPickPress }: EliteLockOfTheDayProp
               <h3 className="text-xl font-bold text-white">🔒 Lock of the Day</h3>
             </div>
             <p className="text-purple-200">
-              Professor Lock's highest confidence pick
+              AI's highest confidence pick
             </p>
           </div>
 
@@ -332,7 +332,7 @@ export default function EliteLockOfTheDay({ onPickPress }: EliteLockOfTheDayProp
                   </div>
                   <p className="text-purple-100 text-sm">
                     This is our highest-conviction pick, available exclusively to Elite members. 
-                    Professor Lock has analyzed all available data points to identify the strongest betting opportunity.
+                    Our AI has analyzed all available data points to identify the strongest betting opportunity.
                   </p>
                 </div>
               </div>

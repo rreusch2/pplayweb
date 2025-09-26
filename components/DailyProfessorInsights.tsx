@@ -212,7 +212,7 @@ export default function DailyProfessorInsights({ sport = 'MLB', limit }: DailyPr
               <Brain className="w-6 h-6 text-blue-400" />
             </div>
             <div className="flex-1">
-              <h4 className="text-white font-semibold mb-2">👋 Good morning from Professor Lock</h4>
+              <h4 className="text-white font-semibold mb-2">👋 Good morning from AI Insights</h4>
               <p className="text-blue-100 leading-relaxed">{dailyMessage}</p>
             </div>
           </div>
@@ -317,10 +317,10 @@ export default function DailyProfessorInsights({ sport = 'MLB', limit }: DailyPr
           <div className="text-center">
             <Crown className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
             <h4 className="text-xl font-bold text-white mb-2">
-              Unlock Complete Professor Insights
+              Unlock Complete AI Insights
             </h4>
             <p className="text-gray-300 mb-4">
-              Get access to all daily insights, detailed analysis, and exclusive research from Professor Lock
+              Get access to all daily insights, detailed analysis, and exclusive AI research
             </p>
             <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200">
               Upgrade to Pro
