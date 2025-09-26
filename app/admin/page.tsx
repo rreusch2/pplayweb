@@ -187,71 +187,70 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      // Get accurate counts without client-side filtering to avoid limits
-      const { data: countData, error: countError } = await supabase
-        .rpc('get_user_stats')
+      // Get ALL data without any limits - directly query the full table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_status, created_at, subscription_plan_type')
+
+      if (error) throw error
+
+      const today = new Date().toDateString()
+      const newUsersToday = data?.filter(user => 
+        new Date(user.created_at).toDateString() === today
+      ).length || 0
+
+      const activeSubscriptions = data?.filter(user => 
+        user.subscription_status === 'active' && user.subscription_tier !== 'free'
+      ).length || 0
+
+      const proUsers = data?.filter(user => user.subscription_tier === 'pro').length || 0
+      const eliteUsers = data?.filter(user => user.subscription_tier === 'elite').length || 0
+
+      // Correct pricing from RevenueCat service
+      const activeSubs = data?.filter(user => user.subscription_status === 'active') || []
+      const proSubs = activeSubs.filter(user => user.subscription_tier === 'pro')
+      const eliteSubs = activeSubs.filter(user => user.subscription_tier === 'elite')
+
+      const yearlyPro = proSubs.filter(u => u.subscription_plan_type === 'yearly').length
+      const monthlyPro = proSubs.filter(u => u.subscription_plan_type === 'monthly').length
+      const weeklyPro = proSubs.filter(u => u.subscription_plan_type === 'weekly').length
+      const lifetimePro = proSubs.filter(u => u.subscription_plan_type === 'lifetime').length
+      const daypassPro = proSubs.filter(u => u.subscription_plan_type === 'daypass').length
       
-      if (countError) {
-        console.warn('RPC call failed, falling back to client-side calculation')
-        // Fallback to getting all data without limits
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('subscription_tier, subscription_status, created_at, subscription_plan_type')
-          .limit(10000) // Remove any artificial 1000 limit
+      const yearlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'yearly').length
+      const monthlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'monthly').length
+      const weeklyElite = eliteSubs.filter(u => u.subscription_plan_type === 'weekly').length
+      const daypassElite = eliteSubs.filter(u => u.subscription_plan_type === 'daypass').length
 
-        if (error) throw error
+      // Correct pricing from actual RevenueCat service
+      // Pro: weekly: 9.99, monthly: 19.99, yearly: 199.99, daypass: 4.99, lifetime: 349.99
+      // Elite: daypass: 8.99, weekly: 14.99, monthly: 29.99, yearly: 199.99
+      const monthlyRevenue = 
+        (weeklyPro * 9.99 * 4.33) + // Weekly to monthly
+        (monthlyPro * 19.99) +
+        (yearlyPro * 199.99 / 12) + // Yearly to monthly
+        (daypassPro * 4.99 * 30) + // Daily to monthly (rough estimate)
+        (lifetimePro * 349.99 / 60) + // Lifetime amortized over 5 years
+        (weeklyElite * 14.99 * 4.33) + // Weekly to monthly
+        (monthlyElite * 29.99) +
+        (yearlyElite * 199.99 / 12) + // Yearly to monthly
+        (daypassElite * 8.99 * 30) // Daily to monthly (rough estimate)
 
-        const today = new Date().toDateString()
-        const newUsersToday = data?.filter(user => 
-          new Date(user.created_at).toDateString() === today
-        ).length || 0
-
-        const activeSubscriptions = data?.filter(user => 
-          user.subscription_status === 'active' && user.subscription_tier !== 'free'
-        ).length || 0
-
-        const proUsers = data?.filter(user => user.subscription_tier === 'pro').length || 0
-        const eliteUsers = data?.filter(user => user.subscription_tier === 'elite').length || 0
-
-        // Enhanced revenue calculation with realistic pricing
-        const activeSubs = data?.filter(user => user.subscription_status === 'active') || []
-        const proSubs = activeSubs.filter(user => user.subscription_tier === 'pro')
-        const eliteSubs = activeSubs.filter(user => user.subscription_tier === 'elite')
-
-        const yearlyPro = proSubs.filter(u => u.subscription_plan_type === 'yearly').length
-        const monthlyPro = proSubs.filter(u => u.subscription_plan_type === 'monthly').length
-        const weeklyPro = proSubs.filter(u => u.subscription_plan_type === 'weekly').length
-        const lifetimePro = proSubs.filter(u => u.subscription_plan_type === 'lifetime').length
-        
-        const yearlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'yearly').length
-        const monthlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'monthly').length
-        const weeklyElite = eliteSubs.filter(u => u.subscription_plan_type === 'weekly').length
-
-        // More accurate revenue calculation
-        const monthlyRevenue = 
-          (weeklyPro * 12.49 * 4.33) + // Weekly to monthly
-          (monthlyPro * 24.99) +
-          (yearlyPro * 199.99 / 12) + // Yearly to monthly
-          (weeklyElite * 14.99 * 4.33) + // Weekly to monthly
-          (monthlyElite * 29.99) +
-          (yearlyElite * 249.99 / 12) // Yearly to monthly
-
-        setStats({
-          totalUsers: data?.length || 0,
-          proUsers,
-          eliteUsers,
-          activeSubscriptions,
-          monthlyRevenue: Math.round(monthlyRevenue),
-          newUsersToday,
-          yearlyPro,
-          monthlyPro,
-          weeklyPro,
-          lifetimePro,
-          yearlyElite,
-          monthlyElite,
-          weeklyElite,
-        })
-      }
+      setStats({
+        totalUsers: data?.length || 0, // This should now show the real count (1354+)
+        proUsers,
+        eliteUsers,
+        activeSubscriptions,
+        monthlyRevenue: Math.round(monthlyRevenue),
+        newUsersToday,
+        yearlyPro,
+        monthlyPro,
+        weeklyPro,
+        lifetimePro,
+        yearlyElite,
+        monthlyElite,
+        weeklyElite,
+      })
     } catch (error) {
       console.error('Error loading stats:', error)
     }
