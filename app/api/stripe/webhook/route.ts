@@ -18,7 +18,62 @@ const supabaseAdmin = createClient(
   }
 )
 
+// Optional update for Stripe-specific columns; ignore errors if columns don't exist
+async function safeUpdateStripeFields(userId: string, fields: Record<string, any>) {
+  try {
+    const { error } = await supabaseAdmin.from('profiles').update(fields).eq('id', userId)
+    if (error) {
+      console.warn('Stripe-specific profile update skipped:', error.message)
+    }
+  } catch (e: any) {
+    console.warn('Stripe-specific profile update error (ignored):', e?.message || e)
+  }
+}
+
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+// Map Stripe recurring.interval to our plan type labels
+function mapIntervalToPlanType(interval?: string | null): 'weekly' | 'monthly' | 'yearly' | 'daypass' | 'lifetime' {
+  switch (interval) {
+    case 'week':
+      return 'weekly'
+    case 'month':
+      return 'monthly'
+    case 'year':
+      return 'yearly'
+    default:
+      return 'monthly'
+  }
+}
+
+// Safe insert of webhook event for audit trail; ignore if table missing
+async function logWebhookEvent(event: Stripe.Event) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('stripe_webhook_events')
+      .insert({ id: event.id, type: event.type, payload: event as any })
+    if (error) {
+      // If table doesn't exist or permission issues, just warn and continue
+      console.warn('stripe_webhook_events insert skipped:', error.message)
+    }
+  } catch (e: any) {
+    console.warn('stripe_webhook_events insert error (ignored):', e?.message || e)
+  }
+}
+
+async function markWebhookProcessed(id: string, errorMsg?: string) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('stripe_webhook_events')
+      .update({ processed: true, processed_at: new Date().toISOString(), error: errorMsg || null })
+      .eq('id', id)
+    if (error) {
+      console.warn('stripe_webhook_events mark processed warn:', error.message)
+    }
+  } catch (e: any) {
+    console.warn('stripe_webhook_events mark processed error (ignored):', e?.message || e)
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,12 +93,8 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
 
     if (!endpointSecret) {
-      console.warn("⚠️ STRIPE_WEBHOOK_SECRET not set. Skipping signature verification. THIS IS INSECURE.")
-      try {
-        event = JSON.parse(body) as Stripe.Event;
-      } catch (err) {
-        return NextResponse.json({ error: 'Failed to parse request body.' }, { status: 400 });
-      }
+      console.error('STRIPE_WEBHOOK_SECRET is not set. Refusing to process webhook in production.')
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
     } else {
       try {
         // Verify the webhook signature
@@ -59,13 +110,17 @@ export async function POST(request: NextRequest) {
 
     console.log('Received Stripe webhook event:', event.type)
 
+    // Audit log (best-effort)
+    await logWebhookEvent(event)
+
     // Handle the event
+    let handlerError: string | undefined
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session).catch(e => { handlerError = String(e) })
         break
       case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent).catch(e => { handlerError = String(e) })
         break
       
       case 'payment_intent.payment_failed':
@@ -99,6 +154,9 @@ export async function POST(request: NextRequest) {
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
+
+    // Mark processed (best-effort)
+    await markWebhookProcessed(event.id, handlerError)
 
     return NextResponse.json({ received: true })
 
@@ -229,16 +287,30 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       if (!subscriptionType) return
 
       const subData = getSubscriptionData(subscriptionType)
+      
+      // Special handling for lifetime purchases
+      const updateData: any = {
+        subscription_tier: subData.tier,
+        subscription_status: 'active',
+        subscription_plan_type: subData.planType,
+        subscription_started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      
+      if (subData.isLifetime) {
+        // Lifetime: no expiration, reset welcome bonus, set max picks
+        updateData.subscription_expires_at = null
+        updateData.welcome_bonus_claimed = false
+        updateData.welcome_bonus_expires_at = null
+        updateData.max_daily_picks = 20
+        updateData.subscription_provider = 'stripe'
+      } else {
+        updateData.subscription_expires_at = subData.expiresAt
+      }
+      
       const { error } = await supabaseAdmin
         .from('profiles')
-        .update({
-          subscription_tier: subData.tier,
-          subscription_status: 'active',
-          subscription_plan_type: subData.planType,
-          subscription_started_at: new Date().toISOString(),
-          subscription_expires_at: subData.expiresAt,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', userId)
 
       if (error) {
@@ -272,6 +344,17 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       if (error) {
         console.error('Error updating profile after checkout (subscription):', error)
       }
+      // Best-effort Stripe-specific fields
+      await safeUpdateStripeFields(userId, {
+        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+        stripe_subscription_id: subscription.id,
+        stripe_price_id: subscription.items.data[0]?.price?.id || null,
+        stripe_status: subscription.status,
+        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+        subscription_provider: 'stripe',
+      })
     }
   } catch (error) {
     console.error('Error in handleCheckoutSessionCompleted:', error)
@@ -300,7 +383,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
           subscription_plan_type: interval,
           subscription_started_at: new Date().toISOString(),
           subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
 
@@ -309,6 +392,16 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       } else {
         console.log(`Subscription created for user ${userId}: ${subscriptionType}`)
       }
+      await safeUpdateStripeFields(userId, {
+        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+        stripe_subscription_id: subscription.id,
+        stripe_price_id: subscription.items.data[0]?.price?.id || null,
+        stripe_status: subscription.status,
+        current_period_start: new Date(((subscriptionObj as any).current_period_start) * 1000).toISOString(),
+        current_period_end: new Date(subscriptionObj.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+        subscription_provider: 'stripe',
+      })
     }
   } catch (error) {
     console.error('Error handling subscription creation:', error)
@@ -324,13 +417,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     if (userId) {
       let updateData: any = {
         subscription_status: subscription.status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }
 
       // If subscription is canceled or past_due, handle accordingly
       if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
         updateData.subscription_tier = 'free'
         updateData.subscription_expires_at = new Date().toISOString()
+        updateData.canceled_at = new Date().toISOString()
       } else if (subscription.status === 'active' || subscription.status === 'trialing') {
         // Renew/extend subscription from Stripe period
         const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
@@ -340,6 +434,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         updateData.subscription_tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
         updateData.subscription_plan_type = interval
         updateData.subscription_expires_at = new Date(currentPeriodEnd * 1000).toISOString()
+        updateData.current_period_start = new Date(((subscriptionObj as any).current_period_start) * 1000).toISOString()
+        updateData.current_period_end = new Date(subscriptionObj.current_period_end * 1000).toISOString()
       }
 
       const { error } = await supabaseAdmin
@@ -352,6 +448,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       } else {
         console.log(`Subscription updated for user ${userId}: ${subscription.status}`)
       }
+      await safeUpdateStripeFields(userId, {
+        stripe_status: subscription.status,
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+        stripe_price_id: subscription.items.data[0]?.price?.id || null,
+        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+        subscription_provider: 'stripe',
+      })
     }
   } catch (error) {
     console.error('Error handling subscription update:', error)
@@ -380,6 +484,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       } else {
         console.log(`Subscription canceled for user ${userId}`)
       }
+      await safeUpdateStripeFields(userId, {
+        stripe_status: 'canceled',
+        cancel_at_period_end: false,
+        canceled_at: new Date().toISOString(),
+        subscription_provider: 'stripe',
+      })
     }
   } catch (error) {
     console.error('Error handling subscription deletion:', error)
@@ -411,7 +521,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
             subscription_status: 'active',
             subscription_plan_type: interval,
             subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
 
@@ -420,6 +530,16 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
         } else {
           console.log(`Subscription renewed for user ${userId}`)
         }
+        await safeUpdateStripeFields(userId, {
+          stripe_status: 'active',
+          stripe_subscription_id: subscription.id,
+          stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+          stripe_price_id: subscription.items.data[0]?.price?.id || null,
+          current_period_start: new Date(((subscription as any).current_period_start) * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+          subscription_provider: 'stripe',
+        })
       }
     }
   } catch (error) {
@@ -446,7 +566,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
           .from('profiles')
           .update({
             subscription_status: 'past_due',
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', userId)
 
@@ -455,6 +575,10 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         } else {
           console.log(`Marked subscription as past_due for user ${userId}`)
         }
+        await safeUpdateStripeFields(userId, {
+          stripe_status: 'past_due',
+          subscription_provider: 'stripe',
+        })
       }
     }
   } catch (error) {
@@ -467,6 +591,7 @@ function getSubscriptionData(subscriptionType: string) {
   let expiresAt: Date
   let tier: string
   let planType: string
+  let isLifetime = false
 
   switch (subscriptionType) {
     // Pro Plans
@@ -492,8 +617,9 @@ function getSubscriptionData(subscriptionType: string) {
       break
     case 'pro_lifetime':
       tier = 'pro'
-      planType = 'one_time'
-      expiresAt = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 years (lifetime)
+      planType = 'lifetime'
+      isLifetime = true
+      expiresAt = new Date('2099-12-31') // Far future date
       break
     
     // Elite Plans
@@ -512,6 +638,12 @@ function getSubscriptionData(subscriptionType: string) {
       planType = 'year'
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 365 days
       break
+    case 'elite_lifetime':
+      tier = 'elite'
+      planType = 'lifetime'
+      isLifetime = true
+      expiresAt = new Date('2099-12-31') // Far future date
+      break
     
     default:
       tier = 'free'
@@ -522,6 +654,7 @@ function getSubscriptionData(subscriptionType: string) {
   return {
     tier,
     planType,
-    expiresAt: expiresAt.toISOString()
+    expiresAt: expiresAt.toISOString(),
+    isLifetime
   }
 }

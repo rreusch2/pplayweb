@@ -28,6 +28,7 @@ const navigation = [
   { name: 'Games', href: '/games', icon: Calendar },
   { name: 'Predictions', href: '/predictions', icon: Zap },
   { name: 'Trends', href: '/trends', icon: TrendingUp },
+  { name: 'Professor Lock', href: '/professor-lock', icon: MessageCircle },
 ]
 
 interface NavigationProps {}
