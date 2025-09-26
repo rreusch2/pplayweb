@@ -208,6 +208,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           { error: 'Authorization required for manual trigger' },
           { status: 401 }
+        )
       }
     }
 
