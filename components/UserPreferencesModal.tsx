@@ -19,6 +19,7 @@ export interface UserPreferences {
     wnba: boolean
     ufc: boolean
     nfl: boolean
+    cfb: boolean
   }
   bettingStyle: 'conservative' | 'balanced' | 'aggressive'
   pickDistribution?: { auto: boolean }
@@ -45,6 +46,13 @@ const sportOptions = [
     icon: '🏈',
     description: 'National Football League',
     color: 'from-green-500 to-emerald-600'
+  },
+  {
+    key: 'cfb' as const,
+    name: 'CFB',
+    icon: '🏈',
+    description: 'College Football',
+    color: 'from-purple-500 to-indigo-600'
   },
   {
     key: 'wnba' as const,
@@ -101,7 +109,7 @@ export default function UserPreferencesModal({
   const { user } = useAuth()
   
   const [preferences, setPreferences] = useState<UserPreferences>({
-    sportPreferences: currentPreferences?.sportPreferences || { mlb: true, wnba: false, ufc: false, nfl: false },
+    sportPreferences: currentPreferences?.sportPreferences || { mlb: true, wnba: false, ufc: false, nfl: false, cfb: false },
     bettingStyle: currentPreferences?.bettingStyle || 'balanced',
     pickDistribution: { auto: true }
   })

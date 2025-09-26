@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
+import UserPreferencesModal, { UserPreferences } from '@/components/UserPreferencesModal'
 import { motion } from 'framer-motion'
 import { 
   User,
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const { subscriptionTier } = useSubscription()
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
+  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pushNotifications, setPushNotifications] = useState(true)
@@ -90,6 +92,15 @@ export default function SettingsPage() {
     console.log('Export user data')
   }
 
+  const handleOpenPreferences = () => {
+    setPreferencesModalOpen(true)
+  }
+
+  const handlePreferencesComplete = (preferences: UserPreferences) => {
+    console.log('User preferences updated:', preferences)
+    setPreferencesModalOpen(false)
+  }
+
   const settingsSections: SettingSection[] = [
     {
       title: 'Account',
@@ -108,7 +119,7 @@ export default function SettingsPage() {
           title: 'Betting Preferences',
           subtitle: 'Sports, betting style & pick distribution',
           type: 'link',
-          action: () => console.log('Edit preferences')
+          action: handleOpenPreferences
         },
         {
           id: 'export',
@@ -440,6 +451,13 @@ export default function SettingsPage() {
         isOpen={subscriptionModalOpen}
         onClose={() => setSubscriptionModalOpen(false)}
         onContinueFree={() => setSubscriptionModalOpen(false)}
+      />
+
+      {/* User Preferences Modal */}
+      <UserPreferencesModal
+        isOpen={preferencesModalOpen}
+        onClose={() => setPreferencesModalOpen(false)}
+        onComplete={handlePreferencesComplete}
       />
     </div>
   )
