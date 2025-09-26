@@ -15,6 +15,8 @@ function resolveSubscriptionType(priceId: string): string | null {
     [(process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_WEEKLY || '')]: 'elite_weekly',
     [(process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_MONTHLY || '')]: 'elite_monthly',
     [(process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_YEARLY || '')]: 'elite_yearly',
+    [(process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_DAYPASS || '')]: 'elite_daypass',
+    [(process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_LIFETIME || '')]: 'elite_lifetime',
   }
   return map[priceId] || null
 }
@@ -37,9 +39,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Determine plan type from price and whether it's one-time vs recurring
+    // Determine plan type from env mapping
     const subscriptionType = resolveSubscriptionType(priceId)
-    const isOneTimeProduct = subscriptionType === 'pro_lifetime' || subscriptionType === 'pro_daypass'
+
+    // Fetch the Price from Stripe to determine if it is recurring or one-time
+    const price = await stripe.prices.retrieve(priceId)
+    const isRecurring = !!price.recurring
+    const interval = price.recurring?.interval || null
+    // If Stripe says it's recurring, we must use subscription mode.
+    // Only use payment mode for true one-time prices.
+    const isOneTimeProduct = !isRecurring
     
     // Build params conditionally to avoid passing payment_intent_data in subscription mode
     const baseParams: any = {
@@ -59,6 +68,9 @@ export async function POST(req: NextRequest) {
         productType: isOneTimeProduct ? 'one_time' : 'subscription',
         subscription_type: subscriptionType || 'unknown',
         price_id: priceId,
+        interval: interval || 'none',
+        tier: subscriptionType?.includes('elite') ? 'elite' : 'pro',
+        created_at: new Date().toISOString(),
       },
       customer_email: undefined, // You can add user email here if available
       allow_promotion_codes: true,
@@ -80,6 +92,7 @@ export async function POST(req: NextRequest) {
           user_id: userId,
           subscription_type: subscriptionType || 'unknown',
           price_id: priceId,
+          interval: interval || 'none',
         },
       }
     }

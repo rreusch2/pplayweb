@@ -46,6 +46,21 @@ function mapIntervalToPlanType(interval?: string | null): 'weekly' | 'monthly' |
   }
 }
 
+// Helper function to determine if a price ID is for Elite tier
+function isElitePriceId(priceId?: string): boolean {
+  if (!priceId) return false
+  
+  const elitePriceIds = [
+    'price_1RsHrXRo1RFNyzsn6tf8SYDr', // Elite Weekly
+    'price_1RsHswRo1RFNyzsnyyluM3J2', // Elite Monthly  
+    'price_1RsHugRo1RFNyzsnhKEKMAE6', // Elite Yearly
+    'price_1SBVgmRo1RFNyzsnVPrt2JDK', // Elite Daypass
+    'price_1SBVaSRo1RFNyzsnLdiz5euz', // Elite Lifetime
+  ]
+  
+  return elitePriceIds.includes(priceId)
+}
+
 // Safe insert of webhook event for audit trail; ignore if table missing
 async function logWebhookEvent(event: Stripe.Event) {
   try {
@@ -273,10 +288,15 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
 // Handle successful completion of Stripe Checkout
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
-    console.log('Checkout session completed:', session.id)
+    console.log('🎉 Checkout session completed:', session.id)
     const userId = (session.client_reference_id as string) || (session.metadata?.userId as string) || ''
 
-    if (!userId) return
+    if (!userId) {
+      console.error('❌ No userId found in checkout session')
+      return
+    }
+
+    console.log('👤 Processing subscription for user:', userId)
 
     // One-time payment flow (daypass/lifetime) -> no subscription
     if (session.mode === 'payment') {
@@ -286,6 +306,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       const subscriptionType = (paymentIntent.metadata?.subscription_type as string) || ''
       if (!subscriptionType) return
 
+      console.log('💳 Processing one-time payment:', subscriptionType)
       const subData = getSubscriptionData(subscriptionType)
       
       // Special handling for lifetime purchases
@@ -295,17 +316,22 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_plan_type: subData.planType,
         subscription_started_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        max_daily_picks: subData.tier === 'elite' ? 30 : (subData.tier === 'pro' ? 20 : 2),
+        subscription_provider: 'stripe',
       }
       
       if (subData.isLifetime) {
-        // Lifetime: no expiration, reset welcome bonus, set max picks
+        // Lifetime: no expiration, reset welcome bonus
         updateData.subscription_expires_at = null
         updateData.welcome_bonus_claimed = false
         updateData.welcome_bonus_expires_at = null
-        updateData.max_daily_picks = 20
-        updateData.subscription_provider = 'stripe'
       } else {
         updateData.subscription_expires_at = subData.expiresAt
+      }
+      
+      // Add customer ID tracking
+      if (session.customer) {
+        updateData.stripe_customer_id = typeof session.customer === 'string' ? session.customer : session.customer.id
       }
       
       const { error } = await supabaseAdmin
@@ -314,7 +340,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         .eq('id', userId)
 
       if (error) {
-        console.error('Error updating profile after checkout (payment):', error)
+        console.error('❌ Error updating profile after checkout (payment):', error)
+      } else {
+        console.log('✅ Successfully updated user to', subData.tier, 'tier')
       }
       return
     }
@@ -322,42 +350,55 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // Subscription flow -> use Stripe subscription current period end
     if (session.mode === 'subscription' && session.subscription) {
       const subId = session.subscription as string
-      const subscriptionResp = await stripe.subscriptions.retrieve(subId)
+      const subscriptionResp = await stripe.subscriptions.retrieve(subId, {
+        expand: ['items.data.price.product']
+      })
       const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
       const subscriptionType = (subscription.metadata?.subscription_type as string) || ''
       const currentPeriodEnd = subscription.current_period_end
       const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
-      const tier = subscriptionType.startsWith('elite') ? 'elite' : 'pro'
+      
+      // Determine tier from subscription type or price ID
+      let tier = 'pro' // default
+      const priceId = subscription.items.data[0]?.price?.id
+      if (subscriptionType.startsWith('elite') || isElitePriceId(priceId)) {
+        tier = 'elite'
+      }
+
+      console.log('🔄 Processing subscription:', {
+        subscriptionId: subscription.id,
+        tier,
+        interval,
+        priceId
+      })
+
+      const updateData = {
+        subscription_tier: tier,
+        subscription_status: subscription.status,
+        subscription_plan_type: interval,
+        subscription_started_at: new Date().toISOString(),
+        subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+        max_daily_picks: tier === 'elite' ? 30 : 20,
+        subscription_provider: 'stripe',
+        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+        stripe_subscription_id: subscription.id,
+        stripe_price_id: priceId,
+      }
 
       const { error } = await supabaseAdmin
         .from('profiles')
-        .update({
-          subscription_tier: tier,
-          subscription_status: subscription.status,
-          subscription_plan_type: interval,
-          subscription_started_at: new Date().toISOString(),
-          subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', userId)
 
       if (error) {
-        console.error('Error updating profile after checkout (subscription):', error)
+        console.error('❌ Error updating profile after checkout (subscription):', error)
+      } else {
+        console.log('✅ Successfully activated', tier, 'subscription for user')
       }
-      // Best-effort Stripe-specific fields
-      await safeUpdateStripeFields(userId, {
-        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
-        stripe_subscription_id: subscription.id,
-        stripe_price_id: subscription.items.data[0]?.price?.id || null,
-        stripe_status: subscription.status,
-        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-        subscription_provider: 'stripe',
-      })
     }
   } catch (error) {
-    console.error('Error in handleCheckoutSessionCompleted:', error)
+    console.error('❌ Error in handleCheckoutSessionCompleted:', error)
   }
 }
 
@@ -409,7 +450,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('Subscription updated:', subscription.id)
+  console.log('🔄 Subscription updated:', subscription.id)
   
   try {
     const userId = subscription.metadata.user_id
@@ -422,20 +463,41 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
       // If subscription is canceled or past_due, handle accordingly
       if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        console.log('⬇️ Downgrading user to free tier due to:', subscription.status)
         updateData.subscription_tier = 'free'
         updateData.subscription_expires_at = new Date().toISOString()
         updateData.canceled_at = new Date().toISOString()
+        updateData.max_daily_picks = 2
       } else if (subscription.status === 'active' || subscription.status === 'trialing') {
         // Renew/extend subscription from Stripe period
         const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
         const subscriptionType = subscriptionObj.metadata.subscription_type
         const currentPeriodEnd = subscriptionObj.current_period_end
         const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
-        updateData.subscription_tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
+        const priceId = subscriptionObj.items.data[0]?.price?.id
+        
+        // Determine tier from subscription type or price ID
+        let tier = 'pro' // default
+        if (subscriptionType?.startsWith('elite') || isElitePriceId(priceId)) {
+          tier = 'elite'
+        }
+        
+        console.log('⬆️ Updating subscription:', {
+          userId,
+          tier,
+          interval,
+          status: subscription.status,
+          priceId
+        })
+        
+        updateData.subscription_tier = tier
         updateData.subscription_plan_type = interval
         updateData.subscription_expires_at = new Date(currentPeriodEnd * 1000).toISOString()
-        updateData.current_period_start = new Date(((subscriptionObj as any).current_period_start) * 1000).toISOString()
-        updateData.current_period_end = new Date(subscriptionObj.current_period_end * 1000).toISOString()
+        updateData.max_daily_picks = tier === 'elite' ? 30 : 20
+        updateData.stripe_customer_id = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id
+        updateData.stripe_subscription_id = subscription.id
+        updateData.stripe_price_id = priceId
+        updateData.subscription_provider = 'stripe'
       }
 
       const { error } = await supabaseAdmin
@@ -444,55 +506,47 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         .eq('id', userId)
 
       if (error) {
-        console.error('Error updating profile on subscription update:', error)
+        console.error('❌ Error updating profile on subscription update:', error)
       } else {
-        console.log(`Subscription updated for user ${userId}: ${subscription.status}`)
+        console.log(`✅ Subscription updated for user ${userId}: ${subscription.status} (tier: ${updateData.subscription_tier})`)
       }
-      await safeUpdateStripeFields(userId, {
-        stripe_status: subscription.status,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
-        stripe_price_id: subscription.items.data[0]?.price?.id || null,
-        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-        subscription_provider: 'stripe',
-      })
     }
   } catch (error) {
-    console.error('Error handling subscription update:', error)
+    console.error('❌ Error handling subscription update:', error)
   }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('Subscription deleted:', subscription.id)
+  console.log('🗑️ Subscription deleted:', subscription.id)
   
   try {
     const userId = subscription.metadata.user_id
     
     if (userId) {
+      console.log('⬇️ Downgrading user to free tier due to subscription deletion')
+      
       const { error } = await supabaseAdmin
         .from('profiles')
         .update({
           subscription_tier: 'free',
           subscription_status: 'canceled',
           subscription_expires_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          max_daily_picks: 2,
+          stripe_subscription_id: null,
+          stripe_price_id: null,
+          canceled_at: new Date().toISOString(),
         })
         .eq('id', userId)
 
       if (error) {
-        console.error('Error updating profile on subscription deletion:', error)
+        console.error('❌ Error updating profile on subscription deletion:', error)
       } else {
-        console.log(`Subscription canceled for user ${userId}`)
+        console.log(`✅ Subscription canceled for user ${userId}, downgraded to free tier`)
       }
-      await safeUpdateStripeFields(userId, {
-        stripe_status: 'canceled',
-        cancel_at_period_end: false,
-        canceled_at: new Date().toISOString(),
-        subscription_provider: 'stripe',
-      })
     }
   } catch (error) {
-    console.error('Error handling subscription deletion:', error)
+    console.error('❌ Error handling subscription deletion:', error)
   }
 }
 
@@ -623,6 +677,11 @@ function getSubscriptionData(subscriptionType: string) {
       break
     
     // Elite Plans
+    case 'elite_daypass':
+      tier = 'elite'
+      planType = 'day'
+      expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours
+      break
     case 'elite_weekly':
       tier = 'elite'
       planType = 'week'
