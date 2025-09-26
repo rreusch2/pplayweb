@@ -1,13 +1,9 @@
+'use client'
 import React from 'react'
 import dynamic from 'next/dynamic'
 
-export const metadata = {
-  title: 'Professor Lock — Advanced AI Betting Assistant',
-  description: 'Ask Professor Lock for real picks, smart parlays, live odds checks, and injury intel — powered by your real predictions and insights.',
-}
-
 // Use dynamic import to ensure Client Component only renders on client
-const ChatClient = dynamic(() => import('@/components/professor-lock/ChatClient'), {
+const ChatClient = dynamic(() => import('../../components/professor-lock/ChatClient'), {
   ssr: false,
 })
 
