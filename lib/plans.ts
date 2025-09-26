@@ -37,10 +37,10 @@ export const PLANS: Plan[] = [
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || '',
     tier: 'pro',
     name: 'Pro Monthly',
-    price: 19.99,
+    price: 24.99,
     interval: 'month',
     features: ['20 Daily AI Picks', '8 Daily Insights', 'Unlimited Chat', 'Daily AI Predictions'],
-    savings: 'Save 17%',
+    savings: 'Save 42%',
   },
   {
     id: 'pro_yearly',
