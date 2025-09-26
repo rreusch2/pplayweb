@@ -62,11 +62,8 @@ export async function POST(req: NextRequest) {
       },
       customer_email: undefined, // You can add user email here if available
       allow_promotion_codes: true,
-      // Enable automatic payment methods (includes Apple Pay when available)
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'always'
-      },
+      // Note: automatic_payment_methods removed due to API version compatibility
+      // payment_method_types already specifies the methods we want to support
     }
 
     if (isOneTimeProduct) {
