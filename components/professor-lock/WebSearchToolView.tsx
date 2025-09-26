@@ -246,7 +246,7 @@ export default function WebSearchToolView({ tool, expanded }: WebSearchToolViewP
                 {key.replace(/_/g, ' ')}
               </div>
               <div className="text-white font-medium">
-                {typeof value === 'number' ? value.toLocaleString() : value}
+                {typeof value === 'number' ? value.toLocaleString() : String(value)}
               </div>
             </div>
           ))}
