@@ -199,7 +199,11 @@ export default function ProfessorLockPage() {
   }
 
   const sendMessage = async () => {
-    if (!inputValue.trim() || !wsRef.current || !isConnected) return
+    if (!inputValue.trim()) return
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      addSystemMessage('Connection not ready. Reconnecting... please try again in a moment.')
+      return
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -298,8 +302,8 @@ export default function ProfessorLockPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -326,21 +330,6 @@ export default function ProfessorLockPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Connection Status */}
-              <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${
-                isConnected 
-                  ? 'bg-green-500/20 text-green-300' 
-                  : 'bg-red-500/20 text-red-300'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-green-400' : 'bg-red-400'
-                }`} />
-                <span className="text-sm">
-                  {isConnected ? 'Connected' : 'Connecting...'}
-                </span>
-              </div>
-
-              {/* Agent Status */}
               {agentStatus.isActive && (
                 <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -352,7 +341,7 @@ export default function ProfessorLockPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-240px)]">
           
           {/* Chat Section */}
@@ -423,10 +412,10 @@ export default function ProfessorLockPage() {
             </div>
 
             {/* Input */}
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700 p-4">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700 p-4 relative z-50 pointer-events-auto">
               <div className="flex items-end space-x-4">
                 <div 
-                  className="flex-1 cursor-text"
+                  className="flex-1 cursor-text relative z-20"
                   onClick={() => inputRef.current?.focus()}
                 >
                   <input
@@ -434,10 +423,9 @@ export default function ProfessorLockPage() {
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyPress}
                     placeholder="Ask Professor Lock Advanced to analyze betting opportunities, research players, or build complex strategies..."
                     className="w-full bg-transparent text-white placeholder-gray-400 outline-none border-none focus:ring-0 p-2 min-h-[40px]"
-                    disabled={!isConnected}
                     autoComplete="off"
                   />
                 </div>
@@ -454,7 +442,7 @@ export default function ProfessorLockPage() {
                   </button>
                   <button
                     onClick={sendMessage}
-                    disabled={!inputValue.trim() || !isConnected}
+                    disabled={!inputValue.trim()}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all"
                   >
                     <Send className="w-4 h-4" />

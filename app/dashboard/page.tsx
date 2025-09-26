@@ -207,13 +207,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">High Confidence</h3>
-                <p className="text-2xl font-bold text-purple-400">
+                <div className="text-2xl font-bold text-purple-400">
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     highConfidencePicks.length
                   )}
-                </p>
+                </div>
                 <p className="text-xs text-gray-400">80%+ Picks</p>
               </div>
             </div>
@@ -231,13 +231,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Team Picks</h3>
-                <p className="text-2xl font-bold text-yellow-400">
+                <div className="text-2xl font-bold text-yellow-400">
                   {isLoadingTeam ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     teamPicks.length
                   )}
-                </p>
+                </div>
                 <p className="text-xs text-gray-400">ML • Spreads • Totals</p>
               </div>
             </div>
