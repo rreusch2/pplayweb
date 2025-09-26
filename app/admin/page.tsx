@@ -187,57 +187,130 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      // Get ALL data without any limits - directly query the full table
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_tier, subscription_status, created_at, subscription_plan_type')
+      // Use count-only queries (head: true) to avoid 1000-row cap
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+      const startOfDayISO = startOfDay.toISOString()
 
-      if (error) throw error
+      const [
+        totalUsersRes,
+        proUsersRes,
+        eliteUsersRes,
+        activeSubsRes,
+        newTodayRes,
+        weeklyProRes,
+        monthlyProRes,
+        yearlyProRes,
+        lifetimeProRes,
+        daypassProRes,
+        weeklyEliteRes,
+        monthlyEliteRes,
+        yearlyEliteRes,
+        daypassEliteRes,
+      ] = await Promise.all([
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_tier', 'pro'),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_tier', 'elite'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .in('subscription_tier', ['pro', 'elite']),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', startOfDayISO),
+        // Pro plan breakdown (active only)
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'pro')
+          .eq('subscription_plan_type', 'weekly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'pro')
+          .eq('subscription_plan_type', 'monthly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'pro')
+          .eq('subscription_plan_type', 'yearly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'pro')
+          .eq('subscription_plan_type', 'lifetime'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'pro')
+          .eq('subscription_plan_type', 'daypass'),
+        // Elite plan breakdown (active only)
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'elite')
+          .eq('subscription_plan_type', 'weekly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'elite')
+          .eq('subscription_plan_type', 'monthly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'elite')
+          .eq('subscription_plan_type', 'yearly'),
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('subscription_status', 'active')
+          .eq('subscription_tier', 'elite')
+          .eq('subscription_plan_type', 'daypass'),
+      ])
 
-      const today = new Date().toDateString()
-      const newUsersToday = data?.filter(user => 
-        new Date(user.created_at).toDateString() === today
-      ).length || 0
+      const totalUsers = totalUsersRes.count || 0
+      const proUsers = proUsersRes.count || 0
+      const eliteUsers = eliteUsersRes.count || 0
+      const activeSubscriptions = activeSubsRes.count || 0
+      const newUsersToday = newTodayRes.count || 0
 
-      const activeSubscriptions = data?.filter(user => 
-        user.subscription_status === 'active' && user.subscription_tier !== 'free'
-      ).length || 0
+      const weeklyPro = weeklyProRes.count || 0
+      const monthlyPro = monthlyProRes.count || 0
+      const yearlyPro = yearlyProRes.count || 0
+      const lifetimePro = lifetimeProRes.count || 0
+      const daypassPro = daypassProRes.count || 0
 
-      const proUsers = data?.filter(user => user.subscription_tier === 'pro').length || 0
-      const eliteUsers = data?.filter(user => user.subscription_tier === 'elite').length || 0
+      const weeklyElite = weeklyEliteRes.count || 0
+      const monthlyElite = monthlyEliteRes.count || 0
+      const yearlyElite = yearlyEliteRes.count || 0
+      const daypassElite = daypassEliteRes.count || 0
 
       // Correct pricing from RevenueCat service
-      const activeSubs = data?.filter(user => user.subscription_status === 'active') || []
-      const proSubs = activeSubs.filter(user => user.subscription_tier === 'pro')
-      const eliteSubs = activeSubs.filter(user => user.subscription_tier === 'elite')
-
-      const yearlyPro = proSubs.filter(u => u.subscription_plan_type === 'yearly').length
-      const monthlyPro = proSubs.filter(u => u.subscription_plan_type === 'monthly').length
-      const weeklyPro = proSubs.filter(u => u.subscription_plan_type === 'weekly').length
-      const lifetimePro = proSubs.filter(u => u.subscription_plan_type === 'lifetime').length
-      const daypassPro = proSubs.filter(u => u.subscription_plan_type === 'daypass').length
-      
-      const yearlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'yearly').length
-      const monthlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'monthly').length
-      const weeklyElite = eliteSubs.filter(u => u.subscription_plan_type === 'weekly').length
-      const daypassElite = eliteSubs.filter(u => u.subscription_plan_type === 'daypass').length
-
-      // Correct pricing from actual RevenueCat service
       // Pro: weekly: 9.99, monthly: 19.99, yearly: 199.99, daypass: 4.99, lifetime: 349.99
       // Elite: daypass: 8.99, weekly: 14.99, monthly: 29.99, yearly: 199.99
-      const monthlyRevenue = 
-        (weeklyPro * 9.99 * 4.33) + // Weekly to monthly
+      const monthlyRevenue =
+        (weeklyPro * 9.99 * 4.33) +
         (monthlyPro * 19.99) +
-        (yearlyPro * 199.99 / 12) + // Yearly to monthly
-        (daypassPro * 4.99 * 30) + // Daily to monthly (rough estimate)
-        (lifetimePro * 349.99 / 60) + // Lifetime amortized over 5 years
-        (weeklyElite * 14.99 * 4.33) + // Weekly to monthly
+        (yearlyPro * 199.99 / 12) +
+        (daypassPro * 4.99 * 30) +
+        (lifetimePro * 349.99 / 60) +
+        (weeklyElite * 14.99 * 4.33) +
         (monthlyElite * 29.99) +
-        (yearlyElite * 199.99 / 12) + // Yearly to monthly
-        (daypassElite * 8.99 * 30) // Daily to monthly (rough estimate)
+        (yearlyElite * 199.99 / 12) +
+        (daypassElite * 8.99 * 30)
 
       setStats({
-        totalUsers: data?.length || 0, // This should now show the real count (1354+)
+        totalUsers,
         proUsers,
         eliteUsers,
         activeSubscriptions,
