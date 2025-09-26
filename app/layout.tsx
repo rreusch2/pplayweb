@@ -7,6 +7,7 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import ScrollDepthTracker from '@/components/ScrollDepthTracker'
+import ScrollToTop from '@/components/ScrollToTop'
 import { Toaster } from 'react-hot-toast'
 import { CopilotKit } from "@copilotkit/react-core"
 
@@ -110,6 +111,7 @@ export default function RootLayout({
         </a>
         <AnalyticsProvider>
           <ScrollDepthTracker />
+          <ScrollToTop />
           <AuthProvider>
             <SubscriptionProvider>
               <CopilotKit

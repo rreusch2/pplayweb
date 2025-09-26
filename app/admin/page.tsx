@@ -44,7 +44,6 @@ import TodaysPicksModal from './components/TodaysPicksModal'
 import ReportsModal from './components/ReportsModal'
 import SendNotificationModal from './components/SendNotificationModal'
 import RedditAdsAnalytics from './components/RedditAdsAnalytics'
-import AdminChat from './components/AdminChat'
 
 
 interface UserData {
@@ -188,55 +187,71 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_tier, subscription_status, created_at, subscription_plan_type')
-
-      if (error) throw error
-
-      const today = new Date().toDateString()
-      const newUsersToday = data?.filter(user => 
-        new Date(user.created_at).toDateString() === today
-      ).length || 0
-
-      const activeSubscriptions = data?.filter(user => 
-        user.subscription_status === 'active' && user.subscription_tier !== 'free'
-      ).length || 0
-
-      const proUsers = data?.filter(user => user.subscription_tier === 'pro').length || 0
-      const eliteUsers = data?.filter(user => user.subscription_tier === 'elite').length || 0
-
-      // Simple monthly revenue estimate (this would be better with real pricing data)
-      const monthlyRevenue = (proUsers * 19.99) + (eliteUsers * 29.99)
+      // Get accurate counts without client-side filtering to avoid limits
+      const { data: countData, error: countError } = await supabase
+        .rpc('get_user_stats')
       
-      const activeSubs = data?.filter(user => user.subscription_status === 'active') || []
-      const proSubs = activeSubs.filter(user => user.subscription_tier === 'pro')
-      const eliteSubs = activeSubs.filter(user => user.subscription_tier === 'elite')
+      if (countError) {
+        console.warn('RPC call failed, falling back to client-side calculation')
+        // Fallback to getting all data without limits
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('subscription_tier, subscription_status, created_at, subscription_plan_type')
+          .limit(10000) // Remove any artificial 1000 limit
 
-      const yearlyPro = proSubs.filter(u => u.subscription_plan_type === 'yearly').length
-      const monthlyPro = proSubs.filter(u => u.subscription_plan_type === 'monthly').length
-      const weeklyPro = proSubs.filter(u => u.subscription_plan_type === 'weekly').length
-      const lifetimePro = proSubs.filter(u => u.subscription_plan_type === 'lifetime').length
-      
-      const yearlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'yearly').length
-      const monthlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'monthly').length
-      const weeklyElite = eliteSubs.filter(u => u.subscription_plan_type === 'weekly').length
+        if (error) throw error
 
-      setStats({
-        totalUsers: data?.length || 0,
-        proUsers,
-        eliteUsers,
-        activeSubscriptions,
-        monthlyRevenue,
-        newUsersToday,
-        yearlyPro,
-        monthlyPro,
-        weeklyPro,
-        lifetimePro,
-        yearlyElite,
-        monthlyElite,
-        weeklyElite,
-      })
+        const today = new Date().toDateString()
+        const newUsersToday = data?.filter(user => 
+          new Date(user.created_at).toDateString() === today
+        ).length || 0
+
+        const activeSubscriptions = data?.filter(user => 
+          user.subscription_status === 'active' && user.subscription_tier !== 'free'
+        ).length || 0
+
+        const proUsers = data?.filter(user => user.subscription_tier === 'pro').length || 0
+        const eliteUsers = data?.filter(user => user.subscription_tier === 'elite').length || 0
+
+        // Enhanced revenue calculation with realistic pricing
+        const activeSubs = data?.filter(user => user.subscription_status === 'active') || []
+        const proSubs = activeSubs.filter(user => user.subscription_tier === 'pro')
+        const eliteSubs = activeSubs.filter(user => user.subscription_tier === 'elite')
+
+        const yearlyPro = proSubs.filter(u => u.subscription_plan_type === 'yearly').length
+        const monthlyPro = proSubs.filter(u => u.subscription_plan_type === 'monthly').length
+        const weeklyPro = proSubs.filter(u => u.subscription_plan_type === 'weekly').length
+        const lifetimePro = proSubs.filter(u => u.subscription_plan_type === 'lifetime').length
+        
+        const yearlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'yearly').length
+        const monthlyElite = eliteSubs.filter(u => u.subscription_plan_type === 'monthly').length
+        const weeklyElite = eliteSubs.filter(u => u.subscription_plan_type === 'weekly').length
+
+        // More accurate revenue calculation
+        const monthlyRevenue = 
+          (weeklyPro * 12.49 * 4.33) + // Weekly to monthly
+          (monthlyPro * 24.99) +
+          (yearlyPro * 199.99 / 12) + // Yearly to monthly
+          (weeklyElite * 14.99 * 4.33) + // Weekly to monthly
+          (monthlyElite * 29.99) +
+          (yearlyElite * 249.99 / 12) // Yearly to monthly
+
+        setStats({
+          totalUsers: data?.length || 0,
+          proUsers,
+          eliteUsers,
+          activeSubscriptions,
+          monthlyRevenue: Math.round(monthlyRevenue),
+          newUsersToday,
+          yearlyPro,
+          monthlyPro,
+          weeklyPro,
+          lifetimePro,
+          yearlyElite,
+          monthlyElite,
+          weeklyElite,
+        })
+      }
     } catch (error) {
       console.error('Error loading stats:', error)
     }
@@ -680,14 +695,6 @@ export default function AdminDashboard() {
         </motion.div>
 
         {/* Admin Chat Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mb-8"
-        >
-          <AdminChat />
-        </motion.div>
 
         {/* Feedback Section */}
         <motion.div

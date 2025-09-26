@@ -65,53 +65,14 @@ export default function QuickActions({
 
   const actions = [
     {
-      id: 'notification',
-      title: 'Send Notification',
-      description: 'Send push notification to all users',
-      icon: Send,
-      color: 'from-blue-500 to-blue-600',
-      action: onSendNotification
-    },
-    {
-      id: 'export',
-      title: 'Export Data',
-      description: 'Download user data as CSV',
-      icon: Download,
-      color: 'from-green-500 to-green-600',
-      action: onExportData
-    },
-    {
-      id: 'backup',
-      title: 'Backup Database',
-      description: 'Create database backup',
-      icon: Database,
-      color: 'from-purple-500 to-purple-600',
-      action: onBackupDatabase
-    },
-    {
       id: 'todays-picks',
       title: "Today's Picks",
       description: 'View and manage AI predictions',
       icon: Target,
       color: 'from-purple-500 to-pink-600',
       action: onOpenTodaysPicks
-    },
-    {
-        id: 'reports',
-        title: "Reports",
-        description: 'View business intelligence reports',
-        icon: BarChart3,
-        color: 'from-indigo-500 to-violet-600',
-        action: onOpenReports
-      },
-      {
-        id: 'run-top-pick',
-        title: 'Run: Post Top Pick',
-        description: 'Trigger n8n to post social content from latest pick',
-        icon: Play,
-        color: 'from-emerald-500 to-emerald-600',
-        action: runTopPickAutomation
-      }
+    }
+    // Ready for additional actions to be added here
   ]
 
   return (
