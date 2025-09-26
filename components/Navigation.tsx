@@ -20,7 +20,8 @@ import {
   Shield,
   User,
   ChevronDown,
-  HandCoins
+  HandCoins,
+  Brain
 } from 'lucide-react'
 
 const navigation = [
@@ -28,7 +29,7 @@ const navigation = [
   { name: 'Games', href: '/games', icon: Calendar },
   { name: 'Predictions', href: '/predictions', icon: Zap },
   { name: 'Trends', href: '/trends', icon: TrendingUp },
-  { name: 'Professor Lock', href: '/professor-lock', icon: MessageCircle },
+  { name: 'Professor Lock', href: '/professor-lock', icon: Brain },
 ]
 
 interface NavigationProps {}

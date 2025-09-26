@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Build params conditionally to avoid passing payment_intent_data in subscription mode
     const baseParams: any = {
       mode: isOneTimeProduct ? 'payment' : 'subscription',
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'cashapp', 'us_bank_account', 'link', 'paypal'],
       line_items: [
         {
           price: priceId,
@@ -62,6 +62,11 @@ export async function POST(req: NextRequest) {
       },
       customer_email: undefined, // You can add user email here if available
       allow_promotion_codes: true,
+      // Enable automatic payment methods (includes Apple Pay when available)
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'always'
+      },
     }
 
     if (isOneTimeProduct) {
