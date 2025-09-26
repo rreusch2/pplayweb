@@ -292,13 +292,13 @@ export default function PredictionsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Avg Confidence</h3>
-                <p className="text-2xl font-bold text-green-400">
+                <div className="text-2xl font-bold text-green-400">
                   {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-12 rounded"></div>
                   ) : (
                     `${combinedAvgConfidence.toFixed(1)}%`
                   )}
-                </p>
+                </div>
               </div>
             </div>
           </motion.div>

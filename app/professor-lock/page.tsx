@@ -79,7 +79,7 @@ export default function ProfessorLockPage() {
   useEffect(() => {
     if (!user) return
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081'
     const ws = new WebSocket(`${wsUrl}/professor-lock/${user.id}`)
     
     ws.onopen = () => {
@@ -425,7 +425,10 @@ export default function ProfessorLockPage() {
             {/* Input */}
             <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700 p-4">
               <div className="flex items-end space-x-4">
-                <div className="flex-1">
+                <div 
+                  className="flex-1 cursor-text"
+                  onClick={() => inputRef.current?.focus()}
+                >
                   <input
                     ref={inputRef}
                     type="text"
@@ -433,8 +436,9 @@ export default function ProfessorLockPage() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Ask Professor Lock Advanced to analyze betting opportunities, research players, or build complex strategies..."
-                    className="w-full bg-transparent text-white placeholder-gray-400 resize-none outline-none"
+                    className="w-full bg-transparent text-white placeholder-gray-400 outline-none border-none focus:ring-0 p-2 min-h-[40px]"
                     disabled={!isConnected}
+                    autoComplete="off"
                   />
                 </div>
                 <div className="flex items-center space-x-2">

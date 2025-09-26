@@ -183,13 +183,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Avg Confidence</h3>
-                <p className="text-2xl font-bold text-green-400">
+                <div className="text-2xl font-bold text-green-400">
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-12 rounded"></div>
                   ) : (
                     `${averageConfidence.toFixed(1)}%`
                   )}
-                </p>
+                </div>
                 <p className="text-xs text-gray-400">AI Analysis</p>
               </div>
             </div>
