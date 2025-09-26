@@ -65,9 +65,14 @@ export default function SettingsPage() {
     if (subscriptionTier === 'free') {
       setSubscriptionModalOpen(true)
     } else {
-      // Handle subscription management for paid users
-      console.log('Manage subscription')
+      // Open Stripe Customer Portal for paid users
+      window.open('https://billing.stripe.com/p/login/bJe00l8bc6tY1fkfOa0Jq00', '_blank')
     }
+  }
+
+  const handleBillingPortal = () => {
+    // Open Stripe Customer Portal in new tab
+    window.open('https://billing.stripe.com/p/login/bJe00l8bc6tY1fkfOa0Jq00', '_blank')
   }
 
   const handleDeleteAccount = () => {
@@ -92,15 +97,6 @@ export default function SettingsPage() {
       iconColor: '#00E5FF',
       items: [
         {
-          id: 'subscription',
-          title: 'Subscription',
-          subtitle: 'Manage your plan and billing',
-          type: 'link',
-          badge: subscriptionTier === 'elite' ? 'ELITE' : subscriptionTier === 'pro' ? 'PRO' : 'FREE',
-          badgeColor: subscriptionTier === 'elite' ? '#FFD700' : subscriptionTier === 'pro' ? '#F59E0B' : '#6B7280',
-          action: handleManageSubscription
-        },
-        {
           id: 'profile',
           title: 'Profile Information',
           subtitle: 'Update your personal details',
@@ -120,6 +116,29 @@ export default function SettingsPage() {
           subtitle: 'Download your account data',
           type: 'link',
           action: handleExportData
+        }
+      ]
+    },
+    {
+      title: 'Billing & Subscription',
+      icon: CreditCard,
+      iconColor: '#06B6D4',
+      items: [
+        ...(subscriptionTier !== 'free' ? [{
+          id: 'billing_portal',
+          title: 'Manage Billing',
+          subtitle: 'Update payment methods, view invoices & subscription details',
+          type: 'link' as const,
+          action: handleBillingPortal
+        }] : []),
+        {
+          id: 'subscription_plan',
+          title: subscriptionTier === 'free' ? 'Upgrade Plan' : 'Subscription Plan',
+          subtitle: subscriptionTier === 'free' ? 'Unlock premium features and more picks' : 'Change or cancel your subscription',
+          type: 'link' as const,
+          badge: subscriptionTier === 'elite' ? 'ELITE' : subscriptionTier === 'pro' ? 'PRO' : 'FREE',
+          badgeColor: subscriptionTier === 'elite' ? '#FFD700' : subscriptionTier === 'pro' ? '#F59E0B' : '#6B7280',
+          action: handleManageSubscription
         }
       ]
     },
