@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Build params conditionally to avoid passing payment_intent_data in subscription mode
     const baseParams: any = {
       mode: isOneTimeProduct ? 'payment' : 'subscription',
-      payment_method_types: ['card', 'cashapp', 'us_bank_account', 'link', 'paypal'],
+      payment_method_types: ['card', 'cashapp', 'us_bank_account', 'link'],
       line_items: [
         {
           price: priceId,
