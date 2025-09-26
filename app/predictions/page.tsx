@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { usePredictions } from '@/shared/hooks/usePredictions'
-import { useAIChat } from '@/shared/hooks/useAIChat'
 import { motion } from 'framer-motion'
 import { 
   Zap, 
@@ -164,7 +163,6 @@ export default function PredictionsPage() {
     userId: user?.id
   })
 
-  const { openChatWithContext } = useAIChat()
   const tierStyling = getTierStyling(subscriptionTier as any)
 
   useEffect(() => {
@@ -428,7 +426,7 @@ export default function PredictionsPage() {
                 key={prediction.id}
                 prediction={prediction}
                 subscriptionTier={subscriptionTier as any}
-                onClick={() => openChatWithContext({ selectedPrediction: prediction }, prediction)}
+                onClick={() => router.push('/chat')}
               />
             )}
             increaseViewportBy={{ top: 200, bottom: 400 }}

@@ -17,7 +17,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { usePredictions } from '@/shared/hooks/usePredictions'
-import { useAIChat } from '@/shared/hooks/useAIChat'
 import { AIPrediction } from '@/shared/services/aiService'
 
 interface PredictionsPreviewProps {
@@ -29,7 +28,6 @@ export default function PredictionsPreview({ limit = 2 }: PredictionsPreviewProp
   const router = useRouter()
   const { subscriptionTier } = useSubscription()
   const { predictions, isLoading, totalPredictions, averageConfidence } = usePredictions()
-  const { openChatWithContext } = useAIChat()
 
   useEffect(() => {
     setMounted(true)
@@ -50,7 +48,7 @@ export default function PredictionsPreview({ limit = 2 }: PredictionsPreviewProp
   }
 
   const handlePredictionClick = (prediction: AIPrediction) => {
-    openChatWithContext({ selectedPrediction: prediction }, prediction)
+    router.push('/chat')
   }
 
   const handleViewAllClick = () => {
