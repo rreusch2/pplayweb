@@ -50,11 +50,12 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   // Render the layout
   const showNav = user && !isPublicRoute
+  const isFullScreenPage = pathname === '/professor-lock'
 
   return (
     <>
       {showNav && <Navigation />}
-      <main id="main-content" role="main" className={!showNav ? 'h-full' : 'pt-16 sm:pt-20'}>
+      <main id="main-content" role="main" className={!showNav || isFullScreenPage ? 'h-full' : 'pt-16 sm:pt-20'}>
         {children}
       </main>
     </>

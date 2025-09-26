@@ -82,6 +82,15 @@ export const PLANS: Plan[] = [
     savings: 'Save 17%',
   },
   {
+    id: 'elite_daypass',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_DAYPASS || '',
+    tier: 'elite',
+    name: 'Day Pass Elite',
+    price: 7.99,
+    interval: 'day',
+    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day'],
+  },
+  {
     id: 'elite_yearly',
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_YEARLY || '',
     tier: 'elite',
@@ -90,5 +99,15 @@ export const PLANS: Plan[] = [
     interval: 'year',
     features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day', '3-Day Free Trial'],
     savings: 'Save 50%',
+  },
+  {
+    id: 'elite_lifetime',
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE_LIFETIME || '',
+    tier: 'elite',
+    name: 'Lifetime Elite',
+    price: 399.99,
+    interval: 'one_time',
+    features: ['30 Daily AI Picks', '12 Daily Insights', 'Advanced AI Chat', 'Premium Analytics', 'Lock of the Day', 'All Future Elite Updates'],
+    savings: 'Ultimate Value',
   },
 ]

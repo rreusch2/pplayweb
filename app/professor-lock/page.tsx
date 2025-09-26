@@ -24,11 +24,11 @@ import {
   Minimize2
 } from 'lucide-react'
 
-// Tool visualization components
-import BrowserToolView from '@/components/professor-lock/BrowserToolView'
-import StatMuseToolView from '@/components/professor-lock/StatMuseToolView'
-import WebSearchToolView from '@/components/professor-lock/WebSearchToolView'
-import AnalysisToolView from '@/components/professor-lock/AnalysisToolView'
+// Tool visualization components (temporarily disabled - components don't exist yet)
+// import BrowserToolView from '@/components/professor-lock/BrowserToolView'
+// import StatMuseToolView from '@/components/professor-lock/StatMuseToolView'
+// import WebSearchToolView from '@/components/professor-lock/WebSearchToolView'
+// import AnalysisToolView from '@/components/professor-lock/AnalysisToolView'
 
 interface Message {
   id: string
@@ -79,13 +79,23 @@ export default function ProfessorLockPage() {
   useEffect(() => {
     if (!user) return
 
+    // Avoid duplicate sockets during Fast Refresh / re-renders
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return
+    }
+
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081'
     const ws = new WebSocket(`${wsUrl}/professor-lock/${user.id}`)
+    wsRef.current = ws
     
     ws.onopen = () => {
       console.log('🔗 Connected to Professor Lock Agent')
       setIsConnected(true)
       addSystemMessage('🧠 Professor Lock Advanced Agent initialized. Ready for complex analysis tasks.')
+    }
+
+    ws.onerror = (err) => {
+      console.error('⚠️ WebSocket error:', err)
     }
 
     ws.onmessage = (event) => {
@@ -96,16 +106,15 @@ export default function ProfessorLockPage() {
     ws.onclose = () => {
       console.log('🔌 Disconnected from Professor Lock Agent')
       setIsConnected(false)
-      setTimeout(() => {
-        // Reconnect after 3 seconds
-        if (wsRef.current?.readyState === WebSocket.CLOSED) {
-          wsRef.current = null
-        }
-      }, 3000)
+      // Clear ref only if this instance is the active one
+      if (wsRef.current === ws) {
+        wsRef.current = null
+      }
     }
 
-    wsRef.current = ws
-    return () => ws.close()
+    return () => {
+      try { ws.close() } catch {}
+    }
   }, [user])
 
   const handleWebSocketMessage = useCallback((data: any) => {
@@ -261,16 +270,17 @@ export default function ProfessorLockPage() {
   const renderToolView = (tool: Tool) => {
     const isExpanded = expandedTool === tool.name
 
+    // Temporarily use default view for all tools until tool components are created
     switch (tool.name.toLowerCase()) {
       case 'browser_use':
-        return <BrowserToolView tool={tool} expanded={isExpanded} />
       case 'statmuse_query':
-        return <StatMuseToolView tool={tool} expanded={isExpanded} />
       case 'web_search':
-        return <WebSearchToolView tool={tool} expanded={isExpanded} />
       case 'python_execute':
       case 'data_analysis':
-        return <AnalysisToolView tool={tool} expanded={isExpanded} />
+        // return <BrowserToolView tool={tool} expanded={isExpanded} />
+        // return <StatMuseToolView tool={tool} expanded={isExpanded} />
+        // return <WebSearchToolView tool={tool} expanded={isExpanded} />
+        // return <AnalysisToolView tool={tool} expanded={isExpanded} />
       default:
         return (
           <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -303,7 +313,7 @@ export default function ProfessorLockPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
       {/* Header */}
       <div className="bg-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -341,8 +351,8 @@ export default function ProfessorLockPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-240px)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-200px)]">
           
           {/* Chat Section */}
           <div className="lg:col-span-2 flex flex-col">
