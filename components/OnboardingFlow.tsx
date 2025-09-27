@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import UserPreferencesModal, { UserPreferences } from './UserPreferencesModal'
 import TieredSubscriptionModal from './TieredSubscriptionModal'
 import WelcomeSpinWheel from './WelcomeSpinWheel'
+import { stripeOnboardingManager, STRIPE_PRODUCTS } from '@/lib/stripeService'
 
 interface OnboardingFlowProps {
   isOpen: boolean
@@ -33,7 +34,17 @@ export default function OnboardingFlow({ isOpen, onClose, onComplete }: Onboardi
   const handlePreferencesComplete = (preferences: UserPreferences) => {
     console.log('✅ User preferences completed:', preferences)
     setUserPreferences(preferences)
-    setCurrentStep('subscription')
+    
+    // Check if user came from Stripe pricing table
+    const selectedProduct = stripeOnboardingManager.getSelectedProduct()
+    if (selectedProduct) {
+      console.log('🎯 User pre-selected Stripe product:', selectedProduct.name)
+      // Redirect directly to Stripe checkout
+      handleStripeCheckout(selectedProduct)
+    } else {
+      // Normal flow - show subscription modal
+      setCurrentStep('subscription')
+    }
   }
 
   const handleSubscriptionComplete = () => {
@@ -46,6 +57,30 @@ export default function OnboardingFlow({ isOpen, onClose, onComplete }: Onboardi
     // User chose to continue free - show welcome wheel
     console.log('✅ User chose to continue free - showing welcome wheel')
     setCurrentStep('welcome-wheel')
+  }
+
+  const handleStripeCheckout = (product: any) => {
+    console.log('🚀 Redirecting to Stripe checkout for:', product.name)
+    
+    try {
+      // Set user email in Stripe manager
+      if (user?.email) {
+        stripeOnboardingManager.setUserEmail(user.email)
+      }
+      
+      // Create checkout URL and redirect
+      const baseUrl = window.location.origin
+      const checkoutUrl = stripeOnboardingManager.createCheckoutUrl(baseUrl)
+      
+      console.log('📍 Redirecting to Stripe checkout:', checkoutUrl)
+      window.location.href = checkoutUrl
+      
+    } catch (error) {
+      console.error('❌ Error creating Stripe checkout:', error)
+      // Fallback to subscription modal if Stripe fails
+      console.log('🔄 Falling back to subscription modal')
+      setCurrentStep('subscription')
+    }
   }
 
   const handleWelcomeWheelComplete = async (picks: number) => {

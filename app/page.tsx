@@ -262,7 +262,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing Section - Stripe Pricing Table */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -274,60 +274,57 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <div
-                key={plan.name}
-                className={`relative bg-white/5 backdrop-blur-sm rounded-xl p-6 border ${
-                  plan.popular 
-                    ? 'border-blue-500 ring-2 ring-blue-500/20' 
-                    : 'border-white/10'
-                } hover:border-blue-500/50 transition-all duration-300`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {plan.name}
-                  </h3>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-white">
-                      ${plan.price}
-                    </span>
-                    <span className="text-gray-300">/{plan.period}</span>
-                  </div>
-                  <p className="text-gray-300 mb-6">
-                    {plan.description}
-                  </p>
-                  
-                  <button
-                    onClick={() => openAuthModal('signup')}
-                    className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${
-                      plan.popular
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                    }`}
-                  >
-                    Get Started
-                  </button>
+          {/* Free Plan Card */}
+          <div className="max-w-sm mx-auto mb-12">
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
+                <div className="mb-4">
+                  <span className="text-4xl font-bold text-white">$0</span>
+                  <span className="text-gray-300">/month</span>
                 </div>
+                <p className="text-gray-300 mb-6">Get started with core features</p>
+                
+                <button
+                  onClick={() => openAuthModal('signup')}
+                  className="w-full py-3 rounded-lg font-semibold transition-all duration-300 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                >
+                  Get Started Free
+                </button>
+              </div>
 
-                <div className="mt-6 space-y-3">
-                  {plan.features.map((feature, featureIndex) => (
-                    <div key={featureIndex} className="flex items-center space-x-3">
-                      <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <span className="text-gray-300 text-sm">{feature}</span>
-                    </div>
-                  ))}
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">2 daily AI picks</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">Basic trends & insights</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">Mobile app access</span>
                 </div>
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Stripe Pricing Table - Premium Plans */}
+          <div className="stripe-pricing-container">
+            <div 
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+                  <stripe-pricing-table 
+                    pricing-table-id="prctbl_1SBid2Ro1RFNyzsnNSVVWWK8"
+                    publishable-key="pk_live_51QWQQ5Ro1RFNyzsn6yoUYUELzd8WWKuV5fxdLQJhCd9BEXPBWbjaw10gC1IHJg2CnbPLV02FTZ2lexwYBWbi1PXK00Uqs9PtlB"
+                    client-reference-id=""
+                    customer-email=""
+                  ></stripe-pricing-table>
+                `
+              }}
+            />
           </div>
         </div>
       </section>

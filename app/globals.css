@@ -4,6 +4,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Stripe Pricing Table Custom Styling */
+.stripe-pricing-container {
+  margin: 0 auto;
+}
+
+/* Override Stripe pricing table styles to match dark theme */
+stripe-pricing-table {
+  --background: rgba(255, 255, 255, 0.05);
+  --text: #ffffff;
+  --primary: #2563eb;
+  --border: rgba(255, 255, 255, 0.1);
+  filter: brightness(0.9) contrast(1.1);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
