@@ -207,8 +207,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     // Get user_id from payment intent metadata
-    const userId = paymentIntent.metadata.user_id
-    const subscriptionType = paymentIntent.metadata.subscription_type
+    const userId = paymentIntent.metadata.user_id || paymentIntent.metadata.userId
+    const subscriptionType = paymentIntent.metadata.subscription_type || paymentIntent.metadata.planId
 
     if (userId && subscriptionType) {
       // Update user's subscription in profiles table
@@ -406,12 +406,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id)
   
   try {
-    const userId = subscription.metadata.user_id
+    const userId = subscription.metadata.user_id || subscription.metadata.userId
     
     if (userId) {
       // Get subscription plan details from metadata or price ID
       const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
-      const subscriptionType = subscriptionObj.metadata.subscription_type
+      const subscriptionType = subscriptionObj.metadata.subscription_type || subscriptionObj.metadata.planId
       const currentPeriodEnd = subscriptionObj.current_period_end
       const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
       const tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
@@ -453,7 +453,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('🔄 Subscription updated:', subscription.id)
   
   try {
-    const userId = subscription.metadata.user_id
+    const userId = subscription.metadata.user_id || subscription.metadata.userId
     
     if (userId) {
       let updateData: any = {
@@ -471,7 +471,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       } else if (subscription.status === 'active' || subscription.status === 'trialing') {
         // Renew/extend subscription from Stripe period
         const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
-        const subscriptionType = subscriptionObj.metadata.subscription_type
+        const subscriptionType = subscriptionObj.metadata.subscription_type || subscriptionObj.metadata.planId
         const currentPeriodEnd = subscriptionObj.current_period_end
         const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
         const priceId = subscriptionObj.items.data[0]?.price?.id
@@ -520,7 +520,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('🗑️ Subscription deleted:', subscription.id)
   
   try {
-    const userId = subscription.metadata.user_id
+    const userId = subscription.metadata.user_id || subscription.metadata.userId
     
     if (userId) {
       console.log('⬇️ Downgrading user to free tier due to subscription deletion')
@@ -562,10 +562,10 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       // Get subscription details to renew user access
       const subscriptionResp = await stripe.subscriptions.retrieve(subscriptionId)
       const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
-      const userId = subscription.metadata.user_id
+      const userId = subscription.metadata.user_id || subscription.metadata.userId
       
       if (userId) {
-        const subscriptionType = subscription.metadata.subscription_type
+        const subscriptionType = subscription.metadata.subscription_type || subscription.metadata.planId
         const currentPeriodEnd = subscription.current_period_end
         const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
         const { error } = await supabaseAdmin
@@ -611,7 +611,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     
     if (subscriptionId) {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-      const userId = subscription.metadata.user_id
+      const userId = subscription.metadata.user_id || subscription.metadata.userId
       
       if (userId) {
         // Mark subscription as past_due, but don't immediately downgrade
