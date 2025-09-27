@@ -13,12 +13,10 @@ interface AuthState {
   loading: boolean
   initializing: boolean
   justSignedUp: boolean
-  selectedStripeProduct: string | null
 }
 
 interface AuthContextType extends AuthState {
   clearJustSignedUp: () => void
-  setSelectedStripeProduct: (productId: string | null) => void
   signUp: (email: string, password: string, username: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -36,7 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: false, // For specific actions like signIn/signUp
     initializing: true, // For initial auth state resolution
     justSignedUp: false,
-    selectedStripeProduct: null,
   })
   const router = useRouter()
 
@@ -229,11 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setJustSignedUp(false)
   }
 
-  const setSelectedStripeProduct = (productId: string | null) => {
-    console.log('🎯 Setting selected Stripe product:', productId)
-    setAuthState(prev => ({ ...prev, selectedStripeProduct: productId }))
-  }
-
   const signUp = async (email: string, password: string, username: string) => {
     try {
       setLoading(true)
@@ -378,7 +370,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     ...authState,
     clearJustSignedUp,
-    setSelectedStripeProduct,
     signUp,
     signIn,
     signOut,

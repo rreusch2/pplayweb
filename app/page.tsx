@@ -18,6 +18,7 @@ import AuthModal from '@/components/AuthModal'
 import { trackSignupStart, trackAppStoreClick, trackCTAClick } from '@/lib/analytics'
 import Image from 'next/image'
 import PredictionsPreview from '@/components/PredictionsPreview'
+import StripePricingTable from '@/components/StripePricingTable'
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -81,6 +82,12 @@ export default function LandingPage() {
             </div>
             
             <div className="flex items-center space-x-4">
+              <a
+                href="/pricing"
+                className="text-white hover:text-blue-300 transition-colors font-medium"
+              >
+                Pricing
+              </a>
               <button
                 onClick={() => openAuthModal('login')}
                 className="text-white hover:text-blue-300 transition-colors font-medium"
@@ -262,69 +269,45 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section - Stripe Pricing Table */}
+      {/* Pricing Section - Enhanced with Stripe */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Choose Your Plan
-            </h2>
-            <p className="text-xl text-gray-300">
-              Start free, upgrade anytime. Cancel without fees.
-            </p>
-          </div>
-
-          {/* Free Plan Card */}
-          <div className="max-w-sm mx-auto mb-12">
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-white">$0</span>
-                  <span className="text-gray-300">/month</span>
-                </div>
-                <p className="text-gray-300 mb-6">Get started with core features</p>
-                
-                <button
-                  onClick={() => openAuthModal('signup')}
-                  className="w-full py-3 rounded-lg font-semibold transition-all duration-300 bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                >
-                  Get Started Free
-                </button>
+          <StripePricingTable 
+            headerTitle="Choose Your Subscription"
+            headerDescription="Unlock premium AI sports betting predictions. Start winning today with our flexible plans."
+          />
+          
+          {/* Additional Benefits Section */}
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
               </div>
-
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">2 daily AI picks</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Basic trends & insights</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Mobile app access</span>
-                </div>
-              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Instant Access</h3>
+              <p className="text-gray-300">Start receiving AI predictions immediately after subscription activation.</p>
             </div>
-          </div>
-
-          {/* Stripe Pricing Table - Premium Plans */}
-          <div className="stripe-pricing-container">
-            <div 
-              dangerouslySetInnerHTML={{
-                __html: `
-                  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
-                  <stripe-pricing-table 
-                    pricing-table-id="prctbl_1SBid2Ro1RFNyzsnNSVVWWK8"
-                    publishable-key="pk_live_51QWQQ5Ro1RFNyzsn6yoUYUELzd8WWKuV5fxdLQJhCd9BEXPBWbjaw10gC1IHJg2CnbPLV02FTZ2lexwYBWbi1PXK00Uqs9PtlB"
-                    client-reference-id=""
-                    customer-email=""
-                  ></stripe-pricing-table>
-                `
-              }}
-            />
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Risk-Free</h3>
+              <p className="text-gray-300">Cancel anytime, no questions asked. Your satisfaction is guaranteed.</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Premium Support</h3>
+              <p className="text-gray-300">Get priority customer support and exclusive betting insights.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -440,43 +423,4 @@ const features = [
   }
 ]
 
-const pricingPlans = [
-  {
-    name: 'Free',
-    price: 0,
-    period: 'month',
-    description: 'Get started with core features',
-    popular: false,
-    features: [
-      '2 daily AI picks',
-      'Basic trends & insights',
-      'Mobile app access'
-    ]
-  },
-  {
-    name: 'Pro',
-    price: 19.99,
-    period: 'month',
-    description: 'Most popular for serious bettors',
-    popular: true,
-    features: [
-      'More daily AI picks',
-      'Advanced trends & analytics',
-      'Professor Lock chat', 
-      'Real-time updates'
-    ]
-  },
-  {
-    name: 'Elite',
-    price: 29.99,
-    period: 'month',
-    description: 'Premium tools & insights',
-    popular: false,
-    features: [
-      'Maximum daily AI picks',
-      'Premium analytics & insights',
-      'Lock of the Day',
-      'Early feature access'
-    ]
-  }
-]
+// Pricing is now handled by Stripe Pricing Table component

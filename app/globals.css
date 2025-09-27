@@ -5,20 +5,33 @@
 @tailwind utilities;
 
 /* Stripe Pricing Table Custom Styling */
-.stripe-pricing-container {
-  margin: 0 auto;
+.stripe-pricing-table-container {
+  @apply w-full max-w-6xl mx-auto;
 }
 
-/* Override Stripe pricing table styles to match dark theme */
+/* Style the Stripe pricing table to match your site theme */
 stripe-pricing-table {
-  --background: rgba(255, 255, 255, 0.05);
-  --text: #ffffff;
-  --primary: #2563eb;
-  --border: rgba(255, 255, 255, 0.1);
-  filter: brightness(0.9) contrast(1.1);
-  border-radius: 12px;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
+  --background-color: transparent;
+  --text-color: #ffffff;
+  --primary-button-color: #2563eb;
+  --primary-button-text-color: #ffffff;
+  --primary-button-hover-color: #1d4ed8;
+  --accent-color: #3b82f6;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 12px;
+  font-family: inherit;
+  width: 100%;
+}
+
+/* Additional styling for pricing page specific table */
+.pricing-page-table stripe-pricing-table {
+  --layout: row;
+  --spacing: 20px;
+}
+
+/* Custom gradient text class */
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-400 via-purple-400 to-blue-600 bg-clip-text text-transparent;
 }
 
 * {
