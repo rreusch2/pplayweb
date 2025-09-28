@@ -1,6 +1,4 @@
 // Environment validation script for Stripe integration
-require('dotenv').config({ path: '.env.local' })
-
 const requiredEnvVars = [
   'STRIPE_SECRET_KEY',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',

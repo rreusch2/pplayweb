@@ -4,36 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Stripe Pricing Table Custom Styling */
-.stripe-pricing-table-container {
-  @apply w-full max-w-6xl mx-auto;
-}
-
-/* Style the Stripe pricing table to match your site theme */
-stripe-pricing-table {
-  --background-color: transparent;
-  --text-color: #ffffff;
-  --primary-button-color: #2563eb;
-  --primary-button-text-color: #ffffff;
-  --primary-button-hover-color: #1d4ed8;
-  --accent-color: #3b82f6;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-radius: 12px;
-  font-family: inherit;
-  width: 100%;
-}
-
-/* Additional styling for pricing page specific table */
-.pricing-page-table stripe-pricing-table {
-  --layout: row;
-  --spacing: 20px;
-}
-
-/* Custom gradient text class */
-.gradient-text {
-  @apply bg-gradient-to-r from-blue-400 via-purple-400 to-blue-600 bg-clip-text text-transparent;
-}
-
 * {
   box-sizing: border-box;
   padding: 0;

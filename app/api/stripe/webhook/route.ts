@@ -30,35 +30,396 @@ async function safeUpdateStripeFields(userId: string, fields: Record<string, any
   }
 }
 
+function extractCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined): string | undefined {
+  if (!customer) return undefined
+  if (typeof customer === 'string') return customer
+  const candidate = (customer as Stripe.Customer).id
+  return typeof candidate === 'string' ? candidate : undefined
+}
+
+const PLAN_KEYS = [
+  'pro_daypass',
+  'pro_weekly',
+  'pro_monthly',
+  'pro_yearly',
+  'pro_lifetime',
+  'elite_daypass',
+  'elite_weekly',
+  'elite_monthly',
+  'elite_yearly',
+  'elite_lifetime',
+] as const
+
+type PlanKey = typeof PLAN_KEYS[number]
+
+type PlanConfig = {
+  tier: 'pro' | 'elite'
+  planType: 'day' | 'week' | 'month' | 'year' | 'lifetime'
+  duration: 'daypass' | 'week' | 'month' | 'year' | 'lifetime'
+  maxDailyPicks: number
+  isLifetime?: boolean
+}
+
+const PLAN_CONFIG: Record<PlanKey, PlanConfig> = {
+  pro_daypass:      { tier: 'pro',   planType: 'day',       duration: 'daypass', maxDailyPicks: 20 },
+  pro_weekly:       { tier: 'pro',   planType: 'week',      duration: 'week',    maxDailyPicks: 20 },
+  pro_monthly:      { tier: 'pro',   planType: 'month',     duration: 'month',   maxDailyPicks: 20 },
+  pro_yearly:       { tier: 'pro',   planType: 'year',      duration: 'year',    maxDailyPicks: 20 },
+  pro_lifetime:     { tier: 'pro',   planType: 'lifetime',  duration: 'lifetime', maxDailyPicks: 20, isLifetime: true },
+  elite_daypass:    { tier: 'elite', planType: 'day',       duration: 'daypass', maxDailyPicks: 30 },
+  elite_weekly:     { tier: 'elite', planType: 'week',      duration: 'week',    maxDailyPicks: 30 },
+  elite_monthly:    { tier: 'elite', planType: 'month',     duration: 'month',   maxDailyPicks: 30 },
+  elite_yearly:     { tier: 'elite', planType: 'year',      duration: 'year',    maxDailyPicks: 30 },
+  elite_lifetime:   { tier: 'elite', planType: 'lifetime',  duration: 'lifetime', maxDailyPicks: 30, isLifetime: true },
+}
+
+const PLAN_ENV_KEYS: Record<PlanKey, string[]> = {
+  pro_daypass:    ['NEXT_PUBLIC_STRIPE_PRICE_PRO_DAYPASS'],
+  pro_weekly:     ['NEXT_PUBLIC_STRIPE_PRICE_PRO_WEEKLY'],
+  pro_monthly:    ['NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY'],
+  pro_yearly:     ['NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY'],
+  pro_lifetime:   ['NEXT_PUBLIC_STRIPE_PRICE_PRO_LIFETIME'],
+  elite_daypass:  ['NEXT_PUBLIC_STRIPE_PRICE_ELITE_DAYPASS'],
+  elite_weekly:   ['NEXT_PUBLIC_STRIPE_PRICE_ELITE_WEEKLY'],
+  elite_monthly:  ['NEXT_PUBLIC_STRIPE_PRICE_ELITE_MONTHLY'],
+  elite_yearly:   ['NEXT_PUBLIC_STRIPE_PRICE_ELITE_YEARLY'],
+  elite_lifetime: ['NEXT_PUBLIC_STRIPE_PRICE_ELITE_LIFETIME'],
+}
+
+const HARDCODED_PRICE_TO_PLAN: Record<string, PlanKey> = {
+  // Elite prices
+  price_1RsHrXRo1RFNyzsn6tf8SYDr: 'elite_weekly',
+  price_1RsHswRo1RFNyzsnyyluM3J2: 'elite_monthly',
+  price_1RsHugRo1RFNyzsnhKEKMAE6: 'elite_yearly',
+  price_1SBVgmRo1RFNyzsnVPrt2JDK: 'elite_daypass',
+  price_1SBVaSRo1RFNyzsnLdiz5euz: 'elite_lifetime',
+}
+
+const PRODUCT_TO_PLAN: Record<string, PlanKey> = {
+  prod_T7lDN3HLfwVpkU: 'elite_daypass',
+}
+
+const PRICE_TO_PLAN = new Map<string, PlanKey>()
+
+function registerPriceMapping(plan: PlanKey, priceId?: string | null) {
+  if (priceId) {
+    PRICE_TO_PLAN.set(priceId, plan)
+  }
+}
+
+for (const [plan, envKeys] of Object.entries(PLAN_ENV_KEYS) as [PlanKey, string[]][]) {
+  for (const envKey of envKeys) {
+    const value = process.env[envKey]
+    if (value) {
+      registerPriceMapping(plan, value)
+    }
+  }
+}
+
+for (const [priceId, plan] of Object.entries(HARDCODED_PRICE_TO_PLAN) as [string, PlanKey][]) {
+  registerPriceMapping(plan, priceId)
+}
+
+function isPlanKey(value: string | null | undefined): value is PlanKey {
+  if (!value) return false
+  return Object.prototype.hasOwnProperty.call(PLAN_CONFIG, value)
+}
+
+function normalizeInterval(value?: string | null): 'daypass' | 'week' | 'month' | 'year' | 'lifetime' | null {
+  if (!value) return null
+  const normalized = value.toLowerCase()
+  switch (normalized) {
+    case 'day':
+    case 'daypass':
+    case 'day_pass':
+      return 'daypass'
+    case 'week':
+    case 'weekly':
+      return 'week'
+    case 'month':
+    case 'monthly':
+      return 'month'
+    case 'year':
+    case 'yearly':
+      return 'year'
+    case 'lifetime':
+      return 'lifetime'
+    default:
+      return null
+  }
+}
+
+function buildPlanKeyFromTierInterval(tier?: string | null, interval?: string | null): PlanKey | null {
+  if (!tier || !interval) return null
+  const normalizedTier = tier.toLowerCase()
+  const normalizedInterval = normalizeInterval(interval)
+  if (!normalizedInterval) return null
+  const intervalKey = normalizedInterval === 'daypass' ? 'daypass' : normalizedInterval === 'lifetime' ? 'lifetime' : `${normalizedInterval === 'week' ? 'weekly' : normalizedInterval === 'month' ? 'monthly' : 'yearly'}`
+  const candidate = `${normalizedTier}_${intervalKey}`
+  if (isPlanKey(candidate)) {
+    return candidate
+  }
+  return null
+}
+
+type ResolveUserContextArgs = {
+  metadata?: Stripe.Metadata | null
+  stripeCustomer?: string | Stripe.Customer | Stripe.DeletedCustomer | null
+  customerEmail?: string | null
+}
+
+async function resolveUserContext({
+  metadata,
+  stripeCustomer,
+  customerEmail,
+}: ResolveUserContextArgs): Promise<{ userId: string | null; stripeCustomerId?: string; customerEmail?: string | null }> {
+  const meta: Record<string, string | null> = metadata ?? {}
+  const userIdFromMeta =
+    meta.user_id ||
+    meta.userId ||
+    meta.user ||
+    meta.profile_id ||
+    meta.profileId ||
+    null
+
+  const stripeCustomerId = extractCustomerId(stripeCustomer)
+
+  if (userIdFromMeta) {
+    return { userId: String(userIdFromMeta), stripeCustomerId, customerEmail }
+  }
+
+  if (stripeCustomerId) {
+    try {
+      const { data: profileByStripe } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email')
+        .eq('stripe_customer_id', stripeCustomerId)
+        .maybeSingle()
+
+      if (profileByStripe?.id) {
+        return {
+          userId: profileByStripe.id,
+          stripeCustomerId,
+          customerEmail: profileByStripe.email ?? customerEmail ?? null,
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed lookup by stripe_customer_id:', error)
+    }
+  }
+
+  let normalizedEmail: string | null = null
+
+  if (customerEmail) {
+    normalizedEmail = customerEmail.trim().toLowerCase()
+  }
+
+  if (!normalizedEmail && stripeCustomerId) {
+    try {
+      const customer = await stripe.customers.retrieve(stripeCustomerId)
+      if (!('deleted' in customer) && typeof customer.email === 'string') {
+        normalizedEmail = customer.email.trim().toLowerCase()
+      }
+    } catch (error) {
+      console.warn('⚠️ Unable to fetch Stripe customer for email resolution:', error)
+    }
+  }
+
+  if (normalizedEmail) {
+    try {
+      const { data: profileByEmail } = await supabaseAdmin
+        .from('profiles')
+        .select('id, stripe_customer_id')
+        .eq('email', normalizedEmail)
+        .maybeSingle()
+
+      if (profileByEmail?.id) {
+        if (!profileByEmail.stripe_customer_id && stripeCustomerId) {
+          await safeUpdateStripeFields(profileByEmail.id, { stripe_customer_id: stripeCustomerId })
+        }
+
+        return {
+          userId: profileByEmail.id,
+          stripeCustomerId: stripeCustomerId ?? profileByEmail.stripe_customer_id ?? undefined,
+          customerEmail: normalizedEmail,
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed lookup by email:', error)
+    }
+  }
+
+  return {
+    userId: null,
+    stripeCustomerId,
+    customerEmail: normalizedEmail ?? customerEmail ?? null,
+  }
+}
+
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 // Map Stripe recurring.interval to our plan type labels
 function mapIntervalToPlanType(interval?: string | null): 'weekly' | 'monthly' | 'yearly' | 'daypass' | 'lifetime' {
-  switch (interval) {
+  const normalized = normalizeInterval(interval)
+  switch (normalized) {
     case 'week':
       return 'weekly'
-    case 'month':
-      return 'monthly'
     case 'year':
       return 'yearly'
+    case 'daypass':
+      return 'daypass'
+    case 'lifetime':
+      return 'lifetime'
+    case 'month':
     default:
       return 'monthly'
   }
 }
 
-// Helper function to determine if a price ID is for Elite tier
-function isElitePriceId(priceId?: string): boolean {
+function isElitePriceId(priceId?: string | null): boolean {
   if (!priceId) return false
-  
-  const elitePriceIds = [
-    'price_1RsHrXRo1RFNyzsn6tf8SYDr', // Elite Weekly
-    'price_1RsHswRo1RFNyzsnyyluM3J2', // Elite Monthly  
-    'price_1RsHugRo1RFNyzsnhKEKMAE6', // Elite Yearly
-    'price_1SBVgmRo1RFNyzsnVPrt2JDK', // Elite Daypass
-    'price_1SBVaSRo1RFNyzsnLdiz5euz', // Elite Lifetime
-  ]
-  
-  return elitePriceIds.includes(priceId)
+  const plan = PRICE_TO_PLAN.get(priceId)
+  if (plan) {
+    return PLAN_CONFIG[plan].tier === 'elite'
+  }
+  return false
+}
+
+function resolvePlanKey(options: {
+  metadata?: Stripe.Metadata | null
+  priceId?: string | null
+  interval?: string | null
+  productId?: string | null
+}): PlanKey | null {
+  const { metadata, priceId, interval, productId } = options
+
+  const metadataCandidate = metadata?.subscription_type || metadata?.planId || metadata?.plan_id || metadata?.plan || null
+  if (isPlanKey(metadataCandidate)) {
+    return metadataCandidate
+  }
+
+  const tierFromMetadata = metadata?.tier || metadata?.subscription_tier
+  const intervalFromMetadata = metadata?.interval || metadata?.plan_interval || metadata?.billing_interval || metadata?.duration
+  const planFromTierInterval = buildPlanKeyFromTierInterval(tierFromMetadata, intervalFromMetadata || interval)
+  if (planFromTierInterval) {
+    return planFromTierInterval
+  }
+
+  if (priceId) {
+    const mapped = PRICE_TO_PLAN.get(priceId)
+    if (mapped) {
+      return mapped
+    }
+  }
+
+  if (productId) {
+    const mapped = PRODUCT_TO_PLAN[productId]
+    if (mapped) {
+      return mapped
+    }
+  }
+
+  if (tierFromMetadata) {
+    const fallbackPlan = buildPlanKeyFromTierInterval(tierFromMetadata, interval)
+    if (fallbackPlan) {
+      return fallbackPlan
+    }
+  }
+
+  return null
+}
+
+function deriveTier(planKey: PlanKey | null, metadata?: Stripe.Metadata | null, priceId?: string | null): 'pro' | 'elite' | 'free' {
+  if (planKey) {
+    return PLAN_CONFIG[planKey].tier
+  }
+  const metaTier = metadata?.tier || metadata?.subscription_tier
+  if (typeof metaTier === 'string') {
+    const normalized = metaTier.toLowerCase()
+    if (normalized.includes('elite')) return 'elite'
+    if (normalized.includes('pro')) return 'pro'
+  }
+  if (priceId && isElitePriceId(priceId)) {
+    return 'elite'
+  }
+  return 'pro'
+}
+
+function derivePlanType(planKey: PlanKey | null, metadata?: Stripe.Metadata | null, interval?: string | null): string | null {
+  if (planKey) {
+    return PLAN_CONFIG[planKey].planType
+  }
+  const metaPlanType = metadata?.plan_type || metadata?.plan_interval || metadata?.billing_interval || metadata?.interval
+  if (typeof metaPlanType === 'string') {
+    const normalized = normalizeInterval(metaPlanType)
+    if (normalized === 'daypass') return 'day'
+    if (normalized === 'week') return 'week'
+    if (normalized === 'month') return 'month'
+    if (normalized === 'year') return 'year'
+    if (normalized === 'lifetime') return 'lifetime'
+  }
+  const normalizedInterval = normalizeInterval(interval)
+  switch (normalizedInterval) {
+    case 'daypass':
+      return 'day'
+    case 'week':
+      return 'week'
+    case 'year':
+      return 'year'
+    case 'lifetime':
+      return 'lifetime'
+    case 'month':
+    default:
+      return 'month'
+  }
+}
+
+function deriveDuration(planKey: PlanKey | null, metadata?: Stripe.Metadata | null, interval?: string | null): 'daypass' | 'week' | 'month' | 'year' | 'lifetime' {
+  if (planKey) {
+    return PLAN_CONFIG[planKey].duration
+  }
+  const normalizedMeta = normalizeInterval(metadata?.duration || metadata?.plan_interval || metadata?.billing_interval || metadata?.interval)
+  if (normalizedMeta) {
+    return normalizedMeta
+  }
+  return normalizeInterval(interval) || 'month'
+}
+
+function computeExpiration(planKey: PlanKey | null, metadata?: Stripe.Metadata | null, interval?: string | null): string | null {
+  const duration = deriveDuration(planKey, metadata, interval)
+  const now = new Date()
+  switch (duration) {
+    case 'daypass':
+      now.setTime(now.getTime() + 24 * 60 * 60 * 1000)
+      return now.toISOString()
+    case 'week':
+      now.setDate(now.getDate() + 7)
+      return now.toISOString()
+    case 'month':
+      now.setMonth(now.getMonth() + 1)
+      return now.toISOString()
+    case 'year':
+      now.setFullYear(now.getFullYear() + 1)
+      return now.toISOString()
+    case 'lifetime':
+      return new Date('2099-12-31').toISOString()
+    default:
+      return now.toISOString()
+  }
+}
+
+function getPlanMaxDailyPicks(planKey: PlanKey | null, inferredTier: 'pro' | 'elite' | 'free'): number {
+  if (planKey) {
+    return PLAN_CONFIG[planKey].maxDailyPicks
+  }
+  return inferredTier === 'elite' ? 30 : inferredTier === 'pro' ? 20 : 2
+}
+
+function getNumericProperty(target: unknown, key: string): number | null {
+  if (!target) return null
+  const record = target as Record<string, unknown>
+  const value = record?.[key]
+  return typeof value === 'number' ? value : null
 }
 
 // Safe insert of webhook event for audit trail; ignore if table missing
@@ -350,38 +711,47 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // Subscription flow -> use Stripe subscription current period end
     if (session.mode === 'subscription' && session.subscription) {
       const subId = session.subscription as string
-      const subscriptionResp = await stripe.subscriptions.retrieve(subId, {
+      const subscription = await stripe.subscriptions.retrieve(subId, {
         expand: ['items.data.price.product']
       })
-      const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
-      const subscriptionType = (subscription.metadata?.subscription_type as string) || ''
-      const currentPeriodEnd = subscription.current_period_end
-      const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
-      
-      // Determine tier from subscription type or price ID
-      let tier = 'pro' // default
-      const priceId = subscription.items.data[0]?.price?.id
-      if (subscriptionType.startsWith('elite') || isElitePriceId(priceId)) {
-        tier = 'elite'
-      }
+
+      const price = subscription.items.data[0]?.price
+      const priceId = price?.id ?? null
+      const productId = typeof price?.product === 'string' ? price.product : (price?.product as Stripe.Product | undefined)?.id ?? null
+      const recurringInterval = price?.recurring?.interval ?? null
+      const planKey = resolvePlanKey({
+        metadata: subscription.metadata,
+        priceId,
+        interval: recurringInterval,
+        productId,
+      })
+
+      const inferredTier = deriveTier(planKey, subscription.metadata, priceId)
+      const planType = derivePlanType(planKey, subscription.metadata, recurringInterval)
+      const currentPeriodEndUnix = getNumericProperty(subscription, 'current_period_end')
+      const expiresAt = currentPeriodEndUnix
+        ? new Date(currentPeriodEndUnix * 1000).toISOString()
+        : computeExpiration(planKey, subscription.metadata, recurringInterval)
+      const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
 
       console.log('🔄 Processing subscription:', {
         subscriptionId: subscription.id,
-        tier,
-        interval,
-        priceId
+        inferredTier,
+        planType,
+        priceId,
+        planKey,
       })
 
       const updateData = {
-        subscription_tier: tier,
-        subscription_status: subscription.status,
-        subscription_plan_type: interval,
+        subscription_tier: inferredTier,
+        subscription_status: subscription.status ?? 'active',
+        subscription_plan_type: planType,
         subscription_started_at: new Date().toISOString(),
-        subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
+        subscription_expires_at: expiresAt,
         updated_at: new Date().toISOString(),
-        max_daily_picks: tier === 'elite' ? 30 : 20,
+        max_daily_picks: maxDailyPicks,
         subscription_provider: 'stripe',
-        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
+        stripe_customer_id: extractCustomerId(subscription.customer) ?? null,
         stripe_subscription_id: subscription.id,
         stripe_price_id: priceId,
       }
@@ -394,7 +764,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       if (error) {
         console.error('❌ Error updating profile after checkout (subscription):', error)
       } else {
-        console.log('✅ Successfully activated', tier, 'subscription for user')
+        console.log('✅ Successfully activated', inferredTier, 'subscription for user')
       }
     }
   } catch (error) {
@@ -404,46 +774,75 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id)
-  
+
   try {
-    const userId = subscription.metadata.user_id || subscription.metadata.userId
-    
-    if (userId) {
-      // Get subscription plan details from metadata or price ID
-      const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
-      const subscriptionType = subscriptionObj.metadata.subscription_type || subscriptionObj.metadata.planId
-      const currentPeriodEnd = subscriptionObj.current_period_end
-      const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
-      const tier = subscriptionType?.startsWith('elite') ? 'elite' : 'pro'
+    const { userId, stripeCustomerId } = await resolveUserContext({
+      metadata: subscription.metadata,
+      stripeCustomer: subscription.customer,
+      customerEmail: (subscription as any)?.customer_email ?? (subscription as any)?.customer_details?.email ?? null,
+    })
 
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          subscription_tier: tier,
-          subscription_status: 'active',
-          subscription_plan_type: interval,
-          subscription_started_at: new Date().toISOString(),
-          subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-
-      if (error) {
-        console.error('Error updating profile on subscription creation:', error)
-      } else {
-        console.log(`Subscription created for user ${userId}: ${subscriptionType}`)
-      }
-      await safeUpdateStripeFields(userId, {
-        stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
-        stripe_subscription_id: subscription.id,
-        stripe_price_id: subscription.items.data[0]?.price?.id || null,
-        stripe_status: subscription.status,
-        current_period_start: new Date(((subscriptionObj as any).current_period_start) * 1000).toISOString(),
-        current_period_end: new Date(subscriptionObj.current_period_end * 1000).toISOString(),
-        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-        subscription_provider: 'stripe',
-      })
+    if (!userId) {
+      console.warn('⚠️ Unable to resolve user for subscription.created event')
+      return
     }
+
+    const price = subscription.items.data[0]?.price
+    const priceId = price?.id ?? null
+    const productId = typeof price?.product === 'string' ? price.product : (price?.product as Stripe.Product | undefined)?.id ?? null
+    const recurringInterval = price?.recurring?.interval ?? null
+    const planKey = resolvePlanKey({
+      metadata: subscription.metadata,
+      priceId,
+      interval: recurringInterval,
+      productId,
+    })
+
+    const inferredTier = deriveTier(planKey, subscription.metadata, priceId)
+    const planType = derivePlanType(planKey, subscription.metadata, recurringInterval)
+    const currentPeriodEndUnix = getNumericProperty(subscription, 'current_period_end')
+    const expiresAt = currentPeriodEndUnix
+      ? new Date(currentPeriodEndUnix * 1000).toISOString()
+      : computeExpiration(planKey, subscription.metadata, recurringInterval)
+    const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
+
+    const profileUpdate: Record<string, any> = {
+      subscription_tier: inferredTier,
+      subscription_status: subscription.status ?? 'active',
+      subscription_plan_type: planType,
+      subscription_started_at: new Date().toISOString(),
+      subscription_expires_at: expiresAt,
+      subscription_source: 'stripe',
+      max_daily_picks: maxDailyPicks,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .update(profileUpdate)
+      .eq('id', userId)
+
+    if (error) {
+      console.error('❌ Error updating profile on subscription creation:', error)
+    } else {
+      console.log(`✅ Subscription created for user ${userId}: tier=${inferredTier}, plan=${planType}`)
+    }
+
+    await safeUpdateStripeFields(userId, {
+      stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: priceId,
+      current_period_start: (() => {
+        const unix = getNumericProperty(subscription, 'current_period_start')
+        return unix ? new Date(unix * 1000).toISOString() : null
+      })(),
+      current_period_end: expiresAt,
+      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+      canceled_at: (() => {
+        const unix = getNumericProperty(subscription, 'canceled_at')
+        return unix ? new Date(unix * 1000).toISOString() : null
+      })(),
+    })
   } catch (error) {
     console.error('Error handling subscription creation:', error)
   }
@@ -451,66 +850,99 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('🔄 Subscription updated:', subscription.id)
-  
+
   try {
-    const userId = subscription.metadata.user_id || subscription.metadata.userId
-    
-    if (userId) {
-      let updateData: any = {
-        subscription_status: subscription.status,
-        updated_at: new Date().toISOString(),
-      }
+    const { userId, stripeCustomerId } = await resolveUserContext({
+      metadata: subscription.metadata,
+      stripeCustomer: subscription.customer,
+      customerEmail: (subscription as any)?.customer_email ?? (subscription as any)?.customer_details?.email ?? null,
+    })
 
-      // If subscription is canceled or past_due, handle accordingly
-      if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-        console.log('⬇️ Downgrading user to free tier due to:', subscription.status)
-        updateData.subscription_tier = 'free'
-        updateData.subscription_expires_at = new Date().toISOString()
-        updateData.canceled_at = new Date().toISOString()
-        updateData.max_daily_picks = 2
-      } else if (subscription.status === 'active' || subscription.status === 'trialing') {
-        // Renew/extend subscription from Stripe period
-        const subscriptionObj = subscription as unknown as Stripe.Subscription & { current_period_end: number }
-        const subscriptionType = subscriptionObj.metadata.subscription_type || subscriptionObj.metadata.planId
-        const currentPeriodEnd = subscriptionObj.current_period_end
-        const interval = subscriptionObj.items.data[0]?.price?.recurring?.interval || 'month'
-        const priceId = subscriptionObj.items.data[0]?.price?.id
-        
-        // Determine tier from subscription type or price ID
-        let tier = 'pro' // default
-        if (subscriptionType?.startsWith('elite') || isElitePriceId(priceId)) {
-          tier = 'elite'
-        }
-        
-        console.log('⬆️ Updating subscription:', {
-          userId,
-          tier,
-          interval,
-          status: subscription.status,
-          priceId
-        })
-        
-        updateData.subscription_tier = tier
-        updateData.subscription_plan_type = interval
-        updateData.subscription_expires_at = new Date(currentPeriodEnd * 1000).toISOString()
-        updateData.max_daily_picks = tier === 'elite' ? 30 : 20
-        updateData.stripe_customer_id = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id
-        updateData.stripe_subscription_id = subscription.id
-        updateData.stripe_price_id = priceId
-        updateData.subscription_provider = 'stripe'
-      }
-
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update(updateData)
-        .eq('id', userId)
-
-      if (error) {
-        console.error('❌ Error updating profile on subscription update:', error)
-      } else {
-        console.log(`✅ Subscription updated for user ${userId}: ${subscription.status} (tier: ${updateData.subscription_tier})`)
-      }
+    if (!userId) {
+      console.warn('⚠️ Unable to resolve user for subscription.updated event')
+      return
     }
+
+    const baseUpdate: Record<string, any> = {
+      subscription_status: subscription.status,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
+      console.log('⬇️ Downgrading user to free tier due to:', subscription.status)
+      baseUpdate.subscription_tier = 'free'
+      baseUpdate.subscription_expires_at = new Date().toISOString()
+      baseUpdate.max_daily_picks = 2
+      baseUpdate.canceled_at = new Date().toISOString()
+      await supabaseAdmin.from('profiles').update(baseUpdate).eq('id', userId)
+      await safeUpdateStripeFields(userId, {
+        stripe_subscription_id: subscription.id,
+        stripe_price_id: subscription.items.data[0]?.price?.id ?? null,
+        stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+        stripe_status: subscription.status,
+      })
+      return
+    }
+
+    const price = subscription.items.data[0]?.price
+    const priceId = price?.id ?? null
+    const productId = typeof price?.product === 'string' ? price.product : (price?.product as Stripe.Product | undefined)?.id ?? null
+    const recurringInterval = price?.recurring?.interval ?? null
+
+    const planKey = resolvePlanKey({
+      metadata: subscription.metadata,
+      priceId,
+      interval: recurringInterval,
+      productId,
+    })
+
+    const inferredTier = deriveTier(planKey, subscription.metadata, priceId)
+    const planType = derivePlanType(planKey, subscription.metadata, recurringInterval)
+    const currentPeriodEndUnix = getNumericProperty(subscription, 'current_period_end')
+    const expiresAt = currentPeriodEndUnix
+      ? new Date(currentPeriodEndUnix * 1000).toISOString()
+      : computeExpiration(planKey, subscription.metadata, recurringInterval)
+    const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
+
+    const updateData: Record<string, any> = {
+      ...baseUpdate,
+      subscription_tier: inferredTier,
+      subscription_plan_type: planType,
+      subscription_expires_at: expiresAt,
+      max_daily_picks: maxDailyPicks,
+      subscription_provider: 'stripe',
+      stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: priceId,
+    }
+
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+
+    if (error) {
+      console.error('❌ Error updating profile on subscription update:', error)
+    } else {
+      console.log(`✅ Subscription updated for user ${userId}: ${subscription.status} (tier: ${inferredTier})`)
+    }
+
+    await safeUpdateStripeFields(userId, {
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: priceId,
+      stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+      current_period_start: (() => {
+        const unix = getNumericProperty(subscription, 'current_period_start')
+        return unix ? new Date(unix * 1000).toISOString() : null
+      })(),
+      current_period_end: expiresAt,
+      cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+      canceled_at: (() => {
+        const unix = getNumericProperty(subscription, 'canceled_at')
+        return unix ? new Date(unix * 1000).toISOString() : null
+      })(),
+      stripe_status: subscription.status,
+    })
   } catch (error) {
     console.error('❌ Error handling subscription update:', error)
   }
@@ -555,46 +987,79 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   
   try {
     // Cast invoice to access subscription property
-    const invoiceWithSub = invoice as any
-    const subscriptionId = invoiceWithSub.subscription
-    
-    if (subscriptionId) {
-      // Get subscription details to renew user access
-      const subscriptionResp = await stripe.subscriptions.retrieve(subscriptionId)
-      const subscription = subscriptionResp as unknown as Stripe.Subscription & { current_period_end: number }
-      const userId = subscription.metadata.user_id || subscription.metadata.userId
-      
-      if (userId) {
-        const subscriptionType = subscription.metadata.subscription_type || subscription.metadata.planId
-        const currentPeriodEnd = subscription.current_period_end
-        const interval = subscription.items.data[0]?.price?.recurring?.interval || 'month'
-        const { error } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            subscription_tier: subscriptionType?.startsWith('elite') ? 'elite' : 'pro',
-            subscription_status: 'active',
-            subscription_plan_type: interval,
-            subscription_expires_at: new Date(currentPeriodEnd * 1000).toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
+    const subscriptionId = (invoice as any)?.subscription as string | null
 
-        if (error) {
-          console.error('Error renewing subscription on invoice payment:', error)
-        } else {
-          console.log(`Subscription renewed for user ${userId}`)
-        }
-        await safeUpdateStripeFields(userId, {
-          stripe_status: 'active',
-          stripe_subscription_id: subscription.id,
-          stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id,
-          stripe_price_id: subscription.items.data[0]?.price?.id || null,
-          current_period_start: new Date(((subscription as any).current_period_start) * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-          subscription_provider: 'stripe',
-        })
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price.product']
+      })
+
+      const { userId, stripeCustomerId } = await resolveUserContext({
+        metadata: subscription.metadata,
+        stripeCustomer: subscription.customer,
+        customerEmail: (subscription as any)?.customer_email ?? (subscription as any)?.customer_details?.email ?? null,
+      })
+
+      if (!userId) {
+        console.warn('⚠️ Unable to resolve user for invoice.payment_succeeded event')
+        return
       }
+
+      const price = subscription.items.data[0]?.price
+      const priceId = price?.id ?? null
+      const productId = typeof price?.product === 'string' ? price.product : (price?.product as Stripe.Product | undefined)?.id ?? null
+      const recurringInterval = price?.recurring?.interval ?? null
+
+      const planKey = resolvePlanKey({
+        metadata: subscription.metadata,
+        priceId,
+        interval: recurringInterval,
+        productId,
+      })
+
+      const inferredTier = deriveTier(planKey, subscription.metadata, priceId)
+      const planType = derivePlanType(planKey, subscription.metadata, recurringInterval)
+      const currentPeriodEndUnix = getNumericProperty(subscription, 'current_period_end')
+      const expiresAt = currentPeriodEndUnix
+        ? new Date(currentPeriodEndUnix * 1000).toISOString()
+        : computeExpiration(planKey, subscription.metadata, recurringInterval)
+      const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
+
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: inferredTier,
+          subscription_status: 'active',
+          subscription_plan_type: planType,
+          subscription_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+          max_daily_picks: maxDailyPicks,
+          subscription_provider: 'stripe',
+          stripe_subscription_id: subscription.id,
+          stripe_price_id: priceId,
+          stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error renewing subscription on invoice payment:', error)
+      } else {
+        console.log(`Subscription renewed for user ${userId}`)
+      }
+
+      await safeUpdateStripeFields(userId, {
+        stripe_status: 'active',
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
+        stripe_price_id: priceId,
+        current_period_start: (() => {
+          const unix = getNumericProperty(subscription, 'current_period_start')
+          return unix ? new Date(unix * 1000).toISOString() : null
+        })(),
+        current_period_end: expiresAt,
+        cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+        subscription_provider: 'stripe',
+      })
     }
   } catch (error) {
     console.error('Error handling invoice payment success:', error)

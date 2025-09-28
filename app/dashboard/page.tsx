@@ -183,13 +183,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Avg Confidence</h3>
-                <div className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold text-green-400">
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-12 rounded"></div>
                   ) : (
                     `${averageConfidence.toFixed(1)}%`
                   )}
-                </div>
+                </p>
                 <p className="text-xs text-gray-400">AI Analysis</p>
               </div>
             </div>
@@ -207,13 +207,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">High Confidence</h3>
-                <div className="text-2xl font-bold text-purple-400">
+                <p className="text-2xl font-bold text-purple-400">
                   {isLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     highConfidencePicks.length
                   )}
-                </div>
+                </p>
                 <p className="text-xs text-gray-400">80%+ Picks</p>
               </div>
             </div>
@@ -231,13 +231,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Team Picks</h3>
-                <div className="text-2xl font-bold text-yellow-400">
+                <p className="text-2xl font-bold text-yellow-400">
                   {isLoadingTeam ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     teamPicks.length
                   )}
-                </div>
+                </p>
                 <p className="text-xs text-gray-400">ML • Spreads • Totals</p>
               </div>
             </div>

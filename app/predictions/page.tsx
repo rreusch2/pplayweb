@@ -269,13 +269,13 @@ export default function PredictionsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Total Predictions</h3>
-                <div className="text-2xl font-bold text-blue-400">
+                <p className="text-2xl font-bold text-blue-400">
                   {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     combinedAll.length
                   )}
-                </div>
+                </p>
               </div>
             </div>
           </motion.div>
@@ -292,13 +292,13 @@ export default function PredictionsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Avg Confidence</h3>
-                <div className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold text-green-400">
                   {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-12 rounded"></div>
                   ) : (
                     `${combinedAvgConfidence.toFixed(1)}%`
                   )}
-                </div>
+                </p>
               </div>
             </div>
           </motion.div>
@@ -315,13 +315,13 @@ export default function PredictionsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">High Confidence</h3>
-                <div className="text-2xl font-bold text-purple-400">
+                <p className="text-2xl font-bold text-purple-400">
                   {combinedLoading ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     combinedHighConfidenceCount
                   )}
-                </div>
+                </p>
               </div>
             </div>
           </motion.div>
@@ -338,13 +338,13 @@ export default function PredictionsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold">Team Picks</h3>
-                <div className="text-2xl font-bold text-yellow-400">
+                <p className="text-2xl font-bold text-yellow-400">
                   {isLoadingTeam ? (
                     <div className="animate-pulse bg-gray-600 h-6 w-8 rounded"></div>
                   ) : (
                     teamPicks.length
                   )}
-                </div>
+                </p>
               </div>
             </div>
           </motion.div>
