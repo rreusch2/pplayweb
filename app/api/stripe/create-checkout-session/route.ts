@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
       client_reference_id: userId,
       metadata: {
         userId,
+        user_id: userId, // 🎯 For RevenueCat metadata field detection
+        app_user_id: userId, // 🎯 Alternative field name RevenueCat might look for
         productType: isOneTimeProduct ? 'one_time' : 'subscription',
         subscription_type: subscriptionType || 'unknown',
         price_id: priceId,
@@ -69,7 +71,9 @@ export async function POST(req: NextRequest) {
     if (isOneTimeProduct) {
       baseParams.payment_intent_data = {
         metadata: {
-          user_id: userId,
+          user_id: userId, // 🎯 For RevenueCat metadata field detection
+          app_user_id: userId, // 🎯 Alternative field name
+          userId: userId, // 🎯 Legacy compatibility
           subscription_type: subscriptionType || 'unknown',
           price_id: priceId,
         },
@@ -77,7 +81,9 @@ export async function POST(req: NextRequest) {
     } else {
       baseParams.subscription_data = {
         metadata: {
-          user_id: userId,
+          user_id: userId, // 🎯 For RevenueCat metadata field detection
+          app_user_id: userId, // 🎯 Alternative field name
+          userId: userId, // 🎯 Legacy compatibility
           subscription_type: subscriptionType || 'unknown',
           price_id: priceId,
         },

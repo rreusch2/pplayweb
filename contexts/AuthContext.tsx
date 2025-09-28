@@ -5,6 +5,7 @@ import { supabase, UserProfile } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import apiClient from '@/lib/apiClient'
+import { revenueCatWeb } from '@/lib/revenueCatWeb'
 
 interface AuthState {
   session: Session | null
@@ -151,9 +152,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }))
               
               // Fetch profile in background
-              fetchUserProfile(session.user).then((profile) => {
+              fetchUserProfile(session.user).then(async (profile) => {
                 if (!mounted) return
                 setAuthState(prev => ({ ...prev, profile }))
+                
+                // 🎯 Ensure RevenueCat is initialized for existing users without revenuecat_customer_id
+                if (profile && !profile.revenuecat_customer_id) {
+                  console.log('🔗 Initializing RevenueCat for existing user:', session.user.id)
+                  try {
+                    await revenueCatWeb.initialize(session.user.id)
+                    
+                    // Update the profile with RevenueCat customer ID
+                    await supabase
+                      .from('profiles')
+                      .update({ 
+                        revenuecat_customer_id: session.user.id,
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq('id', session.user.id)
+                      
+                    console.log('✅ RevenueCat initialized for existing user')
+                    
+                    // Update local profile state
+                    setAuthState(prev => ({
+                      ...prev,
+                      profile: prev.profile ? {
+                        ...prev.profile,
+                        revenuecat_customer_id: session.user.id
+                      } : prev.profile
+                    }))
+                  } catch (error) {
+                    console.error('⚠️ RevenueCat initialization failed for existing user:', error)
+                  }
+                }
               }).catch(console.error)
             }
             break
@@ -268,6 +299,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast.error('Could not create your user profile. Please contact support.')
         } else {
             console.log('✅ Profile created/updated successfully on signup')
+        }
+
+        // 🎯 Initialize RevenueCat for new web user
+        console.log('🔗 Initializing RevenueCat for new web user:', data.user.id)
+        try {
+          await revenueCatWeb.initialize(data.user.id)
+          
+          // Update the profile with RevenueCat customer ID
+          await supabase
+            .from('profiles')
+            .update({ 
+              revenuecat_customer_id: data.user.id, // Use user ID as RevenueCat customer ID
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', data.user.id)
+            
+          console.log('✅ RevenueCat initialized and profile updated for web user')
+        } catch (revenueCatError) {
+          console.error('⚠️ RevenueCat initialization failed (non-fatal):', revenueCatError)
+          // Don't fail signup if RevenueCat fails
         }
 
         console.log('🚀 Setting justSignedUp flag to trigger onboarding')
