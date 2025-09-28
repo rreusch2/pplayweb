@@ -436,6 +436,56 @@ function getNumericProperty(target: unknown, key: string): number | null {
   return typeof value === 'number' ? value : null
 }
 
+// Best-effort verification that profile reflects desired subscription state.
+// If mismatch, we attempt one more minimal update focused only on tier-related fields.
+async function ensureProfileTier(
+  userId: string,
+  desired: {
+    tier: 'pro' | 'elite'
+    status: string
+    planType: string | null
+    expiresAt: string | null
+    maxDailyPicks: number
+  }
+) {
+  try {
+    const { data: row } = await supabaseAdmin
+      .from('profiles')
+      .select('subscription_tier, subscription_status, subscription_plan_type, subscription_expires_at, max_daily_picks')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const mismatch = !row ||
+      row.subscription_tier !== desired.tier ||
+      row.subscription_status !== desired.status ||
+      row.subscription_plan_type !== desired.planType ||
+      row.max_daily_picks !== desired.maxDailyPicks
+
+    if (mismatch) {
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_tier: desired.tier,
+          subscription_status: desired.status,
+          subscription_plan_type: desired.planType,
+          subscription_expires_at: desired.expiresAt,
+          max_daily_picks: desired.maxDailyPicks,
+          subscription_source: 'stripe',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.warn('ensureProfileTier fallback update failed:', error.message)
+      } else {
+        console.log('ensureProfileTier applied fallback update for user', userId)
+      }
+    }
+  } catch (e: any) {
+    console.warn('ensureProfileTier error (ignored):', e?.message || e)
+  }
+}
+
 // Safe insert of webhook event for audit trail; ignore if table missing
 async function logWebhookEvent(event: Stripe.Event) {
   try {
@@ -672,8 +722,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
 
     console.log('👤 Processing subscription for user:', userId)
-    console.log('🔍 DEBUG - Session metadata:', session.metadata)
-    console.log('🔍 DEBUG - Session mode:', session.mode)
 
     // One-time payment flow (daypass/lifetime) -> no subscription
     if (session.mode === 'payment') {
@@ -750,16 +798,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         : computeExpiration(planKey, subscription.metadata, recurringInterval)
       const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
 
-      console.log('🔍 DEBUG - Plan resolution:', {
-        priceId,
-        productId,
-        recurringInterval,
-        metadata: subscription.metadata,
-        planKey,
+      console.log('🔄 Processing subscription:', {
+        subscriptionId: subscription.id,
         inferredTier,
         planType,
-        maxDailyPicks,
-        subscriptionId: subscription.id,
+        priceId,
+        planKey,
       })
 
       const updateData = {
@@ -776,8 +820,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         stripe_price_id: priceId,
       }
 
-      console.log('🔍 DEBUG - Update data being sent:', updateData)
-      
       const { error } = await supabaseAdmin
         .from('profiles')
         .update(updateData)
@@ -785,11 +827,19 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
       if (error) {
         console.error('❌ Error updating profile after checkout (subscription):', error)
-        console.error('❌ Full error details:', JSON.stringify(error, null, 2))
       } else {
-        console.log('✅ Successfully activated', inferredTier, 'subscription for user:', userId)
-        console.log('✅ Updated with tier:', inferredTier, 'plan:', planType, 'max_picks:', maxDailyPicks)
+        console.log('✅ Successfully activated', inferredTier, 'subscription for user')
       }
+
+      // Verify and enforce tier after checkout
+      const enforcedTierCheckout = inferredTier === 'elite' ? 'elite' : 'pro'
+      await ensureProfileTier(userId, {
+        tier: enforcedTierCheckout,
+        status: subscription.status ?? 'active',
+        planType,
+        expiresAt,
+        maxDailyPicks,
+      })
     }
   } catch (error) {
     console.error('❌ Error in handleCheckoutSessionCompleted:', error)
@@ -851,6 +901,16 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     } else {
       console.log(`✅ Subscription created for user ${userId}: tier=${inferredTier}, plan=${planType}`)
     }
+
+    // Verify and enforce tier after subscription creation
+    const enforcedTierCreated = inferredTier === 'elite' ? 'elite' : 'pro'
+    await ensureProfileTier(userId, {
+      tier: enforcedTierCreated,
+      status: subscription.status ?? 'active',
+      planType,
+      expiresAt,
+      maxDailyPicks,
+    })
 
     await safeUpdateStripeFields(userId, {
       stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
@@ -950,6 +1010,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     } else {
       console.log(`✅ Subscription updated for user ${userId}: ${subscription.status} (tier: ${inferredTier})`)
     }
+
+    // Verify and enforce tier after subscription update
+    const enforcedTierUpdated = inferredTier === 'elite' ? 'elite' : 'pro'
+    await ensureProfileTier(userId, {
+      tier: enforcedTierUpdated,
+      status: subscription.status ?? 'active',
+      planType,
+      expiresAt,
+      maxDailyPicks,
+    })
 
     await safeUpdateStripeFields(userId, {
       stripe_subscription_id: subscription.id,
@@ -1070,6 +1140,16 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       } else {
         console.log(`Subscription renewed for user ${userId}`)
       }
+
+      // Verify and enforce tier after invoice payment success
+      const enforcedTierInvoice = inferredTier === 'elite' ? 'elite' : 'pro'
+      await ensureProfileTier(userId, {
+        tier: enforcedTierInvoice,
+        status: 'active',
+        planType,
+        expiresAt,
+        maxDailyPicks,
+      })
 
       await safeUpdateStripeFields(userId, {
         stripe_status: 'active',
