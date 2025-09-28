@@ -89,16 +89,28 @@ const PLAN_ENV_KEYS: Record<PlanKey, string[]> = {
 }
 
 const HARDCODED_PRICE_TO_PLAN: Record<string, PlanKey> = {
+  // Pro prices
+  price_1SBVraRo1RFNyzsn4kMeMCFh: 'pro_daypass',
+  price_1RsHkxRo1RFNyzsnZhWShz9I: 'pro_weekly',
+  price_1SBJosRo1RFNyzsnoewnjNhv: 'pro_monthly',
+  price_1RsHmfRo1RFNyzsnGBnPGZuq: 'pro_yearly',
+  price_1RsHwfRo1RFNyzsnaXZXYNPh: 'pro_lifetime',
+
   // Elite prices
+  price_1SBVgmRo1RFNyzsnVPrt2JDK: 'elite_daypass',
   price_1RsHrXRo1RFNyzsn6tf8SYDr: 'elite_weekly',
   price_1RsHswRo1RFNyzsnyyluM3J2: 'elite_monthly',
   price_1RsHugRo1RFNyzsnhKEKMAE6: 'elite_yearly',
-  price_1SBVgmRo1RFNyzsnVPrt2JDK: 'elite_daypass',
   price_1SBVaSRo1RFNyzsnLdiz5euz: 'elite_lifetime',
 }
 
 const PRODUCT_TO_PLAN: Record<string, PlanKey> = {
+  // Pro products
+  prod_SntVCPbLpTUopK: 'pro_monthly',
+
+  // Elite products
   prod_T7lDN3HLfwVpkU: 'elite_daypass',
+  prod_Sntg5FMrsqzK0o: 'elite_monthly',
 }
 
 const PRICE_TO_PLAN = new Map<string, PlanKey>()
@@ -680,7 +692,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_started_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         max_daily_picks: subData.tier === 'elite' ? 30 : (subData.tier === 'pro' ? 20 : 2),
-        subscription_provider: 'stripe',
+        subscription_source: 'stripe',
       }
       
       if (subData.isLifetime) {
@@ -752,7 +764,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_expires_at: expiresAt,
         updated_at: new Date().toISOString(),
         max_daily_picks: maxDailyPicks,
-        subscription_provider: 'stripe',
+        subscription_source: 'stripe',
         stripe_customer_id: extractCustomerId(subscription.customer) ?? null,
         stripe_subscription_id: subscription.id,
         stripe_price_id: priceId,
@@ -1036,7 +1048,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
           subscription_expires_at: expiresAt,
           updated_at: new Date().toISOString(),
           max_daily_picks: maxDailyPicks,
-          subscription_provider: 'stripe',
+          subscription_source: 'stripe',
           stripe_subscription_id: subscription.id,
           stripe_price_id: priceId,
           stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
