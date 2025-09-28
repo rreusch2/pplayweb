@@ -372,38 +372,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Free Tier */}
-          <div className="max-w-sm mx-auto mb-12">
-            <div className="relative bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-gray-600 hover:border-gray-500 transition-all duration-300 group">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r from-gray-500 to-gray-600 flex items-center justify-center">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold text-white">$0</span>
-                  <span className="text-gray-300">/month</span>
-                </div>
-                <p className="text-gray-300 mb-6">Get started with core features</p>
-                
-                <button
-                  onClick={() => openAuthModal('signup')}
-                  className="w-full py-3 rounded-lg font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all duration-300 group-hover:scale-105"
-                >
-                  Start Winning Free
-                </button>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {['2 daily AI picks', 'Basic trends & insights', 'Mobile app access'].map((feature, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-gray-300 text-sm">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
           {/* Pro & Elite Plans */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
