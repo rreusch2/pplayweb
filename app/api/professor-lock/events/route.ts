@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'sessionId and events array are required' }, { status: 400 })
     }
 
-    const results = [] as { eventId: string; agentEventId: string }[]
+    const results: { eventId: string; agentEventId: string }[] = []
 
     for (const event of events) {
       if (!event.agentEventId || !event.phase) {
@@ -61,12 +61,15 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      results.push(insertedEvent)
+      results.push({
+        eventId: insertedEvent.id as string,
+        agentEventId: insertedEvent.agent_event_id as string,
+      })
 
       if (Array.isArray(event.artifacts) && event.artifacts.length > 0) {
         const artifactsToInsert = event.artifacts
-          .filter(artifact => artifact.storagePath)
-          .map(artifact => ({
+          .filter((artifact: ArtifactPayload) => artifact.storagePath)
+          .map((artifact: ArtifactPayload) => ({
             session_id: sessionId,
             event_id: insertedEvent.id,
             storage_path: artifact.storagePath,
