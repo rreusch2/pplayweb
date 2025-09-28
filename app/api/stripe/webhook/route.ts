@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
-import { headers } from 'next/headers'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // Initialize Stripe with secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -453,10 +455,10 @@ async function markWebhookProcessed(id: string, errorMsg?: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the raw body as text for signature verification
-    const body = await request.text()
-    const headersList = await headers()
-    const sig = headersList.get('stripe-signature')
+    // Get the raw body as a Buffer for signature verification
+    const rawBody = await request.arrayBuffer()
+    const bodyBuffer = Buffer.from(rawBody)
+    const sig = request.headers.get('stripe-signature')
 
     if (!sig) {
       console.error('No Stripe signature found')
@@ -474,7 +476,7 @@ export async function POST(request: NextRequest) {
     } else {
       try {
         // Verify the webhook signature
-        event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent(bodyBuffer, sig, endpointSecret);
       } catch (err) {
         console.error('Webhook signature verification failed:', err);
         return NextResponse.json(
