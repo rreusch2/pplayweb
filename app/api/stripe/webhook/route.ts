@@ -924,7 +924,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       subscription_plan_type: planType,
       subscription_expires_at: expiresAt,
       max_daily_picks: maxDailyPicks,
-      subscription_provider: 'stripe',
+      subscription_source: 'stripe',
       stripe_customer_id: stripeCustomerId ?? extractCustomerId(subscription.customer),
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
@@ -1072,7 +1072,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
         })(),
         current_period_end: expiresAt,
         cancel_at_period_end: subscription.cancel_at_period_end ?? false,
-        subscription_provider: 'stripe',
+        subscription_source: 'stripe',
       })
     }
   } catch (error) {
@@ -1110,7 +1110,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         }
         await safeUpdateStripeFields(userId, {
           stripe_status: 'past_due',
-          subscription_provider: 'stripe',
+          subscription_source: 'stripe',
         })
       }
     }
