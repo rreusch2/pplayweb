@@ -672,6 +672,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
 
     console.log('👤 Processing subscription for user:', userId)
+    console.log('🔍 DEBUG - Session metadata:', session.metadata)
+    console.log('🔍 DEBUG - Session mode:', session.mode)
 
     // One-time payment flow (daypass/lifetime) -> no subscription
     if (session.mode === 'payment') {
@@ -748,12 +750,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         : computeExpiration(planKey, subscription.metadata, recurringInterval)
       const maxDailyPicks = getPlanMaxDailyPicks(planKey, inferredTier)
 
-      console.log('🔄 Processing subscription:', {
-        subscriptionId: subscription.id,
+      console.log('🔍 DEBUG - Plan resolution:', {
+        priceId,
+        productId,
+        recurringInterval,
+        metadata: subscription.metadata,
+        planKey,
         inferredTier,
         planType,
-        priceId,
-        planKey,
+        maxDailyPicks,
+        subscriptionId: subscription.id,
       })
 
       const updateData = {
@@ -770,6 +776,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         stripe_price_id: priceId,
       }
 
+      console.log('🔍 DEBUG - Update data being sent:', updateData)
+      
       const { error } = await supabaseAdmin
         .from('profiles')
         .update(updateData)
@@ -777,8 +785,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
       if (error) {
         console.error('❌ Error updating profile after checkout (subscription):', error)
+        console.error('❌ Full error details:', JSON.stringify(error, null, 2))
       } else {
-        console.log('✅ Successfully activated', inferredTier, 'subscription for user')
+        console.log('✅ Successfully activated', inferredTier, 'subscription for user:', userId)
+        console.log('✅ Updated with tier:', inferredTier, 'plan:', planType, 'max_picks:', maxDailyPicks)
       }
     }
   } catch (error) {
