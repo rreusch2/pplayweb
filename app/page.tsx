@@ -11,18 +11,31 @@ import {
   Sparkles,
   Trophy,
   BarChart3,
-  MessageCircle
+  MessageCircle,
+  Crown,
+  Zap,
+  Check,
+  ArrowRight,
+  Gem,
+  Infinity,
+  Clock
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/AuthModal'
+import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
 import { trackSignupStart, trackAppStoreClick, trackCTAClick } from '@/lib/analytics'
+import { createCheckoutSession, redirectToCheckout } from '@/lib/stripe'
+import { PLANS, Plan } from '@/lib/plans'
 import Image from 'next/image'
 import PredictionsPreview from '@/components/PredictionsPreview'
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [mounted, setMounted] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
+  const [loading, setLoading] = useState<string | null>(null)
   const { user } = useAuth()
   const router = useRouter()
 
@@ -49,13 +62,80 @@ export default function LandingPage() {
     }
   }
 
+  const handlePlanSelect = async (plan: Plan) => {
+    if (!user) {
+      // User needs to sign up first
+      setSelectedPlan(plan)
+      openAuthModal('signup')
+      return
+    }
+
+    // User is logged in, proceed to checkout
+    await handleDirectCheckout(plan)
+  }
+
+  const handleDirectCheckout = async (plan: Plan) => {
+    if (!plan.stripePriceId) {
+      alert('Stripe price ID missing for this plan – please contact support.')
+      return
+    }
+
+    try {
+      setLoading(plan.id)
+      trackCTAClick(`${plan.tier}_${plan.interval}_checkout`)
+      
+      const sessionId = await createCheckoutSession(
+        plan.stripePriceId, 
+        user!.id,
+        `${window.location.origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+        `${window.location.origin}/dashboard`
+      )
+      await redirectToCheckout(sessionId)
+    } catch (err) {
+      console.error(err)
+      alert('Unable to initiate checkout. Please try again.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  // Redirect after signup to checkout if plan was selected
+  useEffect(() => {
+    if (user && selectedPlan && mounted) {
+      handleDirectCheckout(selectedPlan)
+      setSelectedPlan(null)
+    }
+  }, [user, selectedPlan, mounted])
+
   const handleAppStoreClick = () => {
     trackAppStoreClick()
     trackCTAClick('App Store Download')
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 relative">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        
+        {/* Floating Particles */}
+        <div className="absolute inset-0">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-blue-400 rounded-full opacity-20 animate-float"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${10 + Math.random() * 20}s`
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       {/* Navigation */}
       <nav role="navigation" className="relative z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
@@ -121,7 +201,7 @@ export default function LandingPage() {
                 onClick={() => openAuthModal('signup')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center space-x-2 group"
               >
-                <span>Start Free Trial</span>
+                <span>Start Winning</span>
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
@@ -262,72 +342,196 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Enhanced Pricing Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Choose Your Plan
+            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full mb-6 animate-pulse">
+              <Clock className="w-5 h-5 text-orange-400 mr-2" />
+              <span className="text-orange-300 text-sm font-semibold">Limited Time: 50% OFF All Plans</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
+              Choose Your <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Winning Plan</span>
             </h2>
-            <p className="text-xl text-gray-300">
-              Start free, upgrade anytime. Cancel without fees.
+            <p className="text-xl text-gray-300 mb-4">
+              Join 50,000+ successful bettors using AI-powered predictions
             </p>
+            <div className="flex items-center justify-center space-x-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400">73%</div>
+                <div className="text-xs text-slate-400">Win Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-400">$2.1M</div>
+                <div className="text-xs text-slate-400">Won This Month</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-400">50K+</div>
+                <div className="text-xs text-slate-400">Active Users</div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <div
-                key={plan.name}
-                className={`relative bg-white/5 backdrop-blur-sm rounded-xl p-6 border ${
-                  plan.popular 
-                    ? 'border-blue-500 ring-2 ring-blue-500/20' 
-                    : 'border-white/10'
-                } hover:border-blue-500/50 transition-all duration-300`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {plan.name}
-                  </h3>
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-white">
-                      ${plan.price}
-                    </span>
-                    <span className="text-gray-300">/{plan.period}</span>
-                  </div>
-                  <p className="text-gray-300 mb-6">
-                    {plan.description}
-                  </p>
-                  
-                  <button
-                    onClick={() => openAuthModal('signup')}
-                    className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${
-                      plan.popular
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                    }`}
-                  >
-                    Get Started
-                  </button>
+          {/* Free Tier */}
+          <div className="max-w-sm mx-auto mb-12">
+            <div className="relative bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-gray-600 hover:border-gray-500 transition-all duration-300 group">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-r from-gray-500 to-gray-600 flex items-center justify-center">
+                  <Target className="w-8 h-8 text-white" />
                 </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
+                <div className="mb-4">
+                  <span className="text-4xl font-bold text-white">$0</span>
+                  <span className="text-gray-300">/month</span>
+                </div>
+                <p className="text-gray-300 mb-6">Get started with core features</p>
+                
+                <button
+                  onClick={() => openAuthModal('signup')}
+                  className="w-full py-3 rounded-lg font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all duration-300 group-hover:scale-105"
+                >
+                  Start Winning Free
+                </button>
+              </div>
 
-                <div className="mt-6 space-y-3">
-                  {plan.features.map((feature, featureIndex) => (
-                    <div key={featureIndex} className="flex items-center space-x-3">
-                      <Star className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <span className="text-gray-300 text-sm">{feature}</span>
-                    </div>
-                  ))}
+              <div className="mt-6 space-y-3">
+                {['2 daily AI picks', 'Basic trends & insights', 'Mobile app access'].map((feature, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-gray-300 text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pro & Elite Plans */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            {/* Pro Tier */}
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-full border border-blue-500/30">
+                  <Crown className="w-5 h-5 text-blue-400 mr-2" />
+                  <span className="text-blue-300 font-semibold">Pro Tier</span>
+                  <span className="ml-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">MOST POPULAR</span>
                 </div>
               </div>
-            ))}
+              
+              {PLANS.filter(p => p.tier === 'pro').map((plan) => (
+                <div key={plan.id} className="relative bg-gradient-to-br from-blue-500/10 to-blue-900/20 backdrop-blur-sm rounded-2xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 group hover:scale-105">
+                  {plan.savings && (
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                      {plan.savings}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-1">{plan.name}</h4>
+                      <div className="flex items-baseline">
+                        <span className="text-3xl font-black text-white">${plan.price}</span>
+                        <span className="text-blue-200 ml-2">/{plan.interval}</span>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      {plan.interval === 'one_time' ? (
+                        <Infinity className="w-6 h-6 text-white" />
+                      ) : (
+                        <Crown className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-6">
+                    {plan.features.map((feature, i) => (
+                      <div key={i} className="flex items-center">
+                        <Check className="w-4 h-4 text-blue-400 mr-3 flex-shrink-0" />
+                        <span className="text-gray-300 text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handlePlanSelect(plan)}
+                    disabled={loading === plan.id}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center group-hover:shadow-lg group-hover:shadow-blue-500/25 disabled:opacity-50"
+                  >
+                    {loading === plan.id ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Start Winning Now
+                        <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Elite Tier */}
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30">
+                  <Gem className="w-5 h-5 text-purple-400 mr-2" />
+                  <span className="text-purple-300 font-semibold">Elite Tier</span>
+                  <span className="ml-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-2 py-1 rounded-full font-bold">PREMIUM</span>
+                </div>
+              </div>
+              
+              {PLANS.filter(p => p.tier === 'elite').map((plan) => (
+                <div key={plan.id} className="relative bg-gradient-to-br from-purple-500/10 to-pink-900/20 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 group hover:scale-105">
+                  {plan.savings && (
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                      {plan.savings}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-1">{plan.name}</h4>
+                      <div className="flex items-baseline">
+                        <span className="text-3xl font-black text-white">${plan.price}</span>
+                        <span className="text-purple-200 ml-2">/{plan.interval}</span>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                      <Gem className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-6">
+                    {plan.features.map((feature, i) => (
+                      <div key={i} className="flex items-center">
+                        <Check className="w-4 h-4 text-purple-400 mr-3 flex-shrink-0" />
+                        <span className="text-gray-300 text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handlePlanSelect(plan)}
+                    disabled={loading === plan.id}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center group-hover:shadow-lg group-hover:shadow-purple-500/25 disabled:opacity-50"
+                  >
+                    {loading === plan.id ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Start Winning Elite
+                        <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Money Back Guarantee */}
+          <div className="mt-12 flex items-center justify-center text-gray-400">
+            <Shield className="w-5 h-5 mr-2 text-green-400" />
+            <span>30-day money-back guarantee • Cancel anytime • Secure checkout</span>
           </div>
         </div>
       </section>
@@ -346,7 +550,7 @@ export default function LandingPage() {
               onClick={() => openAuthModal('signup')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center space-x-2 mx-auto group"
             >
-              <span>Start Your Free Trial</span>
+              <span>Start Winning Today</span>
               <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
             </button>
           </div>
@@ -406,6 +610,56 @@ export default function LandingPage() {
         mode={authMode}
         onModeChange={setAuthMode}
       />
+
+      {/* Subscription Modal */}
+      <TieredSubscriptionModal
+        isOpen={subscriptionModalOpen}
+        onClose={() => setSubscriptionModalOpen(false)}
+        onContinueFree={() => {
+          setSubscriptionModalOpen(false)
+          openAuthModal('signup')
+        }}
+      />
+      
+      {/* Custom Styles for Animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0%, 100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+        }
+        
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(180deg);
+          }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        
+        .animate-float {
+          animation: float linear infinite;
+        }
+      `}</style>
     </div>
   )
 }
@@ -443,43 +697,4 @@ const features = [
   }
 ]
 
-const pricingPlans = [
-  {
-    name: 'Free',
-    price: 0,
-    period: 'month',
-    description: 'Get started with core features',
-    popular: false,
-    features: [
-      '2 daily AI picks',
-      'Basic trends & insights',
-      'Mobile app access'
-    ]
-  },
-  {
-    name: 'Pro',
-    price: 19.99,
-    period: 'month',
-    description: 'Most popular for serious bettors',
-    popular: true,
-    features: [
-      'More daily AI picks',
-      'Advanced trends & analytics',
-      'Professor Lock chat', 
-      'Real-time updates'
-    ]
-  },
-  {
-    name: 'Elite',
-    price: 29.99,
-    period: 'month',
-    description: 'Premium tools & insights',
-    popular: false,
-    features: [
-      'Maximum daily AI picks',
-      'Premium analytics & insights',
-      'Lock of the Day',
-      'Early feature access'
-    ]
-  }
-]
+// Pricing plans moved to lib/plans.ts for better organization
