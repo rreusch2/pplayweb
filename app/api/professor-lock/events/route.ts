@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { publish } from '@/lib/professorLockBus'
 
 type EventPhase = 'thinking' | 'tool_invocation' | 'result' | 'completed'
 
@@ -88,6 +89,27 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+
+      // Broadcast this event on SSE bus for live UI updates
+      publish(sessionId, {
+        type: 'tool_event',
+        id: insertedEvent.id,
+        agentEventId: insertedEvent.agent_event_id,
+        phase: event.phase,
+        tool: event.tool,
+        title: event.title,
+        message: event.message,
+        payload: event.payload ?? undefined,
+        artifacts: event.artifacts?.map(a => ({
+          storagePath: a.storagePath,
+          contentType: a.contentType,
+          caption: a.caption,
+          // pass through signedUrl if the agent provided one
+          // @ts-ignore
+          signedUrl: (a as any).signedUrl,
+        })),
+        timestamp: event.timestamp || new Date().toISOString(),
+      })
     }
 
     return NextResponse.json({ success: true, results })

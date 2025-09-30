@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Globe,
   Database,
@@ -13,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { ToolEvent } from '@/hooks/useProfessorLockSession'
+import { supabase } from '@/lib/supabase'
 
 interface ToolTimelineProps {
   events: ToolEvent[]
@@ -43,6 +45,35 @@ const phaseLabels: Record<string, string> = {
 }
 
 export default function ToolTimeline({ events }: ToolTimelineProps) {
+  const [urlCache, setUrlCache] = useState<Record<string, string>>({})
+  const bucket = 'professor-lock-artifacts'
+
+  // Create signed URLs for new artifacts
+  useEffect(() => {
+    let cancelled = false
+    const fetchUrls = async () => {
+      const paths: string[] = []
+      for (const e of events) {
+        if (!e.artifacts) continue
+        for (const a of e.artifacts) {
+          if (a.storagePath && !urlCache[a.storagePath]) paths.push(a.storagePath)
+        }
+      }
+      if (paths.length === 0) return
+      for (const p of paths) {
+        try {
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(p, 60)
+          if (!error && data?.signedUrl && !cancelled) {
+            setUrlCache(prev => ({ ...prev, [p]: data.signedUrl }))
+          }
+        } catch {}
+      }
+    }
+    fetchUrls()
+    return () => { cancelled = true }
+  }, [events, urlCache])
   if (events.length === 0) {
     return (
       <div className="flex h-full items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 p-8 text-center backdrop-blur-xl">
@@ -116,27 +147,36 @@ export default function ToolTimeline({ events }: ToolTimelineProps) {
                     {/* Artifacts (screenshots, charts, etc.) */}
                     {event.artifacts && event.artifacts.length > 0 && (
                       <div className="mt-3 grid grid-cols-2 gap-2">
-                        {event.artifacts.map((artifact, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.1 * i }}
-                            className="group relative overflow-hidden rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur-sm transition-all hover:border-blue-400/50 hover:bg-white/10"
-                          >
-                            <div className="flex items-center gap-2">
-                              <ImageIcon className="h-4 w-4 text-blue-400" />
-                              <span className="truncate text-xs text-slate-300">
-                                {artifact.caption || 'Artifact'}
-                              </span>
-                            </div>
-                            {artifact.contentType?.startsWith('image/') && (
-                              <div className="mt-2 text-xs text-slate-500">
-                                Click to view
+                        {event.artifacts.map((artifact, i) => {
+                          const direct = (artifact as any).signedUrl as string | undefined
+                          const signedUrl = direct || (artifact.storagePath ? urlCache[artifact.storagePath] : undefined)
+                          const isImage = artifact.contentType?.startsWith('image/')
+                          return (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.1 * i }}
+                              className="group relative overflow-hidden rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur-sm transition-all hover:border-blue-400/50 hover:bg-white/10"
+                            >
+                              <div className="flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4 text-blue-400" />
+                                <span className="truncate text-xs text-slate-300">
+                                  {artifact.caption || 'Artifact'}
+                                </span>
                               </div>
-                            )}
-                          </motion.div>
-                        ))}
+                              {isImage && signedUrl && (
+                                <a href={signedUrl} target="_blank" rel="noreferrer">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={signedUrl} alt={artifact.caption || 'Artifact'} className="mt-2 h-32 w-full rounded-md object-cover" />
+                                </a>
+                              )}
+                              {isImage && !signedUrl && (
+                                <div className="mt-2 text-xs text-slate-500">Generating preview…</div>
+                              )}
+                            </motion.div>
+                          )
+                        })}
                       </div>
                     )}
 

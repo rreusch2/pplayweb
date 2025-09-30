@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
+import { subscribe } from '@/lib/professorLockBus'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -17,7 +18,17 @@ export async function GET(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
       }
 
-      send({ type: 'heartbeat', sessionId, message: 'SSE placeholder active' })
+      // Initial heartbeat
+      send({ type: 'heartbeat', sessionId, message: 'SSE connected' })
+
+      // Subscribe to in-memory bus for this session
+      const unsubscribe = subscribe(sessionId, (evt) => {
+        try {
+          send(evt)
+        } catch (e) {
+          // ignore
+        }
+      })
 
       const interval = setInterval(() => {
         send({ type: 'keepalive', sessionId, timestamp: new Date().toISOString() })
@@ -27,6 +38,7 @@ export async function GET(req: NextRequest) {
 
       const close = () => {
         clearInterval(interval)
+        try { unsubscribe() } catch {}
         controller.enqueue(encoder.encode('event: end\ndata: {}\n\n'))
         controller.close()
       }
