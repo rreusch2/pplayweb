@@ -315,6 +315,7 @@ export default function TieredSubscriptionModal({
                     </div>
                   )}
 
+                  {/* Removed money-back guarantee copy */}
                 </div>
 
                 {/* Footer Links */}

@@ -259,6 +259,7 @@ export default function UpgradeSubscriptionModal({
                     </div>
                   )}
 
+                  {/* Removed money-back guarantee copy */}
                 </div>
               </Dialog.Panel>
             </Transition.Child>

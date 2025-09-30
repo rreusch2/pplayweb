@@ -18,7 +18,8 @@ import {
   ArrowRight,
   Gem,
   Infinity,
-  Clock
+  Clock,
+  MousePointerClick
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/AuthModal'
@@ -156,7 +157,7 @@ export default function LandingPage() {
                 <span className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
                   Predictive Play
                 </span>
-                <div className="text-xs text-blue-200">AI Sports Betting</div>
+                <div className="text-xs text-blue-200">AI Sports Insights</div>
               </div>
             </div>
             
@@ -187,12 +188,11 @@ export default function LandingPage() {
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
                 <span className="gradient-text">AI-Powered</span>
                 <br />
-                Sports Betting Predictions
+                Sports Insights & Analysis
               </h1>
               <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                Predictive Play uses machine learning models trained on historical odds, team stats,
-                and live feeds to deliver daily NBA, NFL, MLB & Premier League forecasts with
-                <span className="font-semibold"> 72%+ accuracy</span>.
+                Predictive Play delivers data-driven insights for MLB, NFL & WNBA using advanced AI trained on historical data and live updates. 
+                Built for smarter sports analysis and fandom. For informational and educational purposes only.
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 onClick={() => openAuthModal('signup')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center space-x-2 group"
               >
-                <span>Start Winning</span>
+                <span>Get Started</span>
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
@@ -231,6 +231,9 @@ export default function LandingPage() {
                 {/* Floating dots animation */}
                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-bounce animation-delay-200"></div>
                 <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-bounce animation-delay-500"></div>
+                {/* Attention pulse + pointer hint */}
+                <span className="pointer-events-none absolute inset-0 rounded-xl border border-white/20 animate-click-pulse" />
+                <MousePointerClick className="pointer-events-none absolute -bottom-1 -right-1 w-5 h-5 text-white/80 drop-shadow animate-click-tap" />
                 
                 <div className="relative z-10 p-2">
                   <Image
@@ -248,6 +251,29 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Mobile Sticky App Store CTA (visible immediately on mobile) */}
+      <div className="fixed bottom-4 inset-x-0 z-50 sm:hidden px-4">
+        <a
+          href="https://apps.apple.com/us/app/predictive-play/id6748275790"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleAppStoreClick}
+          className="relative block mx-auto w-full max-w-sm rounded-2xl bg-black/60 backdrop-blur border border-white/10 p-2 shadow-xl"
+          aria-label="Download on the App Store"
+        >
+          <span className="pointer-events-none absolute inset-0 rounded-2xl border border-white/20 animate-click-pulse" />
+          <div className="relative z-10 flex items-center justify-center">
+            <Image
+              src="/app-store-badge.svg"
+              alt="Download on the App Store"
+              width={180}
+              height={60}
+              className="h-12 w-auto"
+            />
+          </div>
+        </a>
+      </div>
+
       {/* Features Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
         <div className="max-w-7xl mx-auto">
@@ -256,7 +282,7 @@ export default function LandingPage() {
               Why Choose Predictive Play?
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Advanced AI technology meets sports expertise to give you the edge in sports betting.
+              Advanced AI technology meets sports expertise to give you an edge in sports analysis.
             </p>
           </div>
 
@@ -289,7 +315,7 @@ export default function LandingPage() {
               How Predictive Play Works
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Daily AI sports betting predictions powered by multi-source data and transparent scoring — built for smarter decisions.
+              Daily AI sports insights powered by multi-source data and transparent scoring — built for smarter decisions.
             </p>
           </div>
 
@@ -301,7 +327,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Multi‑Source Data</h3>
               <p className="text-gray-300 text-sm">
-                Aggregates live odds, line movements, injuries, and verified trends to keep the model up‑to‑date.
+                Aggregates live data, injuries, news signals, and verified trends to keep the model up‑to‑date.
               </p>
             </div>
 
@@ -312,7 +338,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">AI Value Scoring</h3>
               <p className="text-gray-300 text-sm">
-                Each pick is scored with confidence, value %, and an EV/ROI estimate based on matchup factors and market context.
+                Each insight includes confidence and value signals based on matchup factors and market context.
               </p>
             </div>
 
@@ -341,12 +367,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Featured Predictions Today */}
+      {/* Featured Insights Today */}
       <section className="py-10 px-4 sm:px-6 lg:px-8 bg-black/20">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Featured Predictions Today</h2>
-            <p className="text-gray-300">Preview a couple of today’s AI picks. Create an account to see more.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Featured Insights Today</h2>
+            <p className="text-gray-300">Preview a couple of today’s AI insights. Create an account to see more.</p>
           </div>
           <div className="max-w-4xl mx-auto">
             <PredictionsPreview limit={2} />
@@ -363,25 +389,11 @@ export default function LandingPage() {
               <span className="text-orange-300 text-sm font-semibold">Limited Time: 50% OFF All Plans</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              Choose Your <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Winning Plan</span>
+              Choose Your <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Plan</span>
             </h2>
             <p className="text-xl text-gray-300 mb-4">
-              Join 50,000+ successful bettors using AI-powered predictions
+              Join thousands of sports fans using AI-powered insights
             </p>
-            <div className="flex items-center justify-center space-x-8">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">73%</div>
-                <div className="text-xs text-slate-400">Win Rate</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">$2.1M</div>
-                <div className="text-xs text-slate-400">Won This Month</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">50K+</div>
-                <div className="text-xs text-slate-400">Active Users</div>
-              </div>
-            </div>
           </div>
 
 
@@ -440,7 +452,7 @@ export default function LandingPage() {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Start Winning Now
+                        Get Pro Access
                         <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
@@ -498,7 +510,7 @@ export default function LandingPage() {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Start Winning Elite
+                        Get Elite Access
                         <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
@@ -521,16 +533,16 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div>
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to Start Winning?
+              Ready to Try Predictive Play?
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Join thousands of successful bettors using AI-powered predictions.
+              Join thousands of sports fans using AI-powered insights.
             </p>
             <button
               onClick={() => openAuthModal('signup')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center space-x-2 mx-auto group"
             >
-              <span>Start Winning Today</span>
+              <span>Get Started Today</span>
               <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
             </button>
           </div>
@@ -589,6 +601,12 @@ export default function LandingPage() {
             </div>
           </div>
           
+          {/* Compliance Notice */}
+          <div className="mt-8 text-center text-xs text-gray-400 max-w-3xl mx-auto">
+            Predictive Play provides sports information and analytics for entertainment and educational purposes only. 
+            We do not offer or facilitate real-money gambling or wagering. Please follow your local laws.
+          </div>
+
           <div className="mt-8 pt-8 border-t border-white/10 text-center text-gray-400">
             <p>&copy; 2025 Predictive Play. All rights reserved.</p>
           </div>
@@ -636,6 +654,29 @@ export default function LandingPage() {
           }
         }
         
+        @keyframes clickPulse {
+          0% {
+            transform: scale(0.9);
+            opacity: 0.0;
+          }
+          50% {
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.2);
+            opacity: 0;
+          }
+        }
+
+        @keyframes clickTap {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(2px, 2px) scale(0.95);
+          }
+        }
+        
         .animate-blob {
           animation: blob 7s infinite;
         }
@@ -651,6 +692,13 @@ export default function LandingPage() {
         .animate-float {
           animation: float linear infinite;
         }
+
+        .animate-click-pulse {
+          animation: clickPulse 1.6s ease-out infinite;
+        }
+        .animate-click-tap {
+          animation: clickTap 1.2s ease-in-out infinite;
+        }
       `}</style>
     </div>
   )
@@ -658,28 +706,28 @@ export default function LandingPage() {
 
 const features = [
   {
-    title: 'AI-Powered Predictions',
-    description: 'Advanced machine learning algorithms analyze thousands of data points to deliver highly accurate predictions.',
+    title: 'AI Sports Insights',
+    description: 'Advanced machine learning analyzes thousands of data points to deliver clear, data-driven insights.',
     icon: Brain
   },
   {
     title: 'Real-Time Analytics',
-    description: 'Live odds tracking, injury reports, and game analysis updated in real-time.',
+    description: 'Live data tracking, injury reports, and game analysis updated in real-time.',
     icon: BarChart3
   },
   {
-    title: 'Expert Insights',
-    description: 'Professional analysis and betting strategies from seasoned sports experts.',
+    title: 'Expert Analysis',
+    description: 'Professional analysis and practical strategies from seasoned sports experts.',
     icon: Target
   },
   {
     title: 'AI Chat Assistant',
-    description: 'Get personalized betting advice and answers to your questions 24/7.',
+    description: 'Get personalized sports analysis and answers to your questions 24/7.',
     icon: MessageCircle
   },
   {
-    title: 'Proven Track Record',
-    description: 'Transparent performance metrics with verified win rates and ROI tracking.',
+    title: 'Transparent Methodology',
+    description: 'Clear methodology and performance history. No guarantees—just honest, useful information.',
     icon: Trophy
   },
   {
