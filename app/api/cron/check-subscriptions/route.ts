@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`⏰ Found ${expiredUsers.length} expired subscriptions`)
 
-    // Downgrade expired users to free tier
+    // Do not change subscription_tier here; only RevenueCat webhook may change tier
     const downgradedUsers = []
     
     for (const user of expiredUsers) {
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
         const { error: updateError } = await supabaseAdmin
           .from('profiles')
           .update({
-            subscription_tier: 'free',
             subscription_status: 'expired',
             updated_at: new Date().toISOString()
           })
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
         if (updateError) {
           console.error(`❌ Failed to downgrade user ${user.id}:`, updateError)
         } else {
-          console.log(`⬇️ Downgraded user ${user.id} from ${user.subscription_tier} to free`)
+          console.log(`⬇️ Marked user ${user.id} as expired (tier unchanged)`) 
           downgradedUsers.push({
             id: user.id,
             email: user.email,
