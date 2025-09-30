@@ -520,11 +520,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Money Back Guarantee */}
-          <div className="mt-12 flex items-center justify-center text-gray-400">
-            <Shield className="w-5 h-5 mr-2 text-green-400" />
-            <span>30-day money-back guarantee • Cancel anytime • Secure checkout</span>
-          </div>
         </div>
       </section>
 
