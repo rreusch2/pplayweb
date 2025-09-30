@@ -34,7 +34,7 @@ export default function ProfessorLockShell() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 -mt-16 sm:-mt-20 pt-20 sm:pt-24">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Hero Header */}
         <motion.div
@@ -139,7 +139,7 @@ export default function ProfessorLockShell() {
               messages={messages}
               isStreaming={isStreaming}
               onSendMessage={sendMessage}
-              disabled={session.status !== 'active'}
+              disabled={false}
             />
           </div>
 

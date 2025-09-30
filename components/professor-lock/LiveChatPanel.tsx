@@ -120,30 +120,36 @@ export default function LiveChatPanel({
 
       {/* Input */}
       <div className="border-t border-white/10 bg-black/40 px-6 py-4">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <input
-            ref={inputRef}
-            type="text"
-            name="message"
-            placeholder={
-              disabled
-                ? 'Start a session to chat...'
-                : 'Ask Professor Lock anything...'
-            }
-            disabled={disabled || isStreaming}
-            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-blue-400/50 focus:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={disabled || isStreaming}
-            className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:from-blue-600 hover:to-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Send
-          </button>
-        </form>
-        <p className="mt-3 text-xs text-slate-500">
-          Professor Lock uses xAI Grok-3 with live sports data, StatMuse, and web search.
-        </p>
+        {disabled ? (
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-center">
+            <p className="text-sm text-yellow-200">
+              👆 Click <strong>"Start Session"</strong> above to begin chatting with Professor Lock
+            </p>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <input
+                ref={inputRef}
+                type="text"
+                name="message"
+                placeholder="Ask Professor Lock anything..."
+                disabled={isStreaming}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-blue-400/50 focus:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={isStreaming}
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:from-blue-600 hover:to-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Send
+              </button>
+            </form>
+            <p className="mt-3 text-xs text-slate-500">
+              Professor Lock uses xAI Grok-3 with live sports data, StatMuse, and web search.
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
