@@ -219,16 +219,28 @@ export default function LandingPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={handleAppStoreClick}
-                className="hover:opacity-80 transition-opacity"
+                className="group relative inline-block overflow-hidden rounded-xl transition-all duration-500 hover:scale-110 hover:-rotate-1 hover:shadow-2xl hover:shadow-blue-500/25 active:scale-95"
                 aria-label="Download on the App Store"
               >
-                <Image
-                  src="/app-store-badge.svg"
-                  alt="Download on the App Store"
-                  width={180}
-                  height={60}
-                  className="h-14 w-auto"
-                />
+                {/* Animated background glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl blur-sm"></div>
+                
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"></div>
+                
+                {/* Floating dots animation */}
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-bounce animation-delay-200"></div>
+                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-bounce animation-delay-500"></div>
+                
+                <div className="relative z-10 p-2">
+                  <Image
+                    src="/app-store-badge.svg"
+                    alt="Download on the App Store"
+                    width={180}
+                    height={60}
+                    className="h-14 w-auto group-hover:brightness-110 transition-all duration-300"
+                  />
+                </div>
               </a>
             </div>
 
@@ -551,16 +563,28 @@ export default function LandingPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={handleAppStoreClick}
-                className="hover:opacity-80 transition-opacity"
+                className="group relative inline-block overflow-hidden rounded-xl transition-all duration-500 hover:scale-110 hover:rotate-1 hover:shadow-2xl hover:shadow-purple-500/25 active:scale-95"
                 aria-label="Download on the App Store"
               >
-                <Image
-                  src="/app-store-badge.svg"
-                  alt="Download on the App Store"
-                  width={120}
-                  height={40}
-                  className="h-8 w-auto"
-                />
+                {/* Animated pulse ring */}
+                <div className="absolute inset-0 rounded-xl border-2 border-purple-400/50 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></div>
+                
+                {/* Gradient glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
+                
+                {/* Sparkle effects */}
+                <div className="absolute top-1 right-1 w-1 h-1 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping animation-delay-300"></div>
+                <div className="absolute bottom-1 left-1 w-1.5 h-1.5 bg-pink-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-pulse animation-delay-700"></div>
+                
+                <div className="relative z-10 p-2">
+                  <Image
+                    src="/app-store-badge.svg"
+                    alt="Download on the App Store"
+                    width={120}
+                    height={40}
+                    className="h-8 w-auto group-hover:brightness-125 transition-all duration-300"
+                  />
+                </div>
               </a>
             </div>
           </div>
