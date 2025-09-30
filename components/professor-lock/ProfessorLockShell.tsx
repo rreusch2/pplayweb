@@ -4,13 +4,16 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, TrendingUp, Brain, Zap, Play, StopCircle } from 'lucide-react'
 import { useProfessorLockSession } from '@/hooks/useProfessorLockSession'
+import { useAuth } from '@/contexts/AuthContext'
 import LiveChatPanel from './LiveChatPanel'
 import ToolTimeline from './ToolTimeline'
 
 export default function ProfessorLockShell() {
-  // TODO: Replace with actual user data from auth context
-  const [userId] = useState('demo-user-123')
-  const [tier] = useState('pro')
+  const { user, profile } = useAuth()
+
+  // Use actual logged-in user
+  const userId = user?.id
+  const tier = profile?.subscription_tier || 'free'
 
   const {
     session,
@@ -20,13 +23,18 @@ export default function ProfessorLockShell() {
     startSession,
     sendMessage,
     endSession,
-  } = useProfessorLockSession(userId, tier)
+  } = useProfessorLockSession(userId || '', tier)
 
   const handleStartSession = async () => {
+    if (!userId) {
+      alert('Please log in to use Professor Lock')
+      return
+    }
+    
     try {
       await startSession({
-        sportPreferences: ['MLB', 'WNBA'],
-        riskTolerance: 'medium',
+        sportPreferences: profile?.preferred_sports || ['MLB', 'WNBA'],
+        riskTolerance: profile?.risk_tolerance || 'medium',
       })
     } catch (error) {
       console.error('Failed to start session:', error)
