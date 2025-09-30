@@ -73,13 +73,18 @@ export default function ProfessorLockShell() {
                   Start Session
                 </button>
               ) : session.status === 'active' ? (
-                <button
-                  onClick={endSession}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 px-6 py-3 font-semibold text-white transition-all hover:from-red-600 hover:to-orange-600"
-                >
-                  <StopCircle className="h-5 w-5" />
-                  End Session
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+                    <span className="text-sm font-medium text-emerald-300">✅ Session Active</span>
+                  </div>
+                  <button
+                    onClick={endSession}
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 px-6 py-3 font-semibold text-white transition-all hover:from-red-600 hover:to-orange-600"
+                  >
+                    <StopCircle className="h-5 w-5" />
+                    End Session
+                  </button>
+                </div>
               ) : session.status === 'connecting' ? (
                 <div className="flex items-center gap-2 rounded-xl border border-blue-400/50 bg-blue-500/10 px-6 py-3 font-semibold text-blue-300">
                   <motion.div
@@ -206,6 +211,19 @@ export default function ProfessorLockShell() {
             <p className="text-sm text-blue-200">
               🚀 Click <strong>"Start Session"</strong> to launch your personal Daytona sandbox and
               watch Professor Lock work in real time.
+            </p>
+          </motion.div>
+        )}
+        
+        {session.status === 'active' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4 backdrop-blur-sm"
+          >
+            <p className="text-sm text-yellow-200">
+              ⚠️ <strong>Demo Mode:</strong> The agent service backend is not yet built. You can send messages and they'll be stored in the database, but you won't receive AI responses until the Daytona + OpenManus agent worker is deployed.
             </p>
           </motion.div>
         )}

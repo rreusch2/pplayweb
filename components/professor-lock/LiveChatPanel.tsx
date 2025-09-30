@@ -68,6 +68,26 @@ export default function LiveChatPanel({
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
         <AnimatePresence mode="popLayout">
+          {messages.length === 0 && !disabled && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-6 text-center"
+            >
+              <div className="mb-3 flex justify-center">
+                <div className="rounded-full bg-gradient-to-br from-blue-400 to-purple-500 p-3">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <h3 className="mb-2 text-lg font-bold text-white">Session Started!</h3>
+              <p className="text-sm text-slate-300">
+                Ask me anything about today's games, betting strategies, or request a parlay analysis.
+              </p>
+              <p className="mt-2 text-xs text-slate-400">
+                💡 Try: "What are your best picks for today?" or "Build me a 3-leg parlay"
+              </p>
+            </motion.div>
+          )}
           {messages.map((message, index) => (
             <motion.div
               key={message.id}
