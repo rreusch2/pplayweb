@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import "@copilotkit/react-ui/styles.css"
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
@@ -9,7 +8,6 @@ import AnalyticsProvider from '@/components/AnalyticsProvider'
 import ScrollDepthTracker from '@/components/ScrollDepthTracker'
 import ScrollToTop from '@/components/ScrollToTop'
 import { Toaster } from 'react-hot-toast'
-import { CopilotKit } from "@copilotkit/react-core"
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -114,17 +112,11 @@ export default function RootLayout({
           <ScrollToTop />
           <AuthProvider>
             <SubscriptionProvider>
-              <CopilotKit
-                runtimeUrl="/api/copilot"
-                headers={{}}
-                showDevConsole={false}
-              >
-                <div className="min-h-full">
-                  <LayoutWrapper>
-                    {children}
-                  </LayoutWrapper>
-                </div>
-              </CopilotKit>
+              <div className="min-h-full">
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </div>
               <Toaster
                 position="top-right"
                 toastOptions={{

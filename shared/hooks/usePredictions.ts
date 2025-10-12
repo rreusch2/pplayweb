@@ -1,6 +1,6 @@
 // Shared Predictions hook (combines mobile app logic)
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { aiService, AIPrediction } from '../services/aiService'
 import { getTierCapabilities, isInWelcomeBonusPeriod } from '@/lib/subscriptionUtils'
 import type { SubscriptionTier } from '@/lib/subscriptionUtils'
@@ -29,6 +29,9 @@ export function usePredictions({
   welcomeBonusExpiresAt = null,
   userId
 }: UsePredictionsProps = {} as UsePredictionsProps) {
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const lastFetchRef = useRef<number>(0)
+  const DEBOUNCE_DELAY = 1000 // 1 second debounce
   const [state, setState] = useState<PredictionsState>({
     predictions: [],
     teamPicks: [],
@@ -61,10 +64,33 @@ export function usePredictions({
     return predictions.slice(0, capabilities.dailyPicks)
   }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
 
+  // Debounced fetch to prevent excessive API calls
+  const debouncedFetch = useCallback((fn: () => Promise<any>) => {
+    return new Promise((resolve) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+      
+      debounceRef.current = setTimeout(async () => {
+        const now = Date.now()
+        if (now - lastFetchRef.current < DEBOUNCE_DELAY) {
+          console.log('⏳ Skipping fetch - too soon after last request')
+          resolve([])
+          return
+        }
+        
+        lastFetchRef.current = now
+        const result = await fn()
+        resolve(result)
+      }, DEBOUNCE_DELAY / 2)
+    })
+  }, [])
+
   // Fetch today's predictions (for home tab preview - 2 picks)
   const fetchTodaysPredictions = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }))
-    try {
+    return debouncedFetch(async () => {
+      setState(prev => ({ ...prev, isLoading: true, error: null }))
+      try {
       const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
       const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
       const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
@@ -102,18 +128,19 @@ export function usePredictions({
         isLoading: false,
         isLoadingTeam: false,
         isLoadingProps: false,
-      }))
-      return filteredPredictions
-    } catch (error) {
-      console.error('Error fetching todays predictions:', error)
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Failed to load predictions', 
-        isLoading: false 
-      }))
-      return []
-    }
-  }, [filterPredictionsByTier])
+        }))
+        return filteredPredictions
+      } catch (error) {
+        console.error('Error fetching todays predictions:', error)
+        setState(prev => ({ 
+          ...prev, 
+          error: 'Failed to load predictions', 
+          isLoading: false 
+        }))
+        return []
+      }
+    })
+  }, [filterPredictionsByTier, debouncedFetch])
 
   // NEW: Fetch full predictions from ai_predictions table (for Predictions tab)
   const fetchFullPredictions = useCallback(async () => {
@@ -208,8 +235,21 @@ export function usePredictions({
   }, [fetchTodaysPredictions])
 
   useEffect(() => {
-    fetchTodaysPredictions()
+    // Only fetch if we haven't fetched recently
+    const now = Date.now()
+    if (now - lastFetchRef.current > DEBOUNCE_DELAY * 2) {
+      fetchTodaysPredictions()
+    }
   }, [fetchTodaysPredictions])
+  
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
 
   return {
     ...state,

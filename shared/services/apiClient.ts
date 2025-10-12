@@ -13,36 +13,11 @@ const apiClient = axios.create({
   withCredentials: true
 })
 
-// Short-lived token cache to prevent refresh storms
-let cachedToken: string | null = null
-let cacheExpiresAt = 0
-let inflightTokenPromise: Promise<string | null> | null = null
-
-async function getAuthToken(): Promise<string | null> {
-  const now = Date.now()
-  if (cachedToken && now < cacheExpiresAt) return cachedToken
-  if (inflightTokenPromise) return inflightTokenPromise
-
-  inflightTokenPromise = (async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token ?? null
-      cachedToken = token
-      cacheExpiresAt = Date.now() + 15_000
-      return token
-    } finally {
-      setTimeout(() => { inflightTokenPromise = null }, 0)
-    }
-  })()
-
-  return inflightTokenPromise
-}
-
-// Add auth token to requests (web version) with caching
+// Add auth token to requests (web version)
 apiClient.interceptors.request.use(async (config) => {
-  const token = await getAuthToken()
-  if (token) {
-    (config.headers as any).Authorization = `Bearer ${token}`
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`
   }
   return config
 })

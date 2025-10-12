@@ -46,83 +46,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true
     let sessionCheckInterval: NodeJS.Timeout | null = null
-    let profileFetchInProgress = false // Prevent concurrent profile fetches
 
     const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
-      // Prevent concurrent fetches
-      if (profileFetchInProgress) {
-        console.log('⏭️ Skipping profile fetch - already in progress')
-        return null
-      }
-      
-      profileFetchInProgress = true
+      console.log('🚀 Fetching profile via Railway backend for user:', user.id)
       try {
-        console.log('🚀 Fetching profile via Railway backend for user:', user.id)
-        try {
-          // Fetch profile from Railway backend API like mobile app does
-          const response = await apiClient.get(`/api/user/profile`, { params: { userId: user.id } })
-          
-          const profile = response?.data?.profile || null
-          if (profile) {
-            console.log('✅ Profile fetched from backend:', profile.username || profile.email)
-            // Ensure admin_role is present even if backend omitted it
-            if (typeof (profile as any).admin_role === 'undefined') {
-              try {
-                const { data: adminCheck, error: adminErr } = await supabase
-                  .from('profiles')
-                  .select('admin_role')
-                  .eq('id', user.id)
-                  .single()
-                if (!adminErr) {
-                  (profile as any).admin_role = adminCheck?.admin_role ?? false
-                }
-              } catch (e) {
-                console.warn('⚠️ Could not load admin_role from Supabase directly')
+        // Fetch profile from Railway backend API like mobile app does
+        const response = await apiClient.get(`/api/user/profile`, { params: { userId: user.id } })
+        
+        const profile = response?.data?.profile || null
+        if (profile) {
+          console.log('✅ Profile fetched from backend:', profile.username || profile.email)
+          // Ensure admin_role is present even if backend omitted it
+          if (typeof (profile as any).admin_role === 'undefined') {
+            try {
+              const { data: adminCheck, error: adminErr } = await supabase
+                .from('profiles')
+                .select('admin_role')
+                .eq('id', user.id)
+                .single()
+              if (!adminErr) {
+                (profile as any).admin_role = adminCheck?.admin_role ?? false
               }
+            } catch (e) {
+              console.warn('⚠️ Could not load admin_role from Supabase directly')
             }
-            return profile as UserProfile
           }
+          return profile as UserProfile
+        }
+        
+        console.log('⚠️ No profile data returned from backend')
+        return null
+      } catch (error: any) {
+        console.error('❌ Error fetching profile from backend:', error.response?.data || error.message)
+        
+        // If backend fails, try direct Supabase as fallback
+        console.log('🔄 Falling back to direct Supabase query')
+        try {
+          const { data, error: supabaseError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
           
-          console.log('⚠️ No profile data returned from backend')
-          return null
-        } catch (error: any) {
-          console.error('❌ Error fetching profile from backend:', error.response?.data || error.message)
-          
-          // If backend fails, try direct Supabase as fallback
-          console.log('🔄 Falling back to direct Supabase query')
-          try {
-            const { data, error: supabaseError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single()
-            
-            if (supabaseError) {
-              console.error('❌ Supabase fallback also failed:', supabaseError)
-              return null
-            }
-            
-            console.log('✅ Profile fetched via Supabase fallback:', data.username)
-            return data
-          } catch (fallbackError) {
-            console.error('❌ Both backend and Supabase failed:', fallbackError)
+          if (supabaseError) {
+            console.error('❌ Supabase fallback also failed:', supabaseError)
             return null
           }
+          
+          console.log('✅ Profile fetched via Supabase fallback:', data.username)
+          return data
+        } catch (fallbackError) {
+          console.error('❌ Both backend and Supabase failed:', fallbackError)
+          return null
         }
-      } finally {
-        profileFetchInProgress = false
       }
     }
 
     // IMMEDIATE auth resolution - no waiting, no hanging
     console.log('🚀 Setting auth as ready immediately')
-
+    setAuthState(prev => ({ ...prev, initializing: false }))
+    
     // Try to get session in background without blocking UI
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mounted) return
       if (error) {
         console.error('❌ Background getSession error:', error)
-        setAuthState(prev => ({ ...prev, initializing: false }))
         return
       }
       if (session?.user) {
@@ -138,10 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAuthState(prev => ({ ...prev, profile }))
         }).catch(console.error)
       }
-      setAuthState(prev => ({ ...prev, initializing: false }))
     }).catch((error) => {
       console.error('❌ Background auth check failed:', error)
-      setAuthState(prev => ({ ...prev, initializing: false }))
     })
 
     // Set up auth state listener
@@ -218,14 +204,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Session check failed:', error)
       }
-    }, 120000)
+    }, 30000)
 
     return () => {
       mounted = false
       if (sessionCheckInterval) clearInterval(sessionCheckInterval)
       subscription.unsubscribe()
     }
-  }, []) // Remove router dependency to prevent re-initialization
+  }, [router])
 
   const setLoading = (loading: boolean) => {
     setAuthState(prev => ({ ...prev, loading }))
