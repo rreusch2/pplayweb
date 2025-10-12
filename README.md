@@ -9,7 +9,7 @@ A modern React web application that shares your existing React Native backend an
 - **Stripe Payments**: Web payments without Apple fees
 - **Responsive Design**: Works on desktop, tablet, and mobile
 - **Modern UI**: Built with Next.js, TypeScript, and Tailwind CSS
-- **Authentication**: Integrated with your existing Supabase auth
+- **Authentication**: Intexgrated with your existing Supabase auth
 
 ## 🏗️ Architecture
 
