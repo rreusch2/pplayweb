@@ -69,11 +69,39 @@ export function usePredictions({
       const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
       const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
       const filteredPredictions = filterPredictionsByTier(allPredictions)
-      
+
+      const teamPicks = filteredPredictions.filter(p => 
+        p.bet_type && !p.bet_type.toLowerCase().includes('prop') &&
+        (
+          p.bet_type.includes('ML') ||
+          p.bet_type.includes('spread') ||
+          p.bet_type.includes('total') ||
+          p.bet_type.includes('moneyline') ||
+          p.bet_type.toLowerCase().includes('over') ||
+          p.bet_type.toLowerCase().includes('under')
+        )
+      )
+
+      const propsPicks = filteredPredictions.filter(p => 
+        p.bet_type && (
+          p.bet_type.toLowerCase().includes('prop') ||
+          p.bet_type.toLowerCase().includes('hit') ||
+          p.bet_type.toLowerCase().includes('homer') ||
+          p.bet_type.toLowerCase().includes('rbi') ||
+          p.bet_type.toLowerCase().includes('strikeout') ||
+          p.bet_type.toLowerCase().includes('assist') ||
+          p.bet_type.toLowerCase().includes('rebound')
+        )
+      )
+
       setState(prev => ({ 
         ...prev, 
         predictions: filteredPredictions,
-        isLoading: false 
+        teamPicks,
+        playerPropsPicks: propsPicks,
+        isLoading: false,
+        isLoadingTeam: false,
+        isLoadingProps: false,
       }))
       return filteredPredictions
     } catch (error) {
@@ -114,82 +142,6 @@ export function usePredictions({
       return []
     }
   }, [userId, subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt])
-
-  // Fetch team picks (ML, spreads, totals)
-  const fetchTeamPicks = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoadingTeam: true, error: null }))
-    try {
-      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
-      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
-      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
-      
-      // Since daily-picks-combined already returns tier-filtered picks, 
-      // just filter by bet type locally
-      const teamPicks = allPredictions.filter(p => 
-        p.bet_type && !p.bet_type.toLowerCase().includes('prop') &&
-        (p.bet_type.includes('ML') || 
-         p.bet_type.includes('spread') || 
-         p.bet_type.includes('total') ||
-         p.bet_type.includes('moneyline') ||
-         p.bet_type.includes('over') ||
-         p.bet_type.includes('under'))
-      )
-      
-      setState(prev => ({ 
-        ...prev, 
-        teamPicks,
-        isLoadingTeam: false 
-      }))
-      return teamPicks
-    } catch (error) {
-      console.error('Error fetching team picks:', error)
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Failed to load team picks', 
-        isLoadingTeam: false 
-      }))
-      return []
-    }
-  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt, userId])
-
-  // Fetch player props picks
-  const fetchPlayerPropsPicks = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoadingProps: true, error: null }))
-    try {
-      const isWelcomeBonus = isInWelcomeBonusPeriod(welcomeBonusClaimed, welcomeBonusExpiresAt)
-      const effectiveTier = isWelcomeBonus ? 'welcome_bonus' : subscriptionTier
-      const allPredictions = await aiService.getTodaysPredictions(userId, effectiveTier)
-      
-      // Since daily-picks-combined already returns tier-filtered picks, 
-      // just filter by bet type locally
-      const propsPicks = allPredictions.filter(p => 
-        p.bet_type && (
-          p.bet_type.toLowerCase().includes('prop') ||
-          p.bet_type.toLowerCase().includes('hit') ||
-          p.bet_type.toLowerCase().includes('homer') ||
-          p.bet_type.toLowerCase().includes('rbi') ||
-          p.bet_type.toLowerCase().includes('strikeout') ||
-          p.bet_type.toLowerCase().includes('assist') ||
-          p.bet_type.toLowerCase().includes('rebound')
-        )
-      )
-      
-      setState(prev => ({ 
-        ...prev, 
-        playerPropsPicks: propsPicks,
-        isLoadingProps: false 
-      }))
-      return propsPicks
-    } catch (error) {
-      console.error('Error fetching player props picks:', error)
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Failed to load player props', 
-        isLoadingProps: false 
-      }))
-      return []
-    }
-  }, [subscriptionTier, welcomeBonusClaimed, welcomeBonusExpiresAt, userId])
 
   // Fetch predictions by sport
   const fetchPredictionsBySport = useCallback(async (sport: string) => {
@@ -248,37 +200,27 @@ export function usePredictions({
     setState(prev => ({ ...prev, refreshing: true }))
     try {
       await Promise.all([
-        fetchTodaysPredictions(),
-        fetchTeamPicks(),
-        fetchPlayerPropsPicks()
+        fetchTodaysPredictions()
       ])
     } finally {
       setState(prev => ({ ...prev, refreshing: false }))
     }
-  }, [fetchTodaysPredictions, fetchTeamPicks, fetchPlayerPropsPicks])
+  }, [fetchTodaysPredictions])
 
-  // Load initial data
   useEffect(() => {
     fetchTodaysPredictions()
-    fetchTeamPicks()
-    fetchPlayerPropsPicks()
-  }, [fetchTodaysPredictions, fetchTeamPicks, fetchPlayerPropsPicks])
+  }, [fetchTodaysPredictions])
 
   return {
-    // State
     ...state,
 
-    // Actions
     fetchTodaysPredictions,
     fetchFullPredictions,
-    fetchTeamPicks,
-    fetchPlayerPropsPicks,
     fetchPredictionsBySport,
     fetchLockOfTheDay,
     generatePredictions,
     refreshAll,
 
-    // Computed values
     totalPredictions: state.predictions.length,
     highConfidencePicks: state.predictions.filter(p => p.confidence >= 80),
     averageConfidence: state.predictions.length > 0 

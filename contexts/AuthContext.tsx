@@ -116,13 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // IMMEDIATE auth resolution - no waiting, no hanging
     console.log('🚀 Setting auth as ready immediately')
-    setAuthState(prev => ({ ...prev, initializing: false }))
-    
+
     // Try to get session in background without blocking UI
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mounted) return
       if (error) {
         console.error('❌ Background getSession error:', error)
+        setAuthState(prev => ({ ...prev, initializing: false }))
         return
       }
       if (session?.user) {
@@ -138,8 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAuthState(prev => ({ ...prev, profile }))
         }).catch(console.error)
       }
+      setAuthState(prev => ({ ...prev, initializing: false }))
     }).catch((error) => {
       console.error('❌ Background auth check failed:', error)
+      setAuthState(prev => ({ ...prev, initializing: false }))
     })
 
     // Set up auth state listener
@@ -216,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Session check failed:', error)
       }
-    }, 30000)
+    }, 120000)
 
     return () => {
       mounted = false
