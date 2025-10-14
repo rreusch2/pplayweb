@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
   Send, 
@@ -12,7 +13,8 @@ import {
   Settings,
   Target,
   BarChart3,
-  Play
+  Play,
+  Trophy
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -32,6 +34,7 @@ export default function QuickActions({
   onOpenReports
 }: QuickActionsProps) {
   const [loading, setLoading] = useState<string | null>(null)
+  const router = useRouter()
   const { session } = useAuth()
 
   const handleAction = async (actionId: string, action: () => void) => {
@@ -63,6 +66,10 @@ export default function QuickActions({
     else alert(`Automation failed: ${data.error || 'Unknown error'}`)
   }
 
+  const navigateToPicksManagement = () => {
+    router.push('/admin/picks')
+  }
+
   const actions = [
     {
       id: 'todays-picks',
@@ -71,6 +78,14 @@ export default function QuickActions({
       icon: Target,
       color: 'from-purple-500 to-pink-600',
       action: onOpenTodaysPicks
+    },
+    {
+      id: 'picks-management',
+      title: "Picks Management",
+      description: 'Edit and manage all picks for Javon',
+      icon: Trophy,
+      color: 'from-green-500 to-emerald-600',
+      action: navigateToPicksManagement
     }
     // Ready for additional actions to be added here
   ]
