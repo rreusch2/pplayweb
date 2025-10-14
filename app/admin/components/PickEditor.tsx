@@ -128,7 +128,7 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-4xl md:w-full md:max-h-[90vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-50"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-4xl max-h-[90vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-50 flex flex-col"
       >
         {/* Header */}
         <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
@@ -164,7 +164,7 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div className="p-6 overflow-y-auto flex-1">
           {activeTab === 'basic' && (
             <div className="space-y-4">
               {/* Sport */}
@@ -573,7 +573,7 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="text-xs text-gray-400">
             ID: {editedPrediction.id.slice(0, 8)}...
           </div>

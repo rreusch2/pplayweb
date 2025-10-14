@@ -119,7 +119,7 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-3xl md:w-full md:max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-[60]"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-3xl max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-[60] flex flex-col"
       >
         {/* Header */}
         <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
@@ -156,7 +156,7 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
         )}
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {selectedCategory !== 'custom' ? (
             <>
               {/* Search */}
