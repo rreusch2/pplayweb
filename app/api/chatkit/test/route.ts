@@ -36,7 +36,7 @@ export async function GET() {
             headers: {
               'Authorization': `Bearer ${OPENAI_API_KEY}`,
               'Content-Type': 'application/json',
-              'OpenAI-Beta': 'chatkit-v1',
+              'OpenAI-Beta': 'chatkit_beta=v1',
             },
             body: JSON.stringify({
               workflow: { 

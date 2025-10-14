@@ -24,7 +24,7 @@ export default function ProfessorLockPage() {
     <>
       {/* Load ChatKit Web Component (required by @openai/chatkit-react) */}
       <Script 
-        src="https://unpkg.com/@openai/chatkit@latest/dist/chatkit.js"
+        src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
         strategy="beforeInteractive"
       />
       
