@@ -123,18 +123,27 @@ export default function LandingPage() {
         
         {/* Floating Particles */}
         <div className="absolute inset-0">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-blue-400 rounded-full opacity-20 animate-float"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 10}s`,
-                animationDuration: `${10 + Math.random() * 20}s`
-              }}
-            />
-          ))}
+          {[...Array(20)].map((_, i) => {
+            // Use index-based deterministic values to avoid hydration mismatch
+            const seed = i * 7919 // Prime number for better distribution
+            const left = (seed % 100)
+            const top = ((seed * 13) % 100)
+            const delay = (seed % 10)
+            const duration = 10 + ((seed * 17) % 20)
+            
+            return (
+              <div
+                key={i}
+                className="absolute w-2 h-2 bg-blue-400 rounded-full opacity-20 animate-float"
+                style={{
+                  left: `${left}%`,
+                  top: `${top}%`,
+                  animationDelay: `${delay}s`,
+                  animationDuration: `${duration}s`
+                }}
+              />
+            )
+          })}
         </div>
       </div>
 

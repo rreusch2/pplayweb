@@ -117,12 +117,12 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
       
       {/* Modal */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-3xl max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-[60] flex flex-col"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-3xl max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 z-[60] flex flex-col"
       >
         {/* Header */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-bold">
             Select {type === 'league' ? 'League/Team Logo' : 'Sportsbook Logo'}
           </h3>
@@ -136,7 +136,7 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
 
         {/* Category Tabs (only for league type) */}
         {type === 'league' && (
-          <div className="border-b border-gray-800 px-6">
+          <div className="border-b border-gray-800 px-6 flex-shrink-0">
             <div className="flex gap-4">
               {(['league', 'team', 'custom'] as const).map((cat) => (
                 <button
@@ -156,7 +156,7 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
         )}
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           {selectedCategory !== 'custom' ? (
             <>
               {/* Search */}

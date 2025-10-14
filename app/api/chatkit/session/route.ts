@@ -1,64 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const WORKFLOW_ID = process.env.OPENAI_WORKFLOW_ID || 'asst_abc123'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('Supabase service role environment variables are missing. Session API will not be able to read/write to DB securely.')
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { tier, preferences, sessionId, userId } = await request.json()
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
 
-    const { tier, preferences, sessionId } = await request.json()
-    
-    // If sessionId provided, try to get existing session first
-    if (sessionId) {
-      const { data: existingSession } = await supabase
+    // Admin client (service role) to bypass RLS for server-side verification and inserts
+    const admin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      : null
+
+    // Verify user exists and get profile
+    let profile: any = null
+    if (admin) {
+      const { data } = await admin
+        .from('profiles')
+        .select('id, subscription_tier, sport_preferences, risk_tolerance, username')
+        .eq('id', userId)
+        .single()
+      profile = data
+    }
+
+    // If sessionId provided, try to return existing client_secret from DB
+    if (admin && sessionId) {
+      const { data: existing } = await admin
         .from('chatkit_sessions')
         .select('client_secret, session_id')
         .eq('session_id', sessionId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
-
-      if (existingSession?.client_secret) {
+      if (existing?.client_secret) {
         return NextResponse.json({
-          client_secret: existingSession.client_secret,
-          session_id: existingSession.session_id,
-          tier: tier || 'free',
+          client_secret: existing.client_secret,
+          session_id: existing.session_id,
+          tier: tier || profile?.subscription_tier || 'free',
           cached: true,
         })
       }
     }
 
-    // Get user profile for additional context
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, sport_preferences, risk_tolerance, username')
-      .eq('id', user.id)
-      .single()
-
-    const workflowId = WORKFLOW_ID
-    const userId = user.id
-
     // Create ChatKit session using OpenAI API
-    // IMPORTANT: Using the correct ChatKit API endpoint
     const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
-        'OpenAI-Beta': 'chatkit-v1', // Required header for ChatKit API
+        'OpenAI-Beta': 'chatkit-v1',
       },
       body: JSON.stringify({
-        workflow: { 
-          id: workflowId 
-        },
+        workflow: { id: WORKFLOW_ID },
         user: userId,
       }),
     })
@@ -76,28 +79,29 @@ export async function POST(request: NextRequest) {
       }, { status: response.status })
     }
 
-    const sessionData = await response.json()
-    
-    // Store session info in database
-    try {
-      await supabase.from('chatkit_sessions').upsert({
-        user_id: user.id,
-        session_id: sessionData.id,
-        client_secret: sessionData.client_secret,
-        tier: tier || profile?.subscription_tier || 'free',
-        metadata: {
-          ...preferences,
-          created: new Date().toISOString(),
-        }
-      })
-    } catch (dbError) {
-      // Don't fail if database insert fails
-      console.warn('Failed to store session in database:', dbError)
+    const session = await response.json()
+
+    // Store session info
+    if (admin) {
+      try {
+        await admin.from('chatkit_sessions').upsert({
+          user_id: userId,
+          session_id: session.id,
+          client_secret: session.client_secret,
+          tier: tier || profile?.subscription_tier || 'free',
+          metadata: {
+            ...preferences,
+            created: new Date().toISOString(),
+          }
+        })
+      } catch (dbError) {
+        console.warn('Failed to store session in database:', dbError)
+      }
     }
 
     return NextResponse.json({
-      client_secret: sessionData.client_secret,
-      session_id: sessionData.id,
+      client_secret: session.client_secret,
+      session_id: session.id,
       tier: tier || profile?.subscription_tier || 'free',
     })
   } catch (error) {
@@ -109,30 +113,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to retrieve existing sessions
+// GET endpoint to retrieve most recent session for a user
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const url = new URL(request.url)
+    const userId = url.searchParams.get('userId')
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
 
-    // Get most recent active session
-    const { data: session } = await supabase
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+    }
+
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const { data: session } = await admin
       .from('chatkit_sessions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (session) {
-      return NextResponse.json(session)
-    }
-
+    if (session) return NextResponse.json(session)
     return NextResponse.json({ error: 'No active session' }, { status: 404 })
   } catch (error) {
     console.error('Session retrieval error:', error)

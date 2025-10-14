@@ -91,52 +91,63 @@ export default function ProfessorLockAutoLoad() {
     },
     theme: {
       colorScheme: 'dark',
-      color: {
-        accent: {
-          primary: isElite ? '#FFD700' : isPro ? '#00E5FF' : '#8B5CF6',
-          level: 2
-        }
-      },
-      radius: 'round',
+      radius: 'pill',
       density: 'normal',
+      color: {
+        grayscale: {
+          hue: 0,
+          tint: 0,
+        },
+        accent: {
+          primary: '#168aa2',
+          level: 1,
+        },
+        surface: {
+          background: '#242424',
+          foreground: '#595654',
+        },
+      },
+      typography: {
+        baseSize: 16,
+        fontFamily: '"OpenAI Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+        fontFamilyMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace',
+        fontSources: [
+          {
+            family: 'OpenAI Sans',
+            src: 'https://cdn.openai.com/common/fonts/openai-sans/v2/OpenAISans-Regular.woff2',
+            weight: 400,
+            style: 'normal',
+            display: 'swap',
+          },
+        ],
+      },
     },
     composer: {
-      placeholder: isElite 
-        ? 'Ask Professor Lock Elite anything...' 
-        : isPro 
-          ? 'Ask about picks, parlays, or strategies...'
-          : 'Ask your betting question...',
+      attachments: {
+        enabled: true,
+        maxCount: 5,
+        maxSize: 10485760,
+      },
+      tools: [
+        {
+          id: 'create_theme',
+          label: 'Create theme',
+          shortLabel: 'Theme',
+          placeholderOverride: 'Describe your chat application',
+          icon: 'sparkle-double',
+          pinned: false,
+        },
+      ],
     },
     startScreen: {
-      greeting: isElite 
-        ? 'Welcome to Professor Lock Elite! 🏆\n\nI have access to advanced analytics and exclusive insights. How can I help you win today?'
-        : isPro
-          ? 'Hey champ! Ready to make some smart bets? 🎯\n\nI can analyze games, find value bets, and build winning parlays.'
-          : 'Welcome to Professor Lock! 👋\n\nAsk me anything about sports betting, odds, or game analysis.',
+      greeting: "Let's cash in some plays!",
       prompts: [
-        { 
-          label: "Today's Best Bets",
-          prompt: 'What are your top 5 picks for today?',
+        {
+          icon: 'circle-question',
+          label: 'What is ChatKit?',
+          prompt: 'What is ChatKit?',
         },
-        { 
-          label: 'Build a Parlay',
-          prompt: 'Help me build a 3-leg parlay with good value',
-        },
-        { 
-          label: 'Game Analysis',
-          prompt: "Analyze tonight's biggest game for me",
-        },
-        { 
-          label: 'Player Props',
-          prompt: 'What are the best player prop bets today?',
-        },
-        ...(isElite ? [
-          { 
-            label: 'Elite Insights',
-            prompt: 'Give me your highest confidence pick with full analysis',
-          },
-        ] : []),
-      ]
+      ],
     },
   })
 

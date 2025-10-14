@@ -126,12 +126,12 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
       
       {/* Modal */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-4xl max-h-[90vh] bg-gray-900 rounded-lg border border-gray-800 overflow-hidden z-50 flex flex-col"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-4rem)] max-w-3xl h-[calc(100vh-4rem)] max-h-[600px] bg-gray-900 rounded-lg border border-gray-800 z-50 flex flex-col"
       >
         {/* Header */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between">
+        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Trophy className="text-green-500" size={20} />
             Edit Pick
@@ -145,7 +145,7 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-800 px-6">
+        <div className="border-b border-gray-800 px-6 flex-shrink-0">
           <div className="flex gap-4">
             {(['basic', 'advanced', 'financial', 'metadata'] as const).map((tab) => (
               <button
@@ -164,7 +164,7 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           {activeTab === 'basic' && (
             <div className="space-y-4">
               {/* Sport */}
