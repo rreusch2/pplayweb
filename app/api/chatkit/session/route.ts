@@ -1,39 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
-export async function POST(req: NextRequest) {
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const WORKFLOW_ID = process.env.OPENAI_WORKFLOW_ID || 'asst_abc123'
+
+export async function POST(request: NextRequest) {
   try {
-    const { userId, tier, preferences } = await req.json()
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    const supabase = createRouteHandlerClient({ cookies })
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY not configured')
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' }, 
-        { status: 500 }
-      )
+    const { tier, preferences, sessionId } = await request.json()
+    
+    // If sessionId provided, try to get existing session first
+    if (sessionId) {
+      const { data: existingSession } = await supabase
+        .from('chatkit_sessions')
+        .select('client_secret, session_id')
+        .eq('session_id', sessionId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (existingSession?.client_secret) {
+        return NextResponse.json({
+          client_secret: existingSession.client_secret,
+          session_id: existingSession.session_id,
+          tier: tier || 'free',
+          cached: true,
+        })
+      }
     }
 
-    // Get user profile for personalization
-    const { data: profile } = await supabaseAdmin
+    // Get user profile for additional context
+    const { data: profile } = await supabase
       .from('profiles')
-      .select('*')
-      .eq('id', userId)
+      .select('subscription_tier, sport_preferences, risk_tolerance, username')
+      .eq('id', user.id)
       .single()
 
-    // Create ChatKit session using the correct API endpoint
-    const workflowId = process.env.OPENAI_WORKFLOW_ID || 'wf_sports_betting_agent'
-    
+    const workflowId = WORKFLOW_ID
+    const userId = user.id
+
+    // Create ChatKit session using OpenAI API
+    // IMPORTANT: Using the correct ChatKit API endpoint
     const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
-        'OpenAI-Beta': 'chatkit_beta=v1',
+        'OpenAI-Beta': 'chatkit-v1', // Required header for ChatKit API
       },
       body: JSON.stringify({
         workflow: { 
@@ -45,57 +65,77 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OpenAI ChatKit API error:', response.status, errorText)
-      
-      // Return more helpful error for debugging
-      return NextResponse.json(
-        { 
-          error: 'Failed to create ChatKit session',
-          details: response.status === 404 
-            ? 'Workflow not found. Please create an Agent Builder workflow first.'
-            : response.status === 401
-              ? 'Invalid OpenAI API key'
-              : errorText
-        }, 
-        { status: response.status }
-      )
+      console.error('OpenAI ChatKit API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      })
+      return NextResponse.json({ 
+        error: 'Failed to create session',
+        details: errorText 
+      }, { status: response.status })
     }
 
-    const session = await response.json()
-
-    // Store session in database for tracking (optional)
+    const sessionData = await response.json()
+    
+    // Store session info in database
     try {
-      await supabaseAdmin
-        .from('chatkit_sessions')
-        .insert({
-          user_id: userId,
-          session_id: session.id,
-          client_secret: session.client_secret,
-          tier: tier || profile?.subscription_tier || 'free',
-          metadata: {
-            tier: tier || profile?.subscription_tier || 'free',
-            sportPreferences: profile?.sport_preferences || { mlb: true, wnba: false, ufc: false },
-            riskTolerance: profile?.risk_tolerance || 'medium',
-            ...preferences,
-          },
-        })
+      await supabase.from('chatkit_sessions').upsert({
+        user_id: user.id,
+        session_id: sessionData.id,
+        client_secret: sessionData.client_secret,
+        tier: tier || profile?.subscription_tier || 'free',
+        metadata: {
+          ...preferences,
+          created: new Date().toISOString(),
+        }
+      })
     } catch (dbError) {
       // Don't fail if database insert fails
       console.warn('Failed to store session in database:', dbError)
     }
 
-    return NextResponse.json({ 
-      client_secret: session.client_secret,
-      session_id: session.id,
+    return NextResponse.json({
+      client_secret: sessionData.client_secret,
+      session_id: sessionData.id,
+      tier: tier || profile?.subscription_tier || 'free',
     })
   } catch (error) {
-    console.error('Failed to create ChatKit session:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to create session',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }, 
-      { status: 500 }
-    )
+    console.error('Session creation error:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}
+
+// GET endpoint to retrieve existing sessions
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get most recent active session
+    const { data: session } = await supabase
+      .from('chatkit_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (session) {
+      return NextResponse.json(session)
+    }
+
+    return NextResponse.json({ error: 'No active session' }, { status: 404 })
+  } catch (error) {
+    console.error('Session retrieval error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
