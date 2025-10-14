@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { checkAdminAccess } from '@/lib/adminAuth'
 import {
@@ -75,6 +76,7 @@ const STATUSES = ['pending', 'won', 'lost', 'push', 'void', 'live']
 
 export default function PicksManagement() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
   const [predictions, setPredictions] = useState<AIPrediction[]>([])
@@ -87,11 +89,18 @@ export default function PicksManagement() {
   const [dateFilter, setDateFilter] = useState<string>('all')
 
   useEffect(() => {
-    checkAuthorization()
-  }, [])
+    if (!authLoading) {
+      checkAuthorization()
+    }
+  }, [authLoading, user])
 
   const checkAuthorization = async () => {
-    const isAdmin = await checkAdminAccess()
+    if (!user) {
+      router.push('/admin')
+      return
+    }
+    
+    const isAdmin = await checkAdminAccess(user.id)
     if (!isAdmin) {
       router.push('/admin')
       return
@@ -267,7 +276,7 @@ export default function PicksManagement() {
     a.click()
   }
 
-  if (!isAuthorized || loading) {
+  if (authLoading || loading || !isAuthorized) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
