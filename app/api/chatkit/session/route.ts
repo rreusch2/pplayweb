@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-})
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,40 +16,49 @@ export async function POST(req: NextRequest) {
       .eq('id', userId)
       .single()
 
-    // Create ChatKit session with OpenAI
-    const session = await openai.beta.chatkit.sessions.create({
-      workflow: { 
-        id: process.env.OPENAI_WORKFLOW_ID || 'wf_sports_betting_agent' 
+    // Create ChatKit session by calling OpenAI API directly
+    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      user: userId,
-      metadata: {
-        tier: tier || profile?.subscription_tier || 'free',
-        sportPreferences: profile?.sport_preferences || { mlb: true, wnba: false, ufc: false },
-        riskTolerance: profile?.risk_tolerance || 'medium',
-        bettingStyle: profile?.betting_style || 'balanced',
-        ...preferences,
-      },
-      context: {
-        // Pass recent predictions and insights for context
-        recentPicks: await getRecentPicks(userId),
-        userStats: await getUserStats(userId),
-      },
+      body: JSON.stringify({
+        model: 'gpt-4o-realtime-preview-2024-12-17',
+        voice: 'alloy',
+      }),
     })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('OpenAI API error:', error)
+      throw new Error('Failed to create OpenAI session')
+    }
+
+    const session = await response.json()
+
+    // Generate a simple client secret (in production, use proper session management)
+    const clientSecret = `cs_${userId}_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
     // Store session in database for tracking
     await supabaseAdmin
       .from('chatkit_sessions')
       .insert({
         user_id: userId,
-        session_id: session.id,
-        client_secret: session.client_secret,
+        session_id: session.id || clientSecret,
+        client_secret: clientSecret,
         tier: tier || profile?.subscription_tier || 'free',
-        metadata: session.metadata,
+        metadata: {
+          tier: tier || profile?.subscription_tier || 'free',
+          sportPreferences: profile?.sport_preferences || { mlb: true, wnba: false, ufc: false },
+          riskTolerance: profile?.risk_tolerance || 'medium',
+          ...preferences,
+        },
       })
 
     return NextResponse.json({ 
-      client_secret: session.client_secret,
-      session_id: session.id,
+      client_secret: clientSecret,
+      session_id: session.id || clientSecret,
     })
   } catch (error) {
     console.error('Failed to create ChatKit session:', error)
@@ -62,31 +66,5 @@ export async function POST(req: NextRequest) {
       { error: 'Failed to create session' }, 
       { status: 500 }
     )
-  }
-}
-
-async function getRecentPicks(userId: string) {
-  const { data } = await supabaseAdmin
-    .from('ai_predictions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  return data || []
-}
-
-async function getUserStats(userId: string) {
-  const { data } = await supabaseAdmin
-    .from('user_betting_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .single()
-
-  return data || {
-    total_bets: 0,
-    win_rate: 0,
-    roi: 0,
-    favorite_sports: [],
   }
 }
