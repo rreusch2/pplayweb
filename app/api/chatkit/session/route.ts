@@ -1,145 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const WORKFLOW_ID = process.env.OPENAI_WORKFLOW_ID || 'asst_abc123'
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Initialize Supabase client with service role for secure operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn('Supabase service role environment variables are missing. Session API will not be able to read/write to DB securely.')
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { tier, preferences, sessionId, userId } = await request.json()
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+    const headersList = await headers()
+    const authorization = headersList.get('authorization')
+    
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      )
     }
 
-    // Admin client (service role) to bypass RLS for server-side verification and inserts
-    const admin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-      : null
-
-    // Verify user exists and get profile
-    let profile: any = null
-    if (admin) {
-      const { data } = await admin
-        .from('profiles')
-        .select('id, subscription_tier, sport_preferences, risk_tolerance, username')
-        .eq('id', userId)
-        .single()
-      profile = data
+    const token = authorization.replace('Bearer ', '')
+    
+    // Verify the user's JWT token with Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      )
     }
 
-    // If sessionId provided, try to return existing client_secret from DB
-    if (admin && sessionId) {
-      const { data: existing } = await admin
-        .from('chatkit_sessions')
-        .select('client_secret, session_id')
-        .eq('session_id', sessionId)
-        .eq('user_id', userId)
-        .single()
-      if (existing?.client_secret) {
-        return NextResponse.json({
-          client_secret: existing.client_secret,
-          session_id: existing.session_id,
-          tier: tier || profile?.subscription_tier || 'free',
-          cached: true,
-        })
-      }
-    }
+    // Get user profile to determine tier and preferences
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, preferred_sports, risk_tolerance, betting_style')
+      .eq('id', user.id)
+      .single()
 
-    // Create ChatKit session using OpenAI API
+    // Create ChatKit session with OpenAI
     const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
         'OpenAI-Beta': 'chatkit_beta=v1',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        workflow: { id: WORKFLOW_ID },
-        user: userId,
+        workflow: { 
+          id: process.env.OPENAI_WORKFLOW_ID || 'wf_placeholder' // You'll need to add your workflow ID
+        },
+        user: user.id,
+        metadata: {
+          email: user.email,
+          tier: profile?.subscription_tier || 'free',
+          sports: profile?.preferred_sports || ['MLB', 'WNBA'],
+          riskTolerance: profile?.risk_tolerance || 'medium',
+          bettingStyle: profile?.betting_style || 'balanced'
+        }
       }),
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('OpenAI ChatKit API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
+      const error = await response.text()
+      console.error('OpenAI ChatKit session creation failed:', error)
+      throw new Error('Failed to create ChatKit session')
+    }
+
+    const sessionData = await response.json()
+
+    // Store session in database for tracking
+    await supabase
+      .from('chatkit_sessions')
+      .insert({
+        id: sessionData.id,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        metadata: {
+          workflow_id: process.env.OPENAI_WORKFLOW_ID,
+          tier: profile?.subscription_tier
+        }
       })
-      return NextResponse.json({ 
-        error: 'Failed to create session',
-        details: errorText 
-      }, { status: response.status })
-    }
-
-    const session = await response.json()
-
-    // Store session info
-    if (admin) {
-      try {
-        await admin.from('chatkit_sessions').upsert({
-          user_id: userId,
-          session_id: session.id,
-          client_secret: session.client_secret,
-          tier: tier || profile?.subscription_tier || 'free',
-          metadata: {
-            ...preferences,
-            created: new Date().toISOString(),
-          }
-        })
-      } catch (dbError) {
-        console.warn('Failed to store session in database:', dbError)
-      }
-    }
 
     return NextResponse.json({
-      client_secret: session.client_secret,
-      session_id: session.id,
-      tier: tier || profile?.subscription_tier || 'free',
+      client_secret: sessionData.client_secret,
+      session_id: sessionData.id,
+      user_preferences: {
+        sports: profile?.preferred_sports,
+        riskTolerance: profile?.risk_tolerance,
+        bettingStyle: profile?.betting_style
+      }
     })
   } catch (error) {
-    console.error('Session creation error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
-
-// GET endpoint to retrieve most recent session for a user
-export async function GET(request: NextRequest) {
-  try {
-    const url = new URL(request.url)
-    const userId = url.searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
-    }
-
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-    }
-
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    const { data: session } = await admin
-      .from('chatkit_sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (session) return NextResponse.json(session)
-    return NextResponse.json({ error: 'No active session' }, { status: 404 })
-  } catch (error) {
-    console.error('Session retrieval error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('ChatKit session error:', error)
+    return NextResponse.json(
+      { error: 'Failed to create session' },
+      { status: 500 }
+    )
   }
 }

@@ -9,7 +9,7 @@ interface LayoutWrapperProps {
   children: React.ReactNode
 }
 
-const publicRoutes = ['/', '/privacy', '/terms', '/signin', '/signup', '/professor-lock']
+const publicRoutes = ['/', '/privacy', '/terms', '/signin', '/signup']
 const authRoutes = ['/signin', '/signup']
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
