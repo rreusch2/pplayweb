@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ChatKit, useChatKit as useChatKitReact } from '@openai/chatkit-react'
+import '@openai/chatkit/dist/chatkit.js'
 import { useAuth } from '@/contexts/AuthContext'
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle } from 'lucide-react'
