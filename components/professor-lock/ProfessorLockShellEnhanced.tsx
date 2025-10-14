@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, TrendingUp, Brain, Zap, Shield, DollarSign, ChevronRight, Play, Users, Trophy, Target } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { ChatKitProvider } from '@/contexts/ChatKitContext'
 import ProfessorLockChatKit from './ProfessorLockChatKit'
 import Script from 'next/script'
 
@@ -222,9 +221,7 @@ export default function ProfessorLockShellEnhanced() {
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3 }}
               >
-                <ChatKitProvider>
-                  <ProfessorLockChatKit />
-                </ChatKitProvider>
+                <ProfessorLockChatKit />
               </motion.div>
             )}
           </AnimatePresence>

@@ -8,7 +8,7 @@ import {
   Send, X, Maximize2, Minimize2, Settings, History,
   Trophy, Zap, Shield, DollarSign, Activity, ChevronRight
 } from 'lucide-react'
-import { useChatKit } from '@/contexts/ChatKitContext'
+import { ChatKit, useChatKit as useChatKitReact } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -104,182 +104,112 @@ const calculatePayout = (stake: number, legs: any[]) => {
 
 export default function ProfessorLockChatKit() {
   const { user, profile } = useAuth()
-  const { clientSecret, sessionId, initializeSession, error: sessionError } = useChatKit()
   const [isExpanded, setIsExpanded] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [chatKitReady, setChatKitReady] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   const tier = profile?.subscription_tier || 'free'
   const isElite = tier === 'elite'
   const isPro = tier === 'pro' || isElite
 
-  // Initialize ChatKit when component mounts
-  useEffect(() => {
-    const loadChatKit = async () => {
-      if (!user?.id || clientSecret || isInitializing) return
-      
-      setIsInitializing(true)
-      try {
-        await initializeSession({
-          sportPreferences: profile?.preferred_sports || ['MLB', 'WNBA'],
-          riskTolerance: profile?.risk_tolerance || 'medium',
-        })
-        setChatKitReady(true)
-      } catch (err) {
-        console.error('Failed to initialize ChatKit:', err)
-        toast.error('Failed to start AI chat session')
-      } finally {
-        setIsInitializing(false)
-      }
-    }
-
-    loadChatKit()
-  }, [user?.id, clientSecret, initializeSession, profile, isInitializing])
-
-  // Mount ChatKit when ready
-  useEffect(() => {
-    if (!chatKitReady || !clientSecret || !containerRef.current) return
-
-    // Check if ChatKit is available
-    if (typeof window !== 'undefined' && window.ChatKit) {
-      const initChatKit = async () => {
-        try {
-          await window.ChatKit.init({
-            clientSecret,
-            theme: {
-              colorScheme: 'dark',
-              color: {
-                accent: {
-                  primary: isElite ? '#FFD700' : isPro ? '#00E5FF' : '#8B5CF6',
-                  level: 2
-                }
-              },
-              radius: 'lg',
-              density: 'comfortable',
-              typography: {
-                fontFamily: 'system-ui, -apple-system, sans-serif'
-              }
-            },
-            composer: {
-              placeholder: isElite 
-                ? '👑 Ask Professor Lock Elite anything...' 
-                : isPro 
-                  ? '🎯 Ask about picks, parlays, or strategies...'
-                  : '💬 Ask your betting question...',
-            },
-            startScreen: {
-              greeting: isElite 
-                ? '🏆 Welcome to Professor Lock Elite! I have access to advanced analytics and exclusive insights.'
-                : isPro
-                  ? '🎯 Hey champ! Ready to build some winning parlays?'
-                  : '👋 Welcome! Let me help you with your betting questions.',
-              prompts: [
-                { 
-                  name: '🎲 Build Smart Parlay', 
-                  prompt: 'Build me a 3-leg parlay with high confidence picks',
-                  icon: 'trophy'
-                },
-                { 
-                  name: '📊 Today\'s Best Bets', 
-                  prompt: 'What are your top 5 picks for today?',
-                  icon: 'chart'
-                },
-                { 
-                  name: '🔍 Analyze This Game', 
-                  prompt: 'Give me a deep analysis of tonight\'s biggest game',
-                  icon: 'search'
-                },
-                ...(isElite ? [
-                  { 
-                    name: '👑 Elite Lock of Day', 
-                    prompt: 'Give me your Elite Lock with full breakdown',
-                    icon: 'crown'
-                  },
-                  { 
-                    name: '💎 Premium Props', 
-                    prompt: 'Show me the best player props with elite analysis',
-                    icon: 'gem'
-                  }
-                ] : []),
-                { 
-                  name: '📈 Live Odds Movement', 
-                  prompt: 'Show me significant line movements today',
-                  icon: 'trending'
-                },
-                { 
-                  name: '⚡ Quick Picks', 
-                  prompt: 'Give me 3 quick picks I can bet right now',
-                  icon: 'zap'
-                }
-              ]
-            },
-            widgets: {
-              bettingCard: BettingCardWidget,
-              parlayBuilder: ParlayBuilderWidget,
-            },
-            tools: {
-              visibility: 'always', // Show tool usage in real-time
-              labels: {
-                web_search: '🌐 Searching the web',
-                file_search: '📁 Analyzing data',
-                code_interpreter: '💻 Running analysis',
-                supabase: '🗄️ Fetching picks',
-                statmuse: '📊 Getting stats',
-              }
-            },
-            messages: {
-              feedback: {
-                enabled: true,
-                thumbsUp: true,
-                thumbsDown: true,
-                report: isPro
-              },
-              actions: {
-                copy: true,
-                regenerate: isPro,
-                edit: isElite
-              }
-            },
-            header: {
-              enabled: false // We'll use custom header
-            },
-            footer: {
-              enabled: false // Custom footer
-            }
-          })
-
-          // Mount ChatKit to container
-          if (containerRef.current) {
-            const chatContainer = containerRef.current.querySelector('#chatkit-container')
-            if (chatContainer) {
-              window.ChatKit.mount(chatContainer)
-            }
-          }
-
-          // Listen for ChatKit events
-          window.ChatKit.on('message.sent', (message: any) => {
-            console.log('Message sent:', message)
-          })
-
-          window.ChatKit.on('response.complete', (response: any) => {
-            console.log('Response complete:', response)
-          })
-
-          window.ChatKit.on('tool.invoked', (tool: any) => {
-            console.log('Tool invoked:', tool)
-          })
-
-        } catch (err) {
-          console.error('Failed to initialize ChatKit:', err)
-          toast.error('Chat initialization failed')
+  // Use ChatKit React hook
+  const { control } = useChatKitReact({
+    api: {
+      async getClientSecret(existing) {
+        if (existing) {
+          // Implement session refresh if needed
+          return existing
         }
-      }
 
-      initChatKit()
-    }
-  }, [chatKitReady, clientSecret, isElite, isPro])
+        try {
+          const res = await fetch('/api/chatkit/session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user?.id,
+              tier,
+              preferences: {
+                sportPreferences: profile?.preferred_sports || ['MLB', 'WNBA'],
+                riskTolerance: profile?.risk_tolerance || 'medium',
+              }
+            }),
+          })
+          
+          if (!res.ok) {
+            throw new Error('Failed to create ChatKit session')
+          }
+          
+          const { client_secret } = await res.json()
+          return client_secret
+        } catch (err) {
+          console.error('Failed to get client secret:', err)
+          toast.error('Failed to start AI chat session')
+          throw err
+        }
+      },
+    },
+    theme: {
+      colorScheme: 'dark',
+      color: {
+        accent: {
+          primary: isElite ? '#FFD700' : isPro ? '#00E5FF' : '#8B5CF6',
+          level: 2
+        }
+      },
+      radius: 'round',
+      density: 'normal',
+      typography: {
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }
+    },
+    composer: {
+      placeholder: isElite 
+        ? 'Ask Professor Lock Elite anything...' 
+        : isPro 
+          ? 'Ask about picks, parlays, or strategies...'
+          : 'Ask your betting question...',
+    },
+    startScreen: {
+      greeting: isElite 
+        ? 'Welcome to Professor Lock Elite! I have access to advanced analytics and exclusive insights.'
+        : isPro
+          ? 'Hey champ! Ready to build some winning parlays?'
+          : 'Welcome! Let me help you with your betting questions.',
+      prompts: [
+        { 
+          label: 'Build Smart Parlay',
+          prompt: 'Build me a 3-leg parlay with high confidence picks',
+        },
+        { 
+          label: 'Today\'s Best Bets',
+          prompt: 'What are your top 5 picks for today?',
+        },
+        { 
+          label: 'Analyze This Game',
+          prompt: 'Give me a deep analysis of tonight\'s biggest game',
+        },
+        ...(isElite ? [
+          { 
+            label: 'Elite Lock of Day',
+            prompt: 'Give me your Elite Lock with full breakdown',
+          },
+          { 
+            label: 'Premium Props',
+            prompt: 'Show me the best player props with elite analysis',
+          }
+        ] : []),
+        { 
+          label: 'Live Odds Movement',
+          prompt: 'Show me significant line movements today',
+        },
+        { 
+          label: 'Quick Picks',
+          prompt: 'Give me 3 quick picks I can bet right now',
+        }
+      ]
+    },
+  })
 
   return (
     <motion.div
@@ -372,39 +302,8 @@ export default function ProfessorLockChatKit() {
       </div>
 
       {/* ChatKit Container */}
-      <div 
-        ref={containerRef}
-        className="relative h-[600px] rounded-b-2xl border border-t-0 border-white/10 bg-slate-950 overflow-hidden"
-      >
-        {isInitializing ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              >
-                <Sparkles className="h-8 w-8 text-purple-400 mx-auto" />
-              </motion.div>
-              <p className="text-slate-400">Initializing Professor Lock AI...</p>
-            </div>
-          </div>
-        ) : sessionError ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4 p-8">
-              <X className="h-8 w-8 text-red-400 mx-auto" />
-              <p className="text-red-400">Failed to initialize chat</p>
-              <p className="text-xs text-slate-500">{sessionError}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div id="chatkit-container" className="h-full w-full" />
-        )}
+      <div className="relative h-[600px] rounded-b-2xl border border-t-0 border-white/10 bg-slate-950 overflow-hidden">
+        <ChatKit control={control} className="h-full w-full" />
       </div>
 
       {/* Custom Footer with Tool Status */}
@@ -441,11 +340,4 @@ export default function ProfessorLockChatKit() {
       </motion.div>
     </motion.div>
   )
-}
-
-// Extend Window interface for ChatKit
-declare global {
-  interface Window {
-    ChatKit: any
-  }
 }
