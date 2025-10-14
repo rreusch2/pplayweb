@@ -1,4 +1,5 @@
-import { Metadata } from 'next'
+"use client"
+
 import dynamic from 'next/dynamic'
 
 // Dynamically import ChatKit to avoid SSR issues
@@ -16,11 +17,6 @@ const ChatKitProfessorLock = dynamic(
     )
   }
 )
-
-export const metadata: Metadata = {
-  title: 'Professor Lock | Predictive Play',
-  description: 'Chat with Professor Lock, the advanced AI sports betting assistant powered by OpenAI.',
-}
 
 export default function ProfessorLockPage() {
   return (
