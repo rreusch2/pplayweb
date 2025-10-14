@@ -51,14 +51,7 @@ export async function POST(req: NextRequest) {
         workflow: { 
           id: process.env.OPENAI_WORKFLOW_ID || 'wf_placeholder' // You'll need to add your workflow ID
         },
-        user: user.id,
-        metadata: {
-          email: user.email,
-          tier: profile?.subscription_tier || 'free',
-          sports: profile?.preferred_sports || ['MLB', 'WNBA'],
-          riskTolerance: profile?.risk_tolerance || 'medium',
-          bettingStyle: profile?.betting_style || 'balanced'
-        }
+        user: user.id
       }),
     })
 

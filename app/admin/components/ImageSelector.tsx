@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, Search, Upload, Link as LinkIcon, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
+import Portal from './Portal'
 
 interface Props {
   type: 'league' | 'sportsbook'
@@ -10,68 +11,40 @@ interface Props {
   onClose: () => void
 }
 
-// Pre-defined logos for easy selection
+// Pre-defined logos from Supabase storage
+const SUPABASE_URL = 'https://iriaegoipkjtktitpary.supabase.co'
+
 const LEAGUE_LOGOS = {
-  MLB: 'https://upload.wikimedia.org/wikipedia/en/a/a6/Major_League_Baseball_logo.svg',
-  NFL: 'https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg',
-  NBA: 'https://cdn.nba.com/logos/leagues/logo-nba.svg',
-  NHL: 'https://cms.nhl.bamgrid.com/images/assets/binary/301172288/binary-file/file.svg',
-  WNBA: 'https://upload.wikimedia.org/wikipedia/en/3/3f/WNBA_logo.svg',
-  UFC: 'https://upload.wikimedia.org/wikipedia/commons/9/92/UFC_Logo.svg',
-  CFB: 'https://upload.wikimedia.org/wikipedia/commons/d/dd/NCAA_logo.svg',
-  CBB: 'https://upload.wikimedia.org/wikipedia/commons/d/dd/NCAA_logo.svg',
+  MLB: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/mlb.png`,
+  NBA: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/nba.png`,
+  NFL: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/nfl.png`,
+  NHL: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/nhl.png`,
+  WNBA: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/wnba.png`,
+  CFB: `${SUPABASE_URL}/storage/v1/object/public/logos/leagues/cfb.png`,
+  UFC: 'https://upload.wikimedia.org/wikipedia/commons/9/92/UFC_Logo.svg', // Fallback for UFC
+}
+
+const TEAM_LOGOS = {
+  // MLB Teams - using ESPN team logos for consistency
+  'New York Yankees': 'https://www.mlbstatic.com/team-logos/147.svg',
+  'Boston Red Sox': 'https://www.mlbstatic.com/team-logos/111.svg',
+  'Los Angeles Dodgers': 'https://www.mlbstatic.com/team-logos/119.svg',
+  'San Francisco Giants': 'https://www.mlbstatic.com/team-logos/137.svg',
+  'Chicago Cubs': 'https://www.mlbstatic.com/team-logos/112.svg',
+  'Atlanta Braves': 'https://www.mlbstatic.com/team-logos/144.svg',
+  'Philadelphia Phillies': 'https://www.mlbstatic.com/team-logos/143.svg',
+  'Houston Astros': 'https://www.mlbstatic.com/team-logos/117.svg',
+  'Toronto Blue Jays': 'https://www.mlbstatic.com/team-logos/141.svg',
+  'Tampa Bay Rays': 'https://www.mlbstatic.com/team-logos/139.svg',
+  // Add more as needed
 }
 
 const SPORTSBOOK_LOGOS = {
-  DraftKings: 'https://sportsbook.draftkings.com/static/favicon/favicon.png',
-  FanDuel: 'https://www.fanduel.com/favicon.ico',
-  BetMGM: 'https://sports.mi.betmgm.com/favicon.ico',
-  Caesars: 'https://www.williamhill.com/us/favicon.ico',
-  PointsBet: 'https://pointsbet.com/favicon.ico',
-  Barstool: 'https://www.barstoolsportsbook.com/favicon.ico',
-}
-
-// MLB Teams
-const MLB_TEAM_LOGOS = {
-  'Arizona Diamondbacks': 'https://content.sportslogos.net/logos/54/50/full/arizona_diamondbacks_logo_primary_2020_sportslogosnet-9728.png',
-  'Atlanta Braves': 'https://content.sportslogos.net/logos/54/51/full/atlanta_braves_logo_primary_2018_sportslogosnet-1068.png',
-  'Baltimore Orioles': 'https://content.sportslogos.net/logos/53/52/full/baltimore_orioles_logo_primary_2019_sportslogosnet-3269.png',
-  'Boston Red Sox': 'https://content.sportslogos.net/logos/53/53/full/boston_red_sox_logo_primary_20249009.png',
-  'Chicago Cubs': 'https://content.sportslogos.net/logos/54/54/full/chicago_cubs_logo_primary_19794077.png',
-  'Chicago White Sox': 'https://content.sportslogos.net/logos/53/55/full/chicago_white_sox_logo_primary_19914833.png',
-  'Cincinnati Reds': 'https://content.sportslogos.net/logos/54/56/full/cincinnati_reds_logo_primary_20138794.png',
-  'Cleveland Guardians': 'https://content.sportslogos.net/logos/53/6564/full/cleveland_guardians_logo_primary_20227831.png',
-  'Colorado Rockies': 'https://content.sportslogos.net/logos/54/58/full/colorado_rockies_logo_primary_20178222.png',
-  'Detroit Tigers': 'https://content.sportslogos.net/logos/53/59/full/detroit_tigers_logo_primary_20166691.png',
-  'Houston Astros': 'https://content.sportslogos.net/logos/53/4929/full/houston_astros_logo_primary_20138052.png',
-  'Kansas City Royals': 'https://content.sportslogos.net/logos/53/62/full/kansas_city_royals_logo_primary_20197339.png',
-  'Los Angeles Angels': 'https://content.sportslogos.net/logos/53/6521/full/los_angeles_angels_logo_primary_20234809.png',
-  'Los Angeles Dodgers': 'https://content.sportslogos.net/logos/54/63/full/los_angeles_dodgers_logo_primary_20128119.png',
-  'Miami Marlins': 'https://content.sportslogos.net/logos/54/3637/full/miami_marlins_logo_primary_20197937.png',
-  'Milwaukee Brewers': 'https://content.sportslogos.net/logos/54/64/full/milwaukee_brewers_logo_primary_20208027.png',
-  'Minnesota Twins': 'https://content.sportslogos.net/logos/53/65/full/minnesota_twins_logo_primary_20233082.png',
-  'New York Mets': 'https://content.sportslogos.net/logos/54/67/full/new_york_mets_logo_primary_20243184.png',
-  'New York Yankees': 'https://content.sportslogos.net/logos/53/68/full/new_york_yankees_logo_primary_20239734.png',
-  'Oakland Athletics': 'https://content.sportslogos.net/logos/53/69/full/oakland_athletics_logo_primary_20199310.png',
-  'Philadelphia Phillies': 'https://content.sportslogos.net/logos/54/70/full/philadelphia_phillies_logo_primary_20196146.png',
-  'Pittsburgh Pirates': 'https://content.sportslogos.net/logos/54/71/full/pittsburgh_pirates_logo_primary_20141126.png',
-  'San Diego Padres': 'https://content.sportslogos.net/logos/54/73/full/san_diego_padres_logo_primary_20208958.png',
-  'San Francisco Giants': 'https://content.sportslogos.net/logos/54/74/full/san_francisco_giants_logo_primary_20011686.png',
-  'Seattle Mariners': 'https://content.sportslogos.net/logos/53/75/full/seattle_mariners_logo_primary_19933809.png',
-  'St. Louis Cardinals': 'https://content.sportslogos.net/logos/54/72/full/st_louis_cardinals_logo_primary_19989789.png',
-  'Tampa Bay Rays': 'https://content.sportslogos.net/logos/53/2535/full/tampa_bay_rays_logo_primary_20196969.png',
-  'Texas Rangers': 'https://content.sportslogos.net/logos/53/77/full/texas_rangers_logo_primary_20207889.png',
-  'Toronto Blue Jays': 'https://content.sportslogos.net/logos/53/78/full/toronto_blue_jays_logo_primary_20208387.png',
-  'Washington Nationals': 'https://content.sportslogos.net/logos/54/578/full/washington_nationals_logo_primary_20118742.png',
-}
-
-// NFL Teams (sample - add all 32)
-const NFL_TEAM_LOGOS = {
-  'Buffalo Bills': 'https://content.sportslogos.net/logos/7/149/full/buffalo_bills_logo_primary_19706226.png',
-  'Miami Dolphins': 'https://content.sportslogos.net/logos/7/150/full/miami_dolphins_logo_primary_20184765.png',
-  'New England Patriots': 'https://content.sportslogos.net/logos/7/151/full/new_england_patriots_logo_primary_20006403.png',
-  'New York Jets': 'https://content.sportslogos.net/logos/7/152/full/new_york_jets_logo_primary_20243639.png',
-  // Add more teams...
+  DraftKings: `${SUPABASE_URL}/storage/v1/object/public/logos/bookmakers/draftkings.png`,
+  FanDuel: `${SUPABASE_URL}/storage/v1/object/public/logos/bookmakers/fanduel.png`,
+  BetMGM: `${SUPABASE_URL}/storage/v1/object/public/logos/bookmakers/betmgm.png`,
+  Caesars: `${SUPABASE_URL}/storage/v1/object/public/logos/bookmakers/caesars.png`,
+  Fanatics: `${SUPABASE_URL}/storage/v1/object/public/logos/bookmakers/fanatics.png`,
 }
 
 export default function ImageSelector({ type, onSelect, onClose }: Props) {
@@ -98,7 +71,7 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
       return LEAGUE_LOGOS
     } else if (selectedCategory === 'team') {
       // Combine all team logos
-      return { ...MLB_TEAM_LOGOS, ...NFL_TEAM_LOGOS }
+      return TEAM_LOGOS
     }
     return {}
   }
@@ -109,20 +82,24 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
 
   return (
     <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-3xl max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 z-[60] flex flex-col"
-      >
-        {/* Header */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <Portal>
+        {/* Overlay */}
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+          onClick={onClose}
+        />
+        
+        {/* Modal */}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-[min(640px,calc(100vw-2rem))] max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 flex flex-col shadow-2xl"
+          >
+            {/* Header */}
+            <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-bold">
             Select {type === 'league' ? 'League/Team Logo' : 'Sportsbook Logo'}
           </h3>
@@ -251,7 +228,9 @@ export default function ImageSelector({ type, onSelect, onClose }: Props) {
             </div>
           )}
         </div>
-      </motion.div>
+          </motion.div>
+        </div>
+      </Portal>
     </>
   )
 }
