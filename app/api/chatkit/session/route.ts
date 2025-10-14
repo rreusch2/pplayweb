@@ -40,13 +40,6 @@ export async function POST(req: NextRequest) {
           id: workflowId 
         },
         user: userId,
-        metadata: {
-          tier: tier || profile?.subscription_tier || 'free',
-          sportPreferences: profile?.sport_preferences || { mlb: true, wnba: false, ufc: false },
-          riskTolerance: profile?.risk_tolerance || 'medium',
-          username: profile?.username || 'Champ',
-          ...preferences,
-        },
       }),
     })
 
