@@ -14,6 +14,7 @@ import {
   User
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import Portal from './Portal'
 import ImageSelector from '../components/ImageSelector'
 
 interface AIPrediction {
@@ -116,20 +117,38 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
     return PROP_TYPES[editedPrediction.sport as keyof typeof PROP_TYPES] || []
   }
 
+  // Body scroll lock and Escape to close
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = original
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
   return (
     <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-4rem)] max-w-3xl h-[calc(100vh-4rem)] max-h-[600px] bg-gray-900 rounded-lg border border-gray-800 z-50 flex flex-col"
-      >
+      <Portal>
+        {/* Overlay */}
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={onClose}
+        />
+        
+        {/* Modal */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-[min(640px,calc(100vw-2rem))] max-h-[80vh] bg-gray-900 rounded-lg border border-gray-800 flex flex-col shadow-2xl"
+          >
         {/* Header */}
         <div className="bg-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -593,7 +612,9 @@ export default function PickEditor({ prediction, onSave, onClose }: Props) {
             </button>
           </div>
         </div>
-      </motion.div>
+          </motion.div>
+        </div>
+      </Portal>
 
       {/* Image Selector Modal */}
       {showImageSelector && (

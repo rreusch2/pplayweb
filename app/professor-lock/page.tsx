@@ -22,9 +22,9 @@ const ProfessorLockAutoLoad = dynamic(
 export default function ProfessorLockPage() {
   return (
     <>
-      {/* Load ChatKit SDK */}
+      {/* Load ChatKit Web Component (required by @openai/chatkit-react) */}
       <Script 
-        src="https://unpkg.com/@openai/chatkit-js@latest/dist/chatkit.js"
+        src="https://unpkg.com/@openai/chatkit@latest/dist/chatkit.js"
         strategy="beforeInteractive"
       />
       
