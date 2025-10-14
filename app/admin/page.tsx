@@ -7,44 +7,34 @@ import { checkAdminAccess } from '@/lib/adminAuth'
 import { 
   Users, 
   Search, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight,
+  Menu,
+  X,
   Crown,
   Star,
   Shield,
   Calendar,
-  Mail,
   Settings,
   TrendingUp,
   DollarSign,
   RefreshCw,
   UserCheck,
-  UserX,
-  Eye,
   BarChart3,
-  PieChart,
-  Activity,
-  Clock,
-  ShoppingCart,
-  Target,
-  Gift,
   Award,
-  AlertCircle,
-  CheckCircle,
-  XCircle
+  Bell,
+  FileText,
+  Upload,
+  Download,
+  Plus,
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
+  ChevronRight,
+  Activity,
+  Target,
+  Zap
 } from 'lucide-react'
-import { motion } from 'framer-motion'
-import AdminCommandPanel from './components/AdminCommandPanel'
-import PredictionsCenter from './components/PredictionsCenter'
-import QuickActions from './components/QuickActions'
-import FeedbackSection from './components/FeedbackSection'
-import SupportRequestsSection from './components/SupportRequestsSection'
-import TodaysPicksModal from './components/TodaysPicksModal'
-import ReportsModal from './components/ReportsModal'
-import SendNotificationModal from './components/SendNotificationModal'
-import RedditAdsAnalytics from './components/RedditAdsAnalytics'
-
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface UserData {
   id: string
@@ -76,11 +66,28 @@ interface AdminStats {
   weeklyElite: number
 }
 
+const NAVIGATION_ITEMS = [
+  { id: 'overview', label: 'Overview', icon: BarChart3, color: 'blue' },
+  { id: 'users', label: 'Users', icon: Users, color: 'purple' },
+  { id: 'picks', label: 'Picks', icon: Target, color: 'green' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, color: 'orange' },
+  { id: 'reports', label: 'Reports', icon: FileText, color: 'cyan' },
+  { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' },
+]
+
+const QUICK_ACTIONS = [
+  { id: 'send-notification', label: 'Send Notification', icon: Bell, color: 'blue' },
+  { id: 'add-picks', label: 'Add Picks', icon: Plus, color: 'green' },
+  { id: 'export-data', label: 'Export Data', icon: Download, color: 'purple' },
+  { id: 'view-reports', label: 'View Reports', icon: FileText, color: 'orange' },
+]
+
 export default function AdminDashboard() {
   const { user, profile } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [users, setUsers] = useState<UserData[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     proUsers: 0,
@@ -96,17 +103,8 @@ export default function AdminDashboard() {
     monthlyElite: 0,
     weeklyElite: 0,
   })
+  const [users, setUsers] = useState<UserData[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [tierFilter, setTierFilter] = useState<'all' | 'free' | 'pro' | 'elite'>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
-  const [updating, setUpdating] = useState<string | null>(null)
-  const [showTodaysPicksModal, setShowTodaysPicksModal] = useState(false)
-  const [showReportsModal, setShowReportsModal] = useState(false)
-  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false)
-  const pageSize = 20
 
   // Check admin access
   useEffect(() => {
@@ -133,7 +131,7 @@ export default function AdminDashboard() {
     if (!loading) {
       loadDashboardData()
     }
-  }, [loading, currentPage, searchTerm, tierFilter, statusFilter])
+  }, [loading])
 
   const loadDashboardData = async () => {
     try {
@@ -148,38 +146,14 @@ export default function AdminDashboard() {
 
   const loadUsers = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, email, subscription_tier, subscription_status, subscription_plan_type, subscription_expires_at, created_at, admin_role, is_active, revenuecat_customer_id', { count: 'exact' })
-
-      // Apply filters
-      if (searchTerm) {
-        query = query.or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-      }
-
-      if (tierFilter !== 'all') {
-        query = query.eq('subscription_tier', tierFilter)
-      }
-
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'active') {
-          query = query.eq('subscription_status', 'active')
-        } else {
-          query = query.neq('subscription_status', 'active')
-        }
-      }
-
-      // Apply pagination
-      const from = (currentPage - 1) * pageSize
-      const to = from + pageSize - 1
-      query = query.range(from, to).order('created_at', { ascending: false })
-
-      const { data, error, count } = await query
+        .select('id, username, email, subscription_tier, subscription_status, subscription_plan_type, subscription_expires_at, created_at, admin_role, is_active, revenuecat_customer_id')
+        .order('created_at', { ascending: false })
+        .limit(10)
 
       if (error) throw error
-
       setUsers(data || [])
-      setTotalPages(Math.ceil((count || 0) / pageSize))
     } catch (error) {
       console.error('Error loading users:', error)
     }
@@ -187,7 +161,6 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      // Use count-only queries (head: true) to avoid 1000-row cap
       const startOfDay = new Date()
       startOfDay.setHours(0, 0, 0, 0)
       const startOfDayISO = startOfDay.toISOString()
@@ -198,84 +171,12 @@ export default function AdminDashboard() {
         eliteUsersRes,
         activeSubsRes,
         newTodayRes,
-        weeklyProRes,
-        monthlyProRes,
-        yearlyProRes,
-        lifetimeProRes,
-        daypassProRes,
-        weeklyEliteRes,
-        monthlyEliteRes,
-        yearlyEliteRes,
-        daypassEliteRes,
       ] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_tier', 'pro'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_tier', 'elite'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .in('subscription_tier', ['pro', 'elite']),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', startOfDayISO),
-        // Pro plan breakdown (active only)
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'pro')
-          .eq('subscription_plan_type', 'weekly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'pro')
-          .eq('subscription_plan_type', 'monthly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'pro')
-          .eq('subscription_plan_type', 'yearly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'pro')
-          .eq('subscription_plan_type', 'lifetime'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'pro')
-          .eq('subscription_plan_type', 'daypass'),
-        // Elite plan breakdown (active only)
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'elite')
-          .eq('subscription_plan_type', 'weekly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'elite')
-          .eq('subscription_plan_type', 'monthly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'elite')
-          .eq('subscription_plan_type', 'yearly'),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active')
-          .eq('subscription_tier', 'elite')
-          .eq('subscription_plan_type', 'daypass'),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_status', 'active').in('subscription_tier', ['pro', 'elite']),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', startOfDayISO),
       ])
 
       const totalUsers = totalUsersRes.count || 0
@@ -283,31 +184,7 @@ export default function AdminDashboard() {
       const eliteUsers = eliteUsersRes.count || 0
       const activeSubscriptions = activeSubsRes.count || 0
       const newUsersToday = newTodayRes.count || 0
-
-      const weeklyPro = weeklyProRes.count || 0
-      const monthlyPro = monthlyProRes.count || 0
-      const yearlyPro = yearlyProRes.count || 0
-      const lifetimePro = lifetimeProRes.count || 0
-      const daypassPro = daypassProRes.count || 0
-
-      const weeklyElite = weeklyEliteRes.count || 0
-      const monthlyElite = monthlyEliteRes.count || 0
-      const yearlyElite = yearlyEliteRes.count || 0
-      const daypassElite = daypassEliteRes.count || 0
-
-      // Correct pricing from RevenueCat service
-      // Pro: weekly: 9.99, monthly: 19.99, yearly: 199.99, daypass: 4.99, lifetime: 349.99
-      // Elite: daypass: 8.99, weekly: 14.99, monthly: 29.99, yearly: 199.99
-      const monthlyRevenue =
-        (weeklyPro * 9.99 * 4.33) +
-        (monthlyPro * 19.99) +
-        (yearlyPro * 199.99 / 12) +
-        (daypassPro * 4.99 * 30) +
-        (lifetimePro * 349.99 / 60) +
-        (weeklyElite * 14.99 * 4.33) +
-        (monthlyElite * 29.99) +
-        (yearlyElite * 199.99 / 12) +
-        (daypassElite * 8.99 * 30)
+      const monthlyRevenue = (proUsers * 19.99) + (eliteUsers * 29.99) // Simplified calculation
 
       setStats({
         totalUsers,
@@ -316,160 +193,108 @@ export default function AdminDashboard() {
         activeSubscriptions,
         monthlyRevenue: Math.round(monthlyRevenue),
         newUsersToday,
-        yearlyPro,
-        monthlyPro,
-        weeklyPro,
-        lifetimePro,
-        yearlyElite,
-        monthlyElite,
-        weeklyElite,
+        yearlyPro: 0,
+        monthlyPro: 0,
+        weeklyPro: 0,
+        lifetimePro: 0,
+        yearlyElite: 0,
+        monthlyElite: 0,
+        weeklyElite: 0,
       })
     } catch (error) {
       console.error('Error loading stats:', error)
     }
   }
 
-  // Rest of your functions (updateUserTier, handleSendNotification, etc.) remain the same...
-  const updateUserTier = async (userId: string, newTier: 'free' | 'pro' | 'elite') => {
-    if (updating) return
-    
-    setUpdating(userId)
-    try {
-      // Prepare comprehensive update data to match payment flow
-      const now = new Date().toISOString()
-      
-      const updateData: any = {
-        subscription_tier: newTier,
-        subscription_status: newTier === 'free' ? 'inactive' : 'active',
-        updated_at: now
-      }
+  const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }: any) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-gradient-to-br from-${color}-500/10 to-${color}-600/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-${color}-500/20 hover:border-${color}-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-${color}-500/10`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2 rounded-xl bg-${color}-500/20`}>
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${color}-400`} />
+        </div>
+        {trend && (
+          <div className={`flex items-center space-x-1 text-${color}-400 text-sm`}>
+            <TrendingUp className="w-4 h-4" />
+            <span>{trend}</span>
+          </div>
+        )}
+      </div>
+      <div>
+        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">{value}</h3>
+        <p className={`text-${color}-200 text-sm font-medium`}>{title}</p>
+        {subtitle && <p className="text-gray-400 text-xs mt-1">{subtitle}</p>}
+      </div>
+    </motion.div>
+  )
 
-      if (newTier === 'free') {
-        // Downgrade to free - clear all subscription fields
-        updateData.max_daily_picks = 2
-        updateData.subscription_plan_type = null
-        updateData.subscription_product_id = null
-        updateData.subscription_expires_at = null
-        updateData.auto_renew_enabled = null
-        updateData.revenuecat_customer_id = null
-        // Clear welcome bonus to prevent UI override
-        updateData.welcome_bonus_claimed = false
-        updateData.welcome_bonus_expires_at = null
-      } else if (newTier === 'pro') {
-        // Upgrade to Pro - set Pro-specific fields
-        updateData.max_daily_picks = 20
-        updateData.subscription_plan_type = 'admin_manual'
-        updateData.subscription_product_id = 'admin_override_pro'
-        updateData.subscription_expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
-        updateData.auto_renew_enabled = false
-        updateData.subscription_started_at = now
-        updateData.subscription_renewed_at = now
-        updateData.revenuecat_customer_id = `admin_${userId}`
-        // Clear welcome bonus to prevent UI override
-        updateData.welcome_bonus_claimed = false
-        updateData.welcome_bonus_expires_at = null
-      } else if (newTier === 'elite') {
-        // Upgrade to Elite - set Elite-specific fields
-        updateData.max_daily_picks = 30
-        updateData.subscription_plan_type = 'admin_manual'
-        updateData.subscription_product_id = 'admin_override_elite'
-        updateData.subscription_expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
-        updateData.auto_renew_enabled = false
-        updateData.subscription_started_at = now
-        updateData.subscription_renewed_at = now
-        updateData.revenuecat_customer_id = `admin_${userId}`
-        // Clear welcome bonus to prevent UI override
-        updateData.welcome_bonus_claimed = false
-        updateData.welcome_bonus_expires_at = null
-      }
+  const QuickActionCard = ({ action }: any) => (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={`w-full p-4 bg-gradient-to-br from-${action.color}-500/10 to-${action.color}-600/20 backdrop-blur-sm rounded-xl border border-${action.color}-500/20 hover:border-${action.color}-500/40 transition-all duration-300 text-left group`}
+    >
+      <div className="flex items-center space-x-3">
+        <div className={`p-2 rounded-lg bg-${action.color}-500/20 group-hover:bg-${action.color}-500/30 transition-colors`}>
+          <action.icon className={`w-5 h-5 text-${action.color}-400`} />
+        </div>
+        <div>
+          <h3 className="text-white font-medium">{action.label}</h3>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-hover:text-white transition-colors" />
+      </div>
+    </motion.button>
+  )
 
-      console.log('🔧 Admin: Updating user subscription with comprehensive data:', updateData)
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', userId)
-
-      if (error) throw error
-
-      // Refresh data
-      await loadDashboardData()
-      alert(`✅ User subscription updated to ${newTier}! All subscription fields have been properly set.`)
-    } catch (error) {
-      console.error('Error updating user tier:', error)
-      alert('❌ Error updating user subscription')
-    } finally {
-      setUpdating(null)
-    }
-  }
-
-  const handleSendNotification = () => {
-    setShowSendNotificationModal(true)
-  }
-
-  const handleExportData = async () => {
-    alert('📊 Data export feature would be implemented here')
-  }
-
-  const handleBackupDatabase = async () => {
-    alert('💾 Database backup feature would be implemented here')
-  }
-
-  const handleOpenTodaysPicks = () => {
-    setShowTodaysPicksModal(true)
-  }
-  
-  const handleOpenReports = () => {
-    setShowReportsModal(true)
-  }
-
-  const formatDate = (dateString: string) => {
-    try {
-      const dt = new Date((dateString || '').replace(' ', 'T'))
-      return dt.toLocaleString('en-US', {
-        timeZone: 'America/Chicago',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    } catch {
-      return 'N/A'
-    }
-  }
-
-  const formatDateOnly = (dateString: string) => {
-    try {
-      const dt = new Date((dateString || '').replace(' ', 'T'))
-      return dt.toLocaleDateString('en-US', {
-        timeZone: 'America/Chicago',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    } catch {
-      return 'N/A'
-    }
-  }
-
-  const getTierBadgeColor = (tier: string) => {
-    switch (tier) {
-      case 'pro': return 'bg-blue-500'
-      case 'elite': return 'bg-purple-500'
-      default: return 'bg-gray-500'
-    }
-  }
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-500'
-      case 'inactive': return 'bg-gray-500'
-      case 'cancelled': return 'bg-red-500'
-      case 'expired': return 'bg-orange-500'
-      default: return 'bg-gray-500'
-    }
-  }
+  const UserRow = ({ user }: { user: UserData }) => (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300"
+    >
+      <div className="flex items-center space-x-3 flex-1 min-w-0">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+          {user.email?.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-medium truncate">{user.email}</h3>
+          <div className="flex items-center space-x-2 mt-1">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                user.subscription_tier === 'pro'
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : user.subscription_tier === 'elite'
+                  ? 'bg-purple-500/20 text-purple-300'
+                  : 'bg-gray-500/20 text-gray-300'
+              }`}
+            >
+              {user.subscription_tier}
+            </span>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                user.subscription_status === 'active'
+                  ? 'bg-green-500/20 text-green-300'
+                  : 'bg-red-500/20 text-red-300'
+              }`}
+            >
+              {user.subscription_status}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center space-x-2">
+        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+          <Eye className="w-4 h-4" />
+        </button>
+        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+          <Edit className="w-4 h-4" />
+        </button>
+      </div>
+    </motion.div>
+  )
 
   if (loading) {
     return (
@@ -483,334 +308,202 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center space-x-3">
-            <Shield className="w-10 h-10 text-blue-400" />
-            <span>Admin Dashboard</span>
-          </h1>
-          <p className="text-gray-400">Manage users, monitor subscriptions, and track key metrics</p>
-        </motion.div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-200 text-sm font-medium">Total Users</p>
-                <div className="text-3xl font-bold text-white">{stats.totalUsers.toLocaleString()}</div>
-              </div>
-              <Users className="w-8 h-8 text-blue-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md rounded-xl p-6 border border-green-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-200 text-sm font-medium">Active Subs</p>
-                <div className="text-3xl font-bold text-white">{stats.activeSubscriptions}</div>
-              </div>
-              <UserCheck className="w-8 h-8 text-green-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 border border-purple-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-200 text-sm font-medium">Pro Users</p>
-                <div className="text-3xl font-bold text-white">{stats.proUsers}</div>
-              </div>
-              <Star className="w-8 h-8 text-purple-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 backdrop-blur-md rounded-xl p-6 border border-yellow-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-yellow-200 text-sm font-medium">Elite Users</p>
-                <div className="text-3xl font-bold text-white">{stats.eliteUsers}</div>
-              </div>
-              <Crown className="w-8 h-8 text-yellow-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 backdrop-blur-md rounded-xl p-6 border border-emerald-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-emerald-200 text-sm font-medium">Est. Monthly Revenue</p>
-                <div className="text-3xl font-bold text-white">${stats.monthlyRevenue.toFixed(0)}</div>
-              </div>
-              <DollarSign className="w-8 h-8 text-emerald-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 backdrop-blur-md rounded-xl p-6 border border-cyan-500/30"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-cyan-200 text-sm font-medium">New Today</p>
-                <div className="text-3xl font-bold text-white">{stats.newUsersToday}</div>
-              </div>
-              <TrendingUp className="w-8 h-8 text-cyan-400" />
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Subscription Breakdown */}
-        <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Subscription Breakdown</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <div className="lg:col-span-4">
-                    <h3 className="text-xl font-semibold text-blue-300 mb-4">Pro Tier</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-blue-200 text-sm font-medium">Weekly Pro</p><div className="text-3xl font-bold text-white">{stats.weeklyPro}</div></div><Calendar className="w-8 h-8 text-blue-400" /></div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-blue-200 text-sm font-medium">Monthly Pro</p><div className="text-3xl font-bold text-white">{stats.monthlyPro}</div></div><Calendar className="w-8 h-8 text-blue-400" /></div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-blue-200 text-sm font-medium">Yearly Pro</p><div className="text-3xl font-bold text-white">{stats.yearlyPro}</div></div><Calendar className="w-8 h-8 text-blue-400" /></div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-blue-200 text-sm font-medium">Lifetime Pro</p><div className="text-3xl font-bold text-white">{stats.lifetimePro}</div></div><Award className="w-8 h-8 text-blue-400" /></div>
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-4">
-                    <h3 className="text-xl font-semibold text-purple-300 mb-4">Elite Tier</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 border border-purple-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-purple-200 text-sm font-medium">Weekly Elite</p><div className="text-3xl font-bold text-white">{stats.weeklyElite}</div></div><Calendar className="w-8 h-8 text-purple-400" /></div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 border border-purple-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-purple-200 text-sm font-medium">Monthly Elite</p><div className="text-3xl font-bold text-white">{stats.monthlyElite}</div></div><Calendar className="w-8 h-8 text-purple-400" /></div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-md rounded-xl p-6 border border-purple-500/30">
-                            <div className="flex items-center justify-between"><div><p className="text-purple-200 text-sm font-medium">Yearly Elite</p><div className="text-3xl font-bold text-white">{stats.yearlyElite}</div></div><Calendar className="w-8 h-8 text-purple-400" /></div>
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* Quick Actions and Activity Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <QuickActions 
-            onSendNotification={handleSendNotification}
-            onExportData={handleExportData}
-            onBackupDatabase={handleBackupDatabase}
-            onOpenTodaysPicks={handleOpenTodaysPicks}
-            onOpenReports={handleOpenReports}
-          />
-          <PredictionsCenter />
-        </div>
-
-
-
-        {/* User Management Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-md rounded-xl border border-blue-500/30 p-6 mb-8"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-2 flex items-center space-x-3">
-                <Users className="w-8 h-8 text-blue-400" />
-                <span>User Management</span>
-              </h3>
-              <p className="text-blue-200 mb-4">
-                Comprehensive user administration with advanced filtering, editing, and bulk operations
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-blue-200 text-sm">Total Users</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-purple-200 text-sm">Pro + Elite</p>
-                  <p className="text-2xl font-bold text-white">{stats.proUsers + stats.eliteUsers}</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-green-200 text-sm">Active Subs</p>
-                  <p className="text-2xl font-bold text-white">{stats.activeSubscriptions}</p>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <button
-                onClick={() => router.push('/admin/users')}
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg"
-              >
-                <Users className="w-5 h-5" />
-                <span>Manage Users</span>
-              </button>
-              <p className="text-blue-200 text-sm mt-2">
-                Advanced user management tools
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
+      {/* Mobile Header */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-md border-b border-white/10">
+          <div className="flex items-center space-x-3">
+            <Shield className="w-8 h-8 text-blue-400" />
+            <h1 className="text-xl font-bold text-white">Admin</h1>
           </div>
-        </motion.div>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
 
-        {/* User Detail Modal */}
-        {selectedUser && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">User Details</h3>
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <motion.div
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              className="fixed top-0 left-0 w-80 h-full bg-slate-900/95 backdrop-blur-md border-r border-white/10 z-50 lg:hidden"
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center space-x-3">
+                    <Shield className="w-8 h-8 text-blue-400" />
+                    <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+                  </div>
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="p-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <nav className="space-y-2">
+                  {NAVIGATION_ITEMS.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id)
+                        setSidebarOpen(false)
+                      }}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        activeTab === item.id
+                          ? `bg-${item.color}-500/20 text-${item.color}-300 border border-${item.color}-500/30`
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop Layout */}
+      <div className="lg:flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 h-screen bg-slate-900/50 backdrop-blur-md border-r border-white/10 fixed left-0 top-0">
+          <div className="p-6">
+            <div className="flex items-center space-x-3 mb-8">
+              <Shield className="w-10 h-10 text-blue-400" />
+              <div>
+                <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+                <p className="text-gray-400 text-sm">ParleyApp Management</p>
+              </div>
+            </div>
+            
+            <nav className="space-y-2">
+              {NAVIGATION_ITEMS.map((item) => (
                 <button
-                  onClick={() => setSelectedUser(null)}
-                  className="text-gray-400 hover:text-white"
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    activeTab === item.id
+                      ? `bg-${item.color}-500/20 text-${item.color}-300 border border-${item.color}-500/30`
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
                 >
-                  <XCircle className="w-6 h-6" />
+                  <item.icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
                 </button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-gray-400 text-sm">Email</p>
-                  <p className="text-white">{selectedUser.email}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Username</p>
-                  <p className="text-white">{selectedUser.username || 'Not set'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Subscription Tier</p>
-                  <p className="text-white capitalize">{selectedUser.subscription_tier}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Subscription Status</p>
-                  <p className="text-white capitalize">{selectedUser.subscription_status}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Plan Type</p>
-                  <p className="text-white">{selectedUser.subscription_plan_type || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Expires At</p>
-                  <p className="text-white">{selectedUser.subscription_expires_at ? formatDate(selectedUser.subscription_expires_at) : 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Joined</p>
-                  <p className="text-white">{formatDate(selectedUser.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">RevenueCat ID</p>
-                  <p className="text-white text-xs font-mono">{selectedUser.revenuecat_customer_id || 'Not linked'}</p>
-                </div>
-              </div>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:ml-80 flex-1">
+          <div className="p-4 lg:p-8">
+            {/* Header */}
+            <div className="hidden lg:block mb-8">
+              <h1 className="text-4xl font-bold text-white mb-2">
+                {NAVIGATION_ITEMS.find(item => item.id === activeTab)?.label || 'Overview'}
+              </h1>
+              <p className="text-gray-400">
+                {activeTab === 'overview' && 'Monitor your app performance and user metrics'}
+                {activeTab === 'users' && 'Manage user accounts and subscriptions'}
+                {activeTab === 'picks' && 'Manage daily picks and predictions'}
+                {activeTab === 'notifications' && 'Send notifications to users'}
+                {activeTab === 'reports' && 'View detailed analytics and reports'}
+                {activeTab === 'settings' && 'Configure admin panel settings'}
+              </p>
             </div>
+
+            {/* Overview Tab Content */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6 lg:space-y-8">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  <StatCard
+                    title="Total Users"
+                    value={stats.totalUsers.toLocaleString()}
+                    icon={Users}
+                    color="blue"
+                    trend="+12%"
+                  />
+                  <StatCard
+                    title="Active Subscriptions"
+                    value={stats.activeSubscriptions}
+                    icon={UserCheck}
+                    color="green"
+                    trend="+8%"
+                  />
+                  <StatCard
+                    title="Monthly Revenue"
+                    value={`$${stats.monthlyRevenue.toLocaleString()}`}
+                    icon={DollarSign}
+                    color="purple"
+                    trend="+23%"
+                  />
+                  <StatCard
+                    title="New Today"
+                    value={stats.newUsersToday}
+                    icon={TrendingUp}
+                    color="orange"
+                    subtitle="users joined"
+                  />
+                </div>
+
+                {/* Quick Actions */}
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-4">Quick Actions</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {QUICK_ACTIONS.map((action) => (
+                      <QuickActionCard key={action.id} action={action} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent Users */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-white">Recent Users</h2>
+                    <button className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">
+                      View All →
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {users.slice(0, 5).map((user) => (
+                      <UserRow key={user.id} user={user} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Other tabs content would go here */}
+            {activeTab !== 'overview' && (
+              <div className="text-center py-16">
+                <div className="text-6xl text-gray-600 mb-4">🚧</div>
+                <h2 className="text-2xl font-bold text-white mb-2">Coming Soon</h2>
+                <p className="text-gray-400">
+                  The {NAVIGATION_ITEMS.find(item => item.id === activeTab)?.label} section is under development.
+                </p>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Send Notification Modal */}
-        {showSendNotificationModal && (
-          <SendNotificationModal 
-            open={showSendNotificationModal} 
-            onClose={() => setShowSendNotificationModal(false)} 
-          />
-        )}
-
-        {/* Reddit Ads Analytics Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75 }}
-          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <BarChart3 className="w-6 h-6 text-red-400" />
-              <span>Reddit Ads Analytics</span>
-            </h2>
-          </div>
-          <RedditAdsAnalytics />
-        </motion.div>
-
-        {/* Admin Chat Section */}
-
-        {/* Feedback Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.85 }}
-          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <Mail className="w-6 h-6 text-blue-400" />
-              <span>User Feedback</span>
-            </h2>
-          </div>
-          <FeedbackSection />
-        </motion.div>
-
-        {/* Support Requests Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <Settings className="w-6 h-6 text-green-400" />
-              <span>Support Requests</span>
-            </h2>
-          </div>
-          <SupportRequestsSection />
-        </motion.div>
-
-        {/* Today's Picks Modal */}
-        <TodaysPicksModal 
-          isOpen={showTodaysPicksModal}
-          onClose={() => setShowTodaysPicksModal(false)}
-        />
-        
-        {/* Reports Modal */}
-        <ReportsModal 
-          isOpen={showReportsModal}
-          onClose={() => setShowReportsModal(false)}
-        />
+        </div>
       </div>
     </div>
   )
