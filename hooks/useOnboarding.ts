@@ -6,18 +6,30 @@ export function useOnboarding() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState<'preferences' | 'subscription' | 'welcome-wheel' | 'completed'>('preferences')
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
-  const { user, profile, justSignedUp, clearJustSignedUp } = useAuth()
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false)
+  const { user, profile } = useAuth()
 
   useEffect(() => {
-    if (justSignedUp && user && profile) {
-      setNeedsOnboarding(true)
-      setOnboardingStep('preferences')
-      setIsOnboardingOpen(true)
+    // Check if user is new (created within last 5 minutes) and hasn't been onboarded
+    if (user && profile && !hasCheckedOnboarding) {
+      const createdAt = new Date(profile.created_at || '')
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+      const isNewUser = createdAt > fiveMinutesAgo
       
-      // Clear the flag so it doesn't trigger again
-      clearJustSignedUp()
+      // Check if onboarding is needed based on profile completeness
+      const needsOnboardingCheck = isNewUser || 
+        !profile.preferred_sports || 
+        profile.subscription_tier === 'free' && !profile.welcome_bonus_claimed
+      
+      if (needsOnboardingCheck) {
+        setNeedsOnboarding(true)
+        setOnboardingStep('preferences')
+        setIsOnboardingOpen(true)
+      }
+      
+      setHasCheckedOnboarding(true)
     }
-  }, [justSignedUp, user, profile, clearJustSignedUp])
+  }, [user, profile, hasCheckedOnboarding])
 
   const startOnboarding = () => {
     setNeedsOnboarding(true)
