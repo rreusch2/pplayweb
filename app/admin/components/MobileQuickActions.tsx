@@ -30,8 +30,13 @@ export default function MobileQuickActions({
   layout = 'grid',
   columns = { mobile: 1, tablet: 2, desktop: 4 }
 }: Props) {
-  const getColorClasses = (color: string) => {
-    const colorMap = {
+  const getColorClasses = (color: QuickAction['color']) => {
+    const colorMap: Record<QuickAction['color'], {
+      bg: string
+      border: string
+      icon: string
+      hover: string
+    }> = {
       blue: {
         bg: 'from-blue-500/10 to-blue-600/20',
         border: 'border-blue-500/20 hover:border-blue-500/40',
