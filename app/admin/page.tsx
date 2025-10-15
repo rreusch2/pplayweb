@@ -84,7 +84,7 @@ const QUICK_ACTIONS = [
 ]
 
 export default function AdminPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, initializing } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -116,23 +116,28 @@ export default function AdminPage() {
 
   // Check admin access
   useEffect(() => {
-    const checkAccess = async () => {
-      if (!user) {
-        router.push('/dashboard')
-        return
-      }
-
-      const hasAccess = await checkAdminAccess(user.id)
-      if (!hasAccess) {
-        router.push('/dashboard')
-        return
-      }
-
-      setLoading(false)
+    // Don't check while still initializing auth
+    if (initializing) {
+      return
     }
 
-    checkAccess()
-  }, [user, router])
+    // If no user, redirect to dashboard
+    if (!user || !profile) {
+      router.push('/dashboard')
+      return
+    }
+
+    // Check admin role from profile (RLS policies only allow reading own profile)
+    if (profile.admin_role === true) {
+      setIsAdmin(true)
+      setLoading(false)
+      console.log('Admin access granted for user:', user.id)
+    } else {
+      console.log('Admin access denied for user:', user.id, 'admin_role:', profile.admin_role)
+      toast.error('You do not have admin access')
+      router.push('/dashboard')
+    }
+  }, [user, profile, router, initializing])
 
   // Load dashboard data
   useEffect(() => {
@@ -349,12 +354,25 @@ export default function AdminPage() {
     </motion.div>
   )
 
-  if (loading) {
+  if (loading || initializing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
           <p className="text-white">Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Extra safety check - should not reach here if not admin due to redirect
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-white text-xl">Access Denied</p>
+          <p className="text-gray-400 mt-2">You do not have admin privileges</p>
         </div>
       </div>
     )

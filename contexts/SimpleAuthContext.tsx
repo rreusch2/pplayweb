@@ -44,11 +44,22 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
         
         if (session?.user && mounted) {
           // Fetch profile directly from Supabase
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single()
+          
+          if (profileError) {
+            console.error('Error fetching profile:', profileError)
+          } else {
+            console.log('Profile loaded:', {
+              id: profile?.id,
+              username: profile?.username,
+              admin_role: profile?.admin_role,
+              subscription_tier: profile?.subscription_tier
+            })
+          }
           
           setAuthState({
             session,
@@ -75,11 +86,22 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
         
         if (event === 'SIGNED_IN' && session?.user) {
           // Fetch profile directly
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single()
+          
+          if (profileError) {
+            console.error('Error fetching profile on sign in:', profileError)
+          } else {
+            console.log('Profile loaded on sign in:', {
+              id: profile?.id,
+              username: profile?.username,
+              admin_role: profile?.admin_role,
+              subscription_tier: profile?.subscription_tier
+            })
+          }
           
           setAuthState({
             session,
