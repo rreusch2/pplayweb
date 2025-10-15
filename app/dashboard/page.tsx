@@ -105,7 +105,7 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center space-x-3 mb-2">
                 <h1 className="text-4xl font-bold text-white">
-                  Welcome back, {user.user_metadata?.display_name || user.email}!
+                  Dashboard
                 </h1>
                 <TierGatedContent requiredTier="pro">
                   <div className={`px-3 py-1 rounded-full text-xs font-semibold ${

@@ -352,7 +352,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      toast.success('Welcome back!')
       // onAuthStateChange will handle the rest
     } catch (error: any) {
       console.error('Sign in error:', error)

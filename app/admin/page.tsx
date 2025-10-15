@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import MobilePicksModal from './components/MobilePicksModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { checkAdminAccess } from '@/lib/adminAuth'
@@ -105,6 +106,7 @@ export default function AdminDashboard() {
   })
   const [users, setUsers] = useState<UserData[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [showPicksModal, setShowPicksModal] = useState(false)
 
   // Check admin access
   useEffect(() => {
@@ -492,8 +494,25 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Other tabs content would go here */}
-            {activeTab !== 'overview' && (
+            {/* Picks Tab Content */}
+            {activeTab === 'picks' && (
+              <div className="space-y-6 lg:space-y-8">
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                  <h2 className="text-2xl font-bold text-white mb-4">Picks Management Center</h2>
+                  <p className="text-gray-400 mb-6">Manage all AI predictions and picks</p>
+                  <button
+                    onClick={() => setShowPicksModal(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl transition-all flex items-center gap-2"
+                  >
+                    <Target className="w-5 h-5" />
+                    Open Picks Manager
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Other tabs content */}
+            {activeTab !== 'overview' && activeTab !== 'picks' && (
               <div className="text-center py-16">
                 <div className="text-6xl text-gray-600 mb-4">🚧</div>
                 <h2 className="text-2xl font-bold text-white mb-2">Coming Soon</h2>
@@ -505,6 +524,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Picks Modal */}
+      <MobilePicksModal 
+        isOpen={showPicksModal}
+        onClose={() => setShowPicksModal(false)}
+      />
     </div>
   )
 }
