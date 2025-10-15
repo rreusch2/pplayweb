@@ -42,8 +42,14 @@ export default function ResponsiveStatsGrid({
     }
   }
 
-  const getColorClasses = (color: string) => {
-    const colorMap = {
+  const getColorClasses = (color: StatData['color']) => {
+    const colorMap: Record<StatData['color'], {
+      bg: string
+      border: string
+      icon: string
+      text: string
+      shadow: string
+    }> = {
       blue: {
         bg: 'from-blue-500/10 to-blue-600/20',
         border: 'border-blue-500/20 hover:border-blue-500/40',
@@ -93,10 +99,8 @@ export default function ResponsiveStatsGrid({
         text: 'text-yellow-200',
         shadow: 'hover:shadow-yellow-500/10'
       }
-    } as const
-    
-    // Type-safe color access with fallback
-    return colorMap[color as keyof typeof colorMap] || colorMap.blue
+    }
+    return colorMap[color] || colorMap.blue
   }
 
   const gridClasses = `grid gap-4 sm:gap-6 grid-cols-${columns.mobile} sm:grid-cols-${columns.tablet} lg:grid-cols-${columns.desktop}`
