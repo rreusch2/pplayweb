@@ -23,7 +23,7 @@ I've successfully integrated OpenAI ChatKit with Agent Builder into your Profess
 10. **`/database/chatkit-sessions-schema.sql`** - Database migration for sessions
 11. **`/.env.chatkit.template`** - Environment variable template
 12. **`/scripts/setup-chatkit.sh`** - Automated setup script
-13. **`/OPENAI_CHATKIT_IMPLEMENTATION.md`** - Complete documentation
+13. **`/OPENAI_CHATKIT_IMPLEMENTATION.md`** - Complete documentationfdgfd
 
 ## 🎨 Custom Theme Applied
 
