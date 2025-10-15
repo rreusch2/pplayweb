@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import MobilePicksModal from './components/MobilePicksModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { checkAdminAccess } from '@/lib/adminAuth'
+import toast from 'react-hot-toast'
 import { 
   Users, 
   Search, 
@@ -83,12 +83,18 @@ const QUICK_ACTIONS = [
   { id: 'view-reports', label: 'View Reports', icon: FileText, color: 'orange' },
 ]
 
-export default function AdminDashboard() {
+export default function AdminPage() {
   const { user, profile } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(320)
+  const [isResizing, setIsResizing] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
+  const [editingUser, setEditingUser] = useState<UserData | null>(null)
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     proUsers: 0,
@@ -233,10 +239,47 @@ export default function AdminDashboard() {
     </motion.div>
   )
 
+  const handleQuickAction = (actionId: string) => {
+    switch(actionId) {
+      case 'send-notification':
+        toast.success('Notification center coming soon!')
+        break
+      case 'add-picks':
+        router.push('/admin/picks-management')
+        break
+      case 'export-data':
+        exportUserData()
+        break
+      case 'view-reports':
+        toast.success('Reports section coming soon!')
+        break
+    }
+  }
+
+  const exportUserData = () => {
+    const csv = [
+      ['Email', 'Tier', 'Status', 'Joined'].join(','),
+      ...users.map(u => [
+        u.email,
+        u.subscription_tier,
+        u.subscription_status,
+        u.created_at
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `users-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
+
   const QuickActionCard = ({ action }: any) => (
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
+      onClick={() => handleQuickAction(action.id)}
       className={`w-full p-4 bg-gradient-to-br from-${action.color}-500/10 to-${action.color}-600/20 backdrop-blur-sm rounded-xl border border-${action.color}-500/20 hover:border-${action.color}-500/40 transition-all duration-300 text-left group`}
     >
       <div className="flex items-center space-x-3">
@@ -288,10 +331,18 @@ export default function AdminDashboard() {
         </div>
       </div>
       <div className="flex items-center space-x-2">
-        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+        <button 
+          onClick={() => router.push('/admin/users-management')}
+          className="p-2 text-gray-400 hover:text-white transition-colors"
+          title="View Details"
+        >
           <Eye className="w-4 h-4" />
         </button>
-        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+        <button 
+          onClick={() => router.push('/admin/users-management')}
+          className="p-2 text-gray-400 hover:text-white transition-colors"
+          title="Edit User"
+        >
           <Edit className="w-4 h-4" />
         </button>
       </div>
@@ -385,14 +436,40 @@ export default function AdminDashboard() {
       {/* Desktop Layout */}
       <div className="lg:flex">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-80 h-screen bg-slate-900/50 backdrop-blur-md border-r border-white/10 fixed left-0 top-0">
+        <div 
+          className={`hidden lg:block h-screen bg-slate-900/50 backdrop-blur-md border-r border-white/10 fixed left-0 top-0 pt-16 transition-all duration-300 ${
+            sidebarCollapsed ? 'w-20' : ''
+          }`}
+          style={{ width: sidebarCollapsed ? '80px' : `${sidebarWidth}px` }}
+        >
+          {/* Resize Handle */}
+          {!sidebarCollapsed && (
+            <div
+              className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-blue-500/50 transition-colors"
+              onMouseDown={(e) => {
+                setIsResizing(true)
+                e.preventDefault()
+              }}
+            />
+          )}
+          
           <div className="p-6">
-            <div className="flex items-center space-x-3 mb-8">
-              <Shield className="w-10 h-10 text-blue-400" />
-              <div>
-                <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-                <p className="text-gray-400 text-sm">ParleyApp Management</p>
+            <div className="flex items-center justify-between mb-8">
+              <div className={`flex items-center space-x-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <Shield className="w-10 h-10 text-blue-400 flex-shrink-0" />
+                {!sidebarCollapsed && (
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+                    <p className="text-gray-400 text-sm">ParleyApp Management</p>
+                  </div>
+                )}
               </div>
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} />
+              </button>
             </div>
             
             <nav className="space-y-2">
@@ -400,14 +477,15 @@ export default function AdminDashboard() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-4 py-3 rounded-xl transition-all duration-200 ${
                     activeTab === item.id
                       ? `bg-${item.color}-500/20 text-${item.color}-300 border border-${item.color}-500/30`
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
+                  title={sidebarCollapsed ? item.label : ''}
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
                 </button>
               ))}
             </nav>
@@ -415,7 +493,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="lg:ml-80 flex-1">
+        <div 
+          className="flex-1 transition-all duration-300"
+          style={{ marginLeft: sidebarCollapsed ? '80px' : `${sidebarWidth}px` }}
+        >
           <div className="p-4 lg:p-8">
             {/* Header */}
             <div className="hidden lg:block mb-8">
@@ -499,20 +580,37 @@ export default function AdminDashboard() {
               <div className="space-y-6 lg:space-y-8">
                 <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
                   <h2 className="text-2xl font-bold text-white mb-4">Picks Management Center</h2>
-                  <p className="text-gray-400 mb-6">Manage all AI predictions and picks</p>
+                  <p className="text-gray-400 mb-6">Comprehensive AI predictions and picks control</p>
                   <button
-                    onClick={() => setShowPicksModal(true)}
+                    onClick={() => router.push('/admin/picks-management')}
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl transition-all flex items-center gap-2"
                   >
                     <Target className="w-5 h-5" />
-                    Open Picks Manager
+                    Open Picks Management Center
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Users Tab Content */}
+            {activeTab === 'users' && (
+              <div className="space-y-6 lg:space-y-8">
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                  <h2 className="text-2xl font-bold text-white mb-4">User Management Center</h2>
+                  <p className="text-gray-400 mb-6">Comprehensive user account control and analytics</p>
+                  <button
+                    onClick={() => router.push('/admin/users-management')}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-xl transition-all flex items-center gap-2"
+                  >
+                    <Users className="w-5 h-5" />
+                    Open User Management Center
                   </button>
                 </div>
               </div>
             )}
 
             {/* Other tabs content */}
-            {activeTab !== 'overview' && activeTab !== 'picks' && (
+            {activeTab !== 'overview' && activeTab !== 'picks' && activeTab !== 'users' && (
               <div className="text-center py-16">
                 <div className="text-6xl text-gray-600 mb-4">🚧</div>
                 <h2 className="text-2xl font-bold text-white mb-2">Coming Soon</h2>
@@ -525,11 +623,17 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Picks Modal */}
-      <MobilePicksModal 
-        isOpen={showPicksModal}
-        onClose={() => setShowPicksModal(false)}
-      />
+      {/* Mouse Events for Resize */}
+      {isResizing && (
+        <div
+          className="fixed inset-0 z-50 cursor-ew-resize"
+          onMouseMove={(e) => {
+            const newWidth = Math.max(200, Math.min(500, e.clientX))
+            setSidebarWidth(newWidth)
+          }}
+          onMouseUp={() => setIsResizing(false)}
+        />
+      )}
     </div>
   )
 }
