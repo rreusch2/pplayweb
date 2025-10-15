@@ -2,7 +2,7 @@
 import { useState, Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { X, Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
 
 interface AuthModalProps {
@@ -377,3 +377,4 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
     </Transition>
   )
 }
+

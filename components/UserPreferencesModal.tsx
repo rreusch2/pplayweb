@@ -10,7 +10,7 @@ import {
   Zap,
   ChevronRight
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { supabase } from '@/lib/supabase'
 
 export interface UserPreferences {

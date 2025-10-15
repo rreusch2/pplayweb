@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { coinsService } from '@/shared/services/coinsService'
 import InviteReferralModal from './InviteReferralModal'

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { supabase } from '@/lib/supabase'
 import { checkAdminAccess } from '@/lib/adminAuth'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -639,3 +639,4 @@ export default function UserManagement() {
     </div>
   )
 }
+

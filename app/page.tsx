@@ -21,7 +21,7 @@ import {
   Clock,
   MousePointerClick
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import AuthModal from '@/components/AuthModal'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
 import { trackSignupStart, trackAppStoreClick, trackCTAClick } from '@/lib/analytics'
@@ -747,3 +747,4 @@ const features = [
 ]
 
 // Pricing plans moved to lib/plans.ts for better organization
+

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
@@ -267,7 +267,7 @@ export default function RootLayout({
         <AnalyticsProvider>
           <ScrollDepthTracker />
           <ScrollToTop />
-          <AuthProvider>
+          <SimpleAuthProvider>
             <SubscriptionProvider>
               <div className="min-h-full">
                 <LayoutWrapper>
@@ -299,7 +299,7 @@ export default function RootLayout({
                 }}
               />
             </SubscriptionProvider>
-          </AuthProvider>
+          </SimpleAuthProvider>
         </AnalyticsProvider>
       </body>
     </html>

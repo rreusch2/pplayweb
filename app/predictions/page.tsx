@@ -2,9 +2,9 @@
 import { useState, useEffect, useMemo, memo } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { usePredictions } from '@/shared/hooks/usePredictions'
+import { useDirectPredictions } from '@/hooks/useDirectPredictions'
 import { motion } from 'framer-motion'
 import { 
   Zap, 
@@ -146,22 +146,26 @@ export default function PredictionsPage() {
   const router = useRouter()
 
   const {
+    predictions,
     teamPicks,
-    playerPropsPicks,
-    isLoading,
-    isLoadingTeam,
-    isLoadingProps,
-    refreshing,
-    // totals and stats will be computed locally from combined arrays
+    propsPicks: playerPropsPicks,
+    loading: isLoading,
+    error,
+    fetchPredictions,
     fetchLockOfTheDay,
-    refreshAll,
-    generatePredictions
-  } = usePredictions({
-    subscriptionTier: subscriptionTier as any,
-    welcomeBonusClaimed: profile?.welcome_bonus_claimed ?? false,
-    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null,
-    userId: user?.id
-  })
+    highConfidencePicks,
+    averageConfidence
+  } = useDirectPredictions()
+  
+  // Aliases for compatibility
+  const isLoadingTeam = isLoading
+  const isLoadingProps = isLoading
+  const refreshing = isLoading
+  const refreshAll = fetchPredictions
+  const generatePredictions = async () => {
+    // This can be handled server-side
+    console.log('Generate predictions not implemented in direct mode')
+  }
 
   const tierStyling = getTierStyling(subscriptionTier as any)
 

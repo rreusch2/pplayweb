@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, TrendingUp, Brain, Zap, Play, StopCircle } from 'lucide-react'
 import { useProfessorLockSession } from '@/hooks/useProfessorLockSession'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import LiveChatPanel from './LiveChatPanel'
 import ToolTimeline from './ToolTimeline'
 
@@ -231,3 +231,4 @@ export default function ProfessorLockShell() {
     </div>
   )
 }
+

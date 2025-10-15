@@ -16,7 +16,7 @@ import {
   Play,
   Trophy
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 
 interface QuickActionsProps {
   onSendNotification: () => void
@@ -127,3 +127,4 @@ export default function QuickActions({
     </motion.div>
   )
 }
+

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, Settings, Play, Wand2, Shield, Terminal, RefreshCw } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
 
 type ScriptType = 'props' | 'teams'
@@ -232,5 +232,6 @@ export default function PredictionsCenter() {
     </motion.div>
   )
 }
+
 
 

@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useAuth } from './AuthContext'
+import { useAuth } from './SimpleAuthContext'
 
 interface SubscriptionContextType {
   isPro: boolean

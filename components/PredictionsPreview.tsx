@@ -14,9 +14,9 @@ import {
   BarChart3,
   Brain
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { usePredictions } from '@/shared/hooks/usePredictions'
+import { useDirectPredictions } from '@/hooks/useDirectPredictions'
 import { AIPrediction } from '@/shared/services/aiService'
 
 interface PredictionsPreviewProps {
@@ -27,7 +27,8 @@ export default function PredictionsPreview({ limit = 2 }: PredictionsPreviewProp
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const { subscriptionTier } = useSubscription()
-  const { predictions, isLoading, totalPredictions, averageConfidence } = usePredictions()
+  const { predictions, loading: isLoading, averageConfidence } = useDirectPredictions()
+  const totalPredictions = predictions.length
 
   useEffect(() => {
     setMounted(true)
@@ -108,7 +109,7 @@ export default function PredictionsPreview({ limit = 2 }: PredictionsPreviewProp
       {/* Predictions List */}
       {!isLoading && previewPredictions.length > 0 && (
         <div className="space-y-4">
-          {previewPredictions.map((prediction, index) => (
+          {previewPredictions.map((prediction: AIPrediction, index: number) => (
             <motion.div
               key={prediction.id}
               initial={{ opacity: 0, y: 20 }}

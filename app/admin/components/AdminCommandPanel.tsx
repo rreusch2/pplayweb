@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Terminal, Play, Calendar, BarChart3, TrendingUp, Database, RefreshCw, Zap } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 
 interface AdminCommandPanelProps {
   // No props needed for now

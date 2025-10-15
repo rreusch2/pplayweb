@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useChatKitSession, useFeatureAccess } from '@/hooks/useChatKit'
 import { 
   createPlayerPropWidget, 
@@ -236,3 +236,4 @@ export default function ChatKitTestPage() {
     </div>
   )
 }
+

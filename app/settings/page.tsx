@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
 import UserPreferencesModal, { UserPreferences } from '@/components/UserPreferencesModal'

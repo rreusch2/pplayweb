@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import TieredSubscriptionModal from '@/components/TieredSubscriptionModal'
-import LockOfTheDay from '@/components/LockOfTheDay'
+import LockOfTheDayDirect from '@/components/LockOfTheDayDirect'
 import DailyProfessorInsights from '@/components/DailyProfessorInsights'
 import TierEnhancedUI, { TierGatedContent, NoUpgradePrompts, TierButton } from '@/components/TierEnhancedUI'
 import PredictionsPreview from '@/components/PredictionsPreview'
@@ -13,7 +13,7 @@ import LatestNewsFeed from '@/components/LatestNewsFeed'
 import OnboardingFlow from '@/components/OnboardingFlow'
 import WelcomeBonusBanner from '@/components/WelcomeBonusBanner'
 import { useOnboarding } from '@/hooks/useOnboarding'
-import { usePredictions } from '@/shared/hooks/usePredictions'
+import { useDirectPredictions } from '@/hooks/useDirectPredictions'
 import { AIPrediction } from '@/shared/services/aiService'
 import { 
   getTierCapabilities, 
@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const { user, signOut, justSignedUp, profile } = useAuth()
+  const { user, signOut, profile } = useAuth()
   const { subscriptionTier } = useSubscription()
   
   // Get tier-based capabilities and styling
@@ -56,18 +56,17 @@ export default function Dashboard() {
 
   // 🔥 MOBILE APP FUNCTIONALITY
   const {
-    isLoading,
-    isLoadingTeam,
-    totalPredictions,
+    predictions,
+    teamPicks,
+    propsPicks: playerPropsPicks,
+    loading: isLoading,
+    error,
+    fetchPredictions: fetchTodaysPredictions,
     highConfidencePicks,
-    averageConfidence,
-    teamPicks
-  } = usePredictions({
-    subscriptionTier: subscriptionTier as any,
-    welcomeBonusClaimed: profile?.welcome_bonus_claimed || true,
-    welcomeBonusExpiresAt: profile?.welcome_bonus_expires_at || null,
-    userId: user?.id
-  })
+    averageConfidence
+  } = useDirectPredictions()
+  
+  const isLoadingTeam = isLoading // Alias for compatibility
 
 
   // Redirect if not authenticated
@@ -277,7 +276,7 @@ export default function Dashboard() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="mb-8"
           >
-            <LockOfTheDay userId={user.id} />
+            <LockOfTheDayDirect userId={user.id} />
           </motion.div>
         )}
 

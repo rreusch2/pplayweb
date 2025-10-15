@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase, UserProfile } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
@@ -38,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
   const router = useRouter()
 
+  // Track in-flight requests to prevent duplicates
+  const profileRequestCache = useRef<Map<string, Promise<UserProfile | null>>>(new Map())
+  const revenueCatInitialized = useRef<Set<string>>(new Set())
+
   useEffect(() => {
     // SSR guard: do nothing on server, immediately mark as not initializing
     if (typeof window === 'undefined') {
@@ -49,64 +53,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let sessionCheckInterval: NodeJS.Timeout | null = null
 
     const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
+      // Check if we already have an in-flight request for this user
+      const existingRequest = profileRequestCache.current.get(user.id)
+      if (existingRequest) {
+        console.log('♻️ Reusing existing profile request for user:', user.id)
+        return existingRequest
+      }
+
       console.log('🚀 Fetching profile via Railway backend for user:', user.id)
-      try {
-        // Fetch profile from Railway backend API like mobile app does
-        const response = await apiClient.get(`/api/user/profile`, { params: { userId: user.id } })
-        
-        const profile = response?.data?.profile || null
-        if (profile) {
-          console.log('✅ Profile fetched from backend:', profile.username || profile.email)
-          // Ensure admin_role is present even if backend omitted it
-          if (typeof (profile as any).admin_role === 'undefined') {
-            try {
-              const { data: adminCheck, error: adminErr } = await supabase
-                .from('profiles')
-                .select('admin_role')
-                .eq('id', user.id)
-                .single()
-              if (!adminErr) {
-                (profile as any).admin_role = adminCheck?.admin_role ?? false
-              }
-            } catch (e) {
-              console.warn('⚠️ Could not load admin_role from Supabase directly')
-            }
-          }
-          return profile as UserProfile
-        }
-        
-        console.log('⚠️ No profile data returned from backend')
-        return null
-      } catch (error: any) {
-        console.error('❌ Error fetching profile from backend:', error.response?.data || error.message)
-        
-        // If backend fails, try direct Supabase as fallback
-        console.log('🔄 Falling back to direct Supabase query')
+
+      // Create the request promise and cache it
+      const requestPromise = (async () => {
         try {
-          const { data, error: supabaseError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single()
-          
-          if (supabaseError) {
-            console.error('❌ Supabase fallback also failed:', supabaseError)
+          // Fetch profile from Railway backend API like mobile app does
+          const response = await apiClient.get(`/api/user/profile`, { params: { userId: user.id } })
+
+          const profile = response?.data?.profile || null
+          if (profile) {
+            console.log('✅ Profile fetched from backend:', profile.username || profile.email)
+            // Ensure admin_role is present even if backend omitted it
+            if (typeof (profile as any).admin_role === 'undefined') {
+              try {
+                const { data: adminCheck, error: adminErr } = await supabase
+                  .from('profiles')
+                  .select('admin_role')
+                  .eq('id', user.id)
+                  .single()
+                if (!adminErr) {
+                  (profile as any).admin_role = adminCheck?.admin_role ?? false
+                }
+              } catch (e) {
+                console.warn('⚠️ Could not load admin_role from Supabase directly')
+              }
+            }
+            return profile as UserProfile
+          }
+
+          console.log('⚠️ No profile data returned from backend')
+          return null
+        } catch (error: any) {
+          console.error('❌ Error fetching profile from backend:', error.response?.data || error.message)
+
+          // If backend fails, try direct Supabase as fallback
+          console.log('🔄 Falling back to direct Supabase query')
+          try {
+            const { data, error: supabaseError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single()
+
+            if (supabaseError) {
+              console.error('❌ Supabase fallback also failed:', supabaseError)
+              return null
+            }
+
+            console.log('✅ Profile fetched via Supabase fallback:', data.username)
+            return data
+          } catch (fallbackError) {
+            console.error('❌ Both backend and Supabase failed:', fallbackError)
             return null
           }
-          
-          console.log('✅ Profile fetched via Supabase fallback:', data.username)
-          return data
-        } catch (fallbackError) {
-          console.error('❌ Both backend and Supabase failed:', fallbackError)
-          return null
         }
-      }
+      })();
+      
+      // Cache the promise
+      profileRequestCache.current.set(user.id, requestPromise)
+      
+      // Clean up the cache after request completes
+      requestPromise.finally(() => {
+        setTimeout(() => {
+          profileRequestCache.current.delete(user.id)
+        }, 100)
+      })
+      
+      return requestPromise
     }
 
     // IMMEDIATE auth resolution - no waiting, no hanging
     console.log('🚀 Setting auth as ready immediately')
     setAuthState(prev => ({ ...prev, initializing: false }))
-    
+
     // Try to get session in background without blocking UI
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mounted) return
@@ -122,9 +149,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user: session.user,
         }))
         // Fetch profile in background
-        fetchUserProfile(session.user).then((profile) => {
+        fetchUserProfile(session.user).then(async (profile) => {
           if (!mounted) return
           setAuthState(prev => ({ ...prev, profile }))
+
+          // Ensure RevenueCat is initialized for existing users without revenuecat_customer_id
+          if (profile && !profile.revenuecat_customer_id && !revenueCatInitialized.current.has(session.user.id)) {
+            console.log('🔗 Initializing RevenueCat for existing user:', session.user.id)
+            revenueCatInitialized.current.add(session.user.id)
+            try {
+              await revenueCatWeb.initialize(session.user.id)
+
+              // Update the profile with RevenueCat customer ID
+              await supabase
+                .from('profiles')
+                .update({ 
+                  revenuecat_customer_id: session.user.id,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', session.user.id)
+
+              console.log('✅ RevenueCat initialized for existing user')
+              
+              // Update local profile state
+              setAuthState(prev => ({
+                ...prev,
+                profile: prev.profile ? {
+                  ...prev.profile,
+                  revenuecat_customer_id: session.user.id
+                } : prev.profile
+              }))
+            } catch (error) {
+              console.error('⚠️ RevenueCat initialization failed for existing user:', error)
+            }
+          }
         }).catch(console.error)
       }
     }).catch((error) => {
@@ -135,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state change:', { event, hasSession: !!session, userId: session?.user?.id })
-        
+
         if (!mounted) return
 
         // Handle different auth events
@@ -150,42 +208,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 initializing: false,
                 loading: false,
               }))
-              
-              // Fetch profile in background
-              fetchUserProfile(session.user).then(async (profile) => {
-                if (!mounted) return
-                setAuthState(prev => ({ ...prev, profile }))
-                
-                // 🎯 Ensure RevenueCat is initialized for existing users without revenuecat_customer_id
-                if (profile && !profile.revenuecat_customer_id) {
-                  console.log('🔗 Initializing RevenueCat for existing user:', session.user.id)
-                  try {
-                    await revenueCatWeb.initialize(session.user.id)
-                    
-                    // Update the profile with RevenueCat customer ID
-                    await supabase
-                      .from('profiles')
-                      .update({ 
-                        revenuecat_customer_id: session.user.id,
-                        updated_at: new Date().toISOString()
-                      })
-                      .eq('id', session.user.id)
+
+              // Only fetch profile if we don't already have it
+              if (!authState.profile || authState.profile.id !== session.user.id) {
+                fetchUserProfile(session.user).then(async (profile) => {
+                  if (!mounted) return
+                  setAuthState(prev => ({ ...prev, profile }))
+
+                  // Ensure RevenueCat is initialized for existing users without revenuecat_customer_id
+                  if (profile && !profile.revenuecat_customer_id && !revenueCatInitialized.current.has(session.user.id)) {
+                    console.log('🔗 Initializing RevenueCat for existing user:', session.user.id)
+                    revenueCatInitialized.current.add(session.user.id)
+                    try {
+                      await revenueCatWeb.initialize(session.user.id)
+
+                      // Update the profile with RevenueCat customer ID
+                      await supabase
+                        .from('profiles')
+                        .update({ 
+                          revenuecat_customer_id: session.user.id,
+                          updated_at: new Date().toISOString()
+                        })
+                        .eq('id', session.user.id)
                       
-                    console.log('✅ RevenueCat initialized for existing user')
-                    
-                    // Update local profile state
-                    setAuthState(prev => ({
-                      ...prev,
-                      profile: prev.profile ? {
-                        ...prev.profile,
-                        revenuecat_customer_id: session.user.id
-                      } : prev.profile
-                    }))
-                  } catch (error) {
-                    console.error('⚠️ RevenueCat initialization failed for existing user:', error)
+                      console.log('✅ RevenueCat initialized for existing user')
+                      
+                      // Update local profile state
+                      setAuthState(prev => ({
+                        ...prev,
+                        profile: prev.profile ? {
+                          ...prev.profile,
+                          revenuecat_customer_id: session.user.id
+                        } : prev.profile
+                      }))
+                    } catch (error) {
+                      console.error('⚠️ RevenueCat initialization failed for existing user:', error)
+                    }
                   }
-                }
-              }).catch(console.error)
+                }).catch(console.error)
+              }
             }
             break
             
@@ -242,7 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sessionCheckInterval) clearInterval(sessionCheckInterval)
       subscription.unsubscribe()
     }
-  }, [router])
+  }, []) // Removed router dependency to prevent re-initialization
 
   const setLoading = (loading: boolean) => {
     setAuthState(prev => ({ ...prev, loading }))

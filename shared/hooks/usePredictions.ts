@@ -235,12 +235,14 @@ export function usePredictions({
   }, [fetchTodaysPredictions])
 
   useEffect(() => {
-    // Only fetch if we haven't fetched recently
+    // Only fetch once on mount or when key props change
+    if (!userId) return // Don't fetch without a userId
+    
     const now = Date.now()
     if (now - lastFetchRef.current > DEBOUNCE_DELAY * 2) {
       fetchTodaysPredictions()
     }
-  }, [fetchTodaysPredictions])
+  }, [userId, subscriptionTier]) // Only depend on actual data changes, not the callback
   
   // Cleanup debounce timer
   useEffect(() => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
 import type { ChatKitSession, ChatMessage, WidgetAction } from '@/types/chatkit'
 
@@ -255,3 +255,4 @@ export function useChatKitAnalytics() {
     trackWidgetAction
   }
 }
+

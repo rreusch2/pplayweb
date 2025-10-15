@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 
 export function useOnboarding() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)

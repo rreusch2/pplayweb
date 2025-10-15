@@ -1,7 +1,7 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
 import Navigation from './Navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
 
@@ -34,7 +34,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
       console.log('User is authenticated but on an auth route. Redirecting to dashboard.')
       router.push('/dashboard')
     }
-  }, [initializing, user, isPublicRoute, isAuthRoute, router, pathname])
+  }, [initializing, user, isPublicRoute, isAuthRoute]) // Removed router and pathname to prevent loops
 
   // Do not block public routes with a loading screen; render content immediately for SEO/UX
   if (initializing && !isPublicRoute) {

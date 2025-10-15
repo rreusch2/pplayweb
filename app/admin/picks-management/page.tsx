@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { checkAdminAccess } from '@/lib/adminAuth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -710,3 +710,4 @@ export default function PicksManagementPage() {
     </div>
   )
 }
+

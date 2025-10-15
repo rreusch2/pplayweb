@@ -4,7 +4,7 @@ import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { PLANS, Plan } from '@/lib/plans'
 import { createCheckoutSession, redirectToCheckout } from '@/lib/stripe'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 
 interface UpgradeSubscriptionModalProps {
@@ -269,3 +269,4 @@ export default function UpgradeSubscriptionModal({
     </Transition>
   )
 }
+

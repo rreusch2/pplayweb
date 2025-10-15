@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Send, Shield, UserCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 
 interface ChatMessage {
   id: string
@@ -168,3 +168,4 @@ export default function AdminChat() {
     </motion.div>
   )
 }
+

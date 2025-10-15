@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
 
 // Import the types for proper typing
@@ -291,3 +291,4 @@ export default function ChatKitProfessorLock({
     </div>
   )
 }
+
