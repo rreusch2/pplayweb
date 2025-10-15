@@ -132,7 +132,7 @@ export default function ChatKitProfessorLock({
           label: 'Find Odds',
           shortLabel: 'Odds',
           placeholderOverride: 'Which game or bet type are you looking for?',
-          icon: 'magnifying-glass' as any,
+          // Removed icon - causing runtime error
           pinned: true
         },
         {
@@ -140,7 +140,7 @@ export default function ChatKitProfessorLock({
           label: 'Build Parlay',
           shortLabel: 'Parlay',
           placeholderOverride: 'Describe the legs you want to add',
-          icon: 'list-checklist' as any,
+          // Removed icon - causing runtime error
           pinned: true
         },
         {
@@ -148,7 +148,7 @@ export default function ChatKitProfessorLock({
           label: 'Player Stats',
           shortLabel: 'Stats',
           placeholderOverride: 'Which players are you interested in?',
-          icon: 'user' as any,
+          // Removed icon - causing runtime error
           pinned: false
         },
         {
@@ -156,7 +156,7 @@ export default function ChatKitProfessorLock({
           label: 'Check Injuries',
           shortLabel: 'Injuries',
           placeholderOverride: 'Which team\'s injury report?',
-          icon: 'sparkle' as any,
+          // Removed icon - causing runtime error
           pinned: false
         }
       ],
@@ -193,15 +193,20 @@ export default function ChatKitProfessorLock({
     },
     entities: {
       async onTagSearch(query: any) {
-        // Search for players, teams, games
         try {
+          // Search for players, teams, props, etc. based on query
           const results = []
           
-          // Search players
-          if (query.length > 1) {
-            // You can implement actual player search from your Supabase
+          // Example: Add mock results (replace with actual API calls)
+          if (query && query.length > 2) {
             results.push(
-              { 
+              {
+                id: "team_example", 
+                title: "Example Team", 
+                group: "Teams", 
+                interactive: true,
+              },
+              {
                 id: "player_example", 
                 title: "Example Player", 
                 group: "Players", 
@@ -216,10 +221,7 @@ export default function ChatKitProfessorLock({
           return []
         }
       },
-      async onTagSelect(entity: any) {
-        // Handle entity clicks (navigate to player/team page, etc.)
-        console.log('Entity clicked:', entity)
-      },
+      // Removed onTagSelect - not a valid property
     }
   } as any
 
