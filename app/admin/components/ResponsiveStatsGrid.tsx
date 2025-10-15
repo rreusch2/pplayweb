@@ -93,8 +93,10 @@ export default function ResponsiveStatsGrid({
         text: 'text-yellow-200',
         shadow: 'hover:shadow-yellow-500/10'
       }
-    }
-    return colorMap[color] || colorMap.blue
+    } as const
+    
+    // Type-safe color access with fallback
+    return colorMap[color as keyof typeof colorMap] || colorMap.blue
   }
 
   const gridClasses = `grid gap-4 sm:gap-6 grid-cols-${columns.mobile} sm:grid-cols-${columns.tablet} lg:grid-cols-${columns.desktop}`
