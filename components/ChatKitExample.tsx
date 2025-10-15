@@ -71,19 +71,19 @@ export function ChatKitExample({ className = "h-[600px] w-[400px]" }: ChatKitExa
       greeting: "Welcome to Professor Lock! 🎯",
       prompts: [
         { 
-          name: "Analyze Today's Games", 
+          label: "Analyze Today's Games", 
           prompt: "What are the best betting opportunities for today's games?", 
-          icon: "search"
+          icon: "search" as any
         },
         { 
-          name: "Build a Parlay", 
+          label: "Build a Parlay", 
           prompt: "Help me build a smart 3-leg parlay with your latest predictions", 
-          icon: "write"
+          icon: "write" as any
         },
         { 
-          name: "Player Props Analysis", 
+          label: "Player Props Analysis", 
           prompt: "Show me your highest confidence player props for tonight", 
-          icon: "chart"
+          icon: "chart" as any
         },
       ],
     },
