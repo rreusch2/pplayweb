@@ -577,18 +577,57 @@ export default function AdminPage() {
 
             {/* Picks Tab Content */}
             {activeTab === 'picks' && (
-              <div className="space-y-6 lg:space-y-8">
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-                  <h2 className="text-2xl font-bold text-white mb-4">Picks Management Center</h2>
-                  <p className="text-gray-400 mb-6">Comprehensive AI predictions and picks control</p>
-                  <button
-                    onClick={() => router.push('/admin/picks-management')}
-                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl transition-all flex items-center gap-2"
-                  >
-                    <Target className="w-5 h-5" />
-                    Open Picks Management Center
-                  </button>
-                </div>
+              <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 hover:border-white/20 transition-all duration-300"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-green-500/20 rounded-xl">
+                      <Target className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Picks Management Center</h2>
+                      <p className="text-gray-400 text-sm sm:text-base mb-4 sm:mb-6">Comprehensive AI predictions and picks control</p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => router.push('/admin/picks-management')}
+                          className="px-4 py-2.5 sm:px-6 sm:py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:scale-95 text-white font-medium rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                        >
+                          <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+                          Open Picks Center
+                        </button>
+                        <button
+                          className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-2 border border-white/20"
+                          onClick={() => toast.success('Quick stats coming soon!')}
+                        >
+                          <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                          View Stats
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Quick Stats Preview */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/10">
+                    <div className="text-center">
+                      <p className="text-2xl sm:text-3xl font-bold text-white">--</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">Today's Picks</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl sm:text-3xl font-bold text-green-400">--</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">Win Rate</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl sm:text-3xl font-bold text-blue-400">--</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">Pending</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl sm:text-3xl font-bold text-yellow-400">--</p>
+                      <p className="text-gray-400 text-xs sm:text-sm">Avg Conf</p>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             )}
 
