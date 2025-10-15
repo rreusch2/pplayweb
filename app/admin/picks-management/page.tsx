@@ -9,7 +9,6 @@ import {
   Target, ArrowLeft, Plus, Download, RefreshCw, Calendar, TrendingUp,
   Trophy, Clock, XCircle, Edit3, Check, X, Search, BarChart3, DollarSign, Percent
 } from 'lucide-react'
-import PredictionsCenter from '../components/PredictionsCenter'
 import toast from 'react-hot-toast'
 
 interface AIPrediction {
@@ -43,7 +42,16 @@ export default function PicksManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [sportFilter, setSportFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('today')
-  const [showPredictionsCenter, setShowPredictionsCenter] = useState(false)
+  const [showAddPickModal, setShowAddPickModal] = useState(false)
+  const [newPick, setNewPick] = useState({
+    match_teams: '',
+    pick: '',
+    odds: '',
+    sport: 'NFL',
+    confidence: 75,
+    reasoning: '',
+    bet_type: 'moneyline'
+  })
   const [editingPick, setEditingPick] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<{[key: string]: any}>({})
 
@@ -108,9 +116,10 @@ export default function PicksManagementPage() {
 
   const loadPredictions = async () => {
     try {
+      // First get predictions
       let query = supabase
         .from('ai_predictions')
-        .select('*, user:profiles!user_id(email)')
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (dateFilter === 'today') {
@@ -129,6 +138,27 @@ export default function PicksManagementPage() {
 
       const { data, error } = await query
       if (error) throw error
+      
+      // Then get user emails separately if needed
+      if (data && data.length > 0) {
+        const userIds = Array.from(new Set(data.map(p => p.user_id).filter(Boolean)))
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .in('id', userIds)
+          
+          if (profiles) {
+            const userMap = Object.fromEntries(profiles.map(p => [p.id, p.email]))
+            data.forEach(prediction => {
+              if (prediction.user_id && userMap[prediction.user_id]) {
+                prediction.user = { email: userMap[prediction.user_id] }
+              }
+            })
+          }
+        }
+      }
+      
       setPredictions(data || [])
     } catch (error) {
       console.error('Error:', error)
@@ -177,9 +207,9 @@ export default function PicksManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 -mt-16 sm:-mt-20">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-16 sm:top-20 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -196,11 +226,11 @@ export default function PicksManagementPage() {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => setShowPredictionsCenter(true)}
+                onClick={() => setShowAddPickModal(true)}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Run Predictions</span>
+                <span className="hidden sm:inline">Add Pick</span>
               </button>
               <button
                 onClick={exportData}
@@ -334,10 +364,172 @@ export default function PicksManagementPage() {
                         {p.sport}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-white">{p.match_teams}</td>
-                    <td className="px-4 py-4 text-sm text-white">{p.pick}</td>
-                    <td className="px-4 py-4 text-sm font-mono text-green-400">{p.odds}</td>
-                    <td className="px-4 py-4 text-sm text-gray-400">{p.confidence}%</td>
+                    <td className="px-4 py-4">
+                      {editingPick === p.id && editValues[p.id]?.editingTeams ? (
+                        <input
+                          type="text"
+                          value={editValues[p.id]?.match_teams || p.match_teams}
+                          onChange={(e) => setEditValues({
+                            ...editValues,
+                            [p.id]: { ...editValues[p.id], match_teams: e.target.value }
+                          })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updatePrediction(p.id, { match_teams: editValues[p.id].match_teams })
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingTeams: false }
+                              })
+                            } else if (e.key === 'Escape') {
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingTeams: false }
+                              })
+                            }
+                          }}
+                          className="px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-sm text-white cursor-pointer hover:text-blue-400"
+                          onClick={() => {
+                            setEditingPick(p.id)
+                            setEditValues({
+                              ...editValues,
+                              [p.id]: { ...editValues[p.id], match_teams: p.match_teams, editingTeams: true }
+                            })
+                          }}
+                        >
+                          {p.match_teams}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      {editingPick === p.id && editValues[p.id]?.editingPick ? (
+                        <input
+                          type="text"
+                          value={editValues[p.id]?.pick || p.pick}
+                          onChange={(e) => setEditValues({
+                            ...editValues,
+                            [p.id]: { ...editValues[p.id], pick: e.target.value }
+                          })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updatePrediction(p.id, { pick: editValues[p.id].pick })
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingPick: false }
+                              })
+                            } else if (e.key === 'Escape') {
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingPick: false }
+                              })
+                            }
+                          }}
+                          className="px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-sm text-white cursor-pointer hover:text-blue-400"
+                          onClick={() => {
+                            setEditingPick(p.id)
+                            setEditValues({
+                              ...editValues,
+                              [p.id]: { ...editValues[p.id], pick: p.pick, editingPick: true }
+                            })
+                          }}
+                        >
+                          {p.pick}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      {editingPick === p.id && editValues[p.id]?.editingOdds ? (
+                        <input
+                          type="text"
+                          value={editValues[p.id]?.odds || p.odds}
+                          onChange={(e) => setEditValues({
+                            ...editValues,
+                            [p.id]: { ...editValues[p.id], odds: e.target.value }
+                          })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updatePrediction(p.id, { odds: editValues[p.id].odds })
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingOdds: false }
+                              })
+                            } else if (e.key === 'Escape') {
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingOdds: false }
+                              })
+                            }
+                          }}
+                          className="px-2 py-1 bg-white/10 border border-white/20 rounded text-green-400 font-mono text-sm w-20"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-sm font-mono text-green-400 cursor-pointer hover:text-green-300"
+                          onClick={() => {
+                            setEditingPick(p.id)
+                            setEditValues({
+                              ...editValues,
+                              [p.id]: { ...editValues[p.id], odds: p.odds, editingOdds: true }
+                            })
+                          }}
+                        >
+                          {p.odds}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      {editingPick === p.id && editValues[p.id]?.editingConfidence ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editValues[p.id]?.confidence || p.confidence || 0}
+                          onChange={(e) => setEditValues({
+                            ...editValues,
+                            [p.id]: { ...editValues[p.id], confidence: parseInt(e.target.value) }
+                          })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              updatePrediction(p.id, { confidence: editValues[p.id].confidence })
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingConfidence: false }
+                              })
+                            } else if (e.key === 'Escape') {
+                              setEditValues({
+                                ...editValues,
+                                [p.id]: { ...editValues[p.id], editingConfidence: false }
+                              })
+                            }
+                          }}
+                          className="px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm w-16"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          className="text-sm text-gray-400 cursor-pointer hover:text-white"
+                          onClick={() => {
+                            setEditingPick(p.id)
+                            setEditValues({
+                              ...editValues,
+                              [p.id]: { ...editValues[p.id], confidence: p.confidence || 0, editingConfidence: true }
+                            })
+                          }}
+                        >
+                          {p.confidence || 0}%
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
                       <select
                         value={p.status}
@@ -362,9 +554,9 @@ export default function PicksManagementPage() {
         </div>
       </div>
 
-      {/* Predictions Center Modal */}
+      {/* Add Pick Modal */}
       <AnimatePresence>
-        {showPredictionsCenter && (
+        {showAddPickModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -374,15 +566,143 @@ export default function PicksManagementPage() {
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
-              className="bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6"
+              className="bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">Run Predictions</h2>
-                <button onClick={() => setShowPredictionsCenter(false)} className="p-2 text-gray-400 hover:text-white">
+                <h2 className="text-2xl font-bold text-white">Add New Pick</h2>
+                <button onClick={() => setShowAddPickModal(false)} className="p-2 text-gray-400 hover:text-white">
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              <PredictionsCenter />
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Match/Teams</label>
+                  <input
+                    type="text"
+                    value={newPick.match_teams}
+                    onChange={(e) => setNewPick({...newPick, match_teams: e.target.value})}
+                    placeholder="e.g., Lakers vs Warriors"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Pick</label>
+                  <input
+                    type="text"
+                    value={newPick.pick}
+                    onChange={(e) => setNewPick({...newPick, pick: e.target.value})}
+                    placeholder="e.g., Lakers -5.5 or Over 220.5"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">Sport</label>
+                    <select
+                      value={newPick.sport}
+                      onChange={(e) => setNewPick({...newPick, sport: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                    >
+                      <option value="NFL">NFL</option>
+                      <option value="NBA">NBA</option>
+                      <option value="MLB">MLB</option>
+                      <option value="NHL">NHL</option>
+                      <option value="NCAAF">College Football</option>
+                      <option value="NCAAB">College Basketball</option>
+                      <option value="WNBA">WNBA</option>
+                      <option value="UFC">UFC/MMA</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">Odds</label>
+                    <input
+                      type="text"
+                      value={newPick.odds}
+                      onChange={(e) => setNewPick({...newPick, odds: e.target.value})}
+                      placeholder="e.g., -110 or +150"
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Confidence ({newPick.confidence}%)</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={newPick.confidence}
+                    onChange={(e) => setNewPick({...newPick, confidence: parseInt(e.target.value)})}
+                    className="w-full"
+                  />
+                  <div className="w-full bg-white/10 rounded-full h-2 mt-2">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-yellow-400 to-green-400"
+                      style={{ width: `${newPick.confidence}%` }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Reasoning (optional)</label>
+                  <textarea
+                    value={newPick.reasoning}
+                    onChange={(e) => setNewPick({...newPick, reasoning: e.target.value})}
+                    placeholder="Why this pick is a good bet..."
+                    rows={4}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  />
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('ai_predictions')
+                          .insert({
+                            ...newPick,
+                            user_id: user?.id,
+                            event_time: new Date().toISOString(),
+                            status: 'pending'
+                          })
+                        
+                        if (error) throw error
+                        
+                        toast.success('Pick added successfully')
+                        setShowAddPickModal(false)
+                        setNewPick({
+                          match_teams: '',
+                          pick: '',
+                          odds: '',
+                          sport: 'NFL',
+                          confidence: 75,
+                          reasoning: '',
+                          bet_type: 'moneyline'
+                        })
+                        loadPredictions()
+                        loadStats()
+                      } catch (error) {
+                        console.error('Error adding pick:', error)
+                        toast.error('Failed to add pick')
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  >
+                    Add Pick
+                  </button>
+                  <button
+                    onClick={() => setShowAddPickModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
