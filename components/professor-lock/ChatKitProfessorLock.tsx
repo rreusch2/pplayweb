@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'react-hot-toast'
-import type { ChatKitOptions } from '@openai/chatkit'
 
 // Import the types for proper typing
 declare global {
@@ -29,9 +28,9 @@ export default function ChatKitProfessorLock({
   const [error, setError] = useState<string | null>(null)
 
   // ChatKit configuration with your custom theme
-  const options: ChatKitOptions = {
+  const options = {
     api: {
-      async getClientSecret(existing) {
+      async getClientSecret(existing: any) {
         try {
           if (existing) {
             // Implement session refresh logic
@@ -67,17 +66,17 @@ export default function ChatKitProfessorLock({
       },
     },
     theme: {
-      colorScheme: 'dark',
-      radius: 'pill',
-      density: 'normal',
+      colorScheme: 'dark' as const,
+      radius: 'pill' as const,
+      density: 'normal' as const,
       color: {
         grayscale: {
           hue: 0,
-          tint: 0
+          tint: 0 as const
         },
         accent: {
           primary: '#168aa2',
-          level: 1
+          level: 1 as const
         },
         surface: {
           background: '#242424',
@@ -85,7 +84,7 @@ export default function ChatKitProfessorLock({
         }
       },
       typography: {
-        baseSize: 16,
+        baseSize: 16 as const,
         fontFamily: '"OpenAI Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
         fontFamilyMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace',
         fontSources: [
@@ -93,29 +92,29 @@ export default function ChatKitProfessorLock({
             family: 'OpenAI Sans',
             src: 'https://cdn.openai.com/common/fonts/openai-sans/v2/OpenAISans-Regular.woff2',
             weight: 400,
-            style: 'normal',
-            display: 'swap'
+            style: 'normal' as const,
+            display: 'swap' as const
           },
           {
             family: 'OpenAI Sans',
             src: 'https://cdn.openai.com/common/fonts/openai-sans/v2/OpenAISans-Medium.woff2',
             weight: 500,
-            style: 'normal',
-            display: 'swap'
+            style: 'normal' as const,
+            display: 'swap' as const
           },
           {
             family: 'OpenAI Sans',
             src: 'https://cdn.openai.com/common/fonts/openai-sans/v2/OpenAISans-SemiBold.woff2',
             weight: 600,
-            style: 'normal',
-            display: 'swap'
+            style: 'normal' as const,
+            display: 'swap' as const
           },
           {
             family: 'OpenAI Sans',
             src: 'https://cdn.openai.com/common/fonts/openai-sans/v2/OpenAISans-Bold.woff2',
             weight: 700,
-            style: 'normal',
-            display: 'swap'
+            style: 'normal' as const,
+            display: 'swap' as const
           }
         ]
       }
@@ -129,27 +128,27 @@ export default function ChatKitProfessorLock({
       placeholder: "Ask about games, odds, injuries, or build a parlay...",
       tools: [
         {
-          id: 'analyze_games',
-          label: 'Analyze Today\'s Games',
-          shortLabel: 'Games',
-          placeholderOverride: 'Which games should I analyze?',
-          icon: 'sparkle-double',
+          id: 'odds_lookup',
+          label: 'Find Odds',
+          shortLabel: 'Odds',
+          placeholderOverride: 'Which game or bet type are you looking for?',
+          icon: 'magnifying-glass' as any,
           pinned: true
         },
         {
-          id: 'build_parlay',
-          label: 'Build Smart Parlay',
+          id: 'parlay_builder',
+          label: 'Build Parlay',
           shortLabel: 'Parlay',
-          placeholderOverride: 'What risk level for your parlay?',
-          icon: 'sparkle',
+          placeholderOverride: 'Describe the legs you want to add',
+          icon: 'list-checklist' as any,
           pinned: true
         },
         {
-          id: 'player_props',
-          label: 'Find Player Props',
-          shortLabel: 'Props',
+          id: 'player_stats',
+          label: 'Player Stats',
+          shortLabel: 'Stats',
           placeholderOverride: 'Which players are you interested in?',
-          icon: 'user',
+          icon: 'user' as any,
           pinned: false
         },
         {
@@ -157,7 +156,7 @@ export default function ChatKitProfessorLock({
           label: 'Check Injuries',
           shortLabel: 'Injuries',
           placeholderOverride: 'Which team\'s injury report?',
-          icon: 'sparkle',
+          icon: 'sparkle' as any,
           pinned: false
         }
       ],
@@ -166,34 +165,34 @@ export default function ChatKitProfessorLock({
       greeting: 'Let\'s cash in some plays! 💰',
       prompts: [
         {
-          icon: 'sparkle-double',
+          icon: 'sparkle-double' as any,
           label: 'What are today\'s best bets?',
           prompt: 'Analyze today\'s MLB and WNBA games and give me your top 3 confident picks'
         },
         {
-          icon: 'sparkle',
+          icon: 'sparkle' as any,
           label: 'Build me a smart parlay',
           prompt: 'Build me a 3-leg parlay with good value and reasonable risk for tonight\'s games'
         },
         {
-          icon: 'user',
+          icon: 'user' as any,
           label: 'Hot player props tonight?',
           prompt: 'Which player props offer the best value tonight? Focus on hits and points'
         },
         {
-          icon: 'circle-question',
+          icon: 'circle-question' as any,
           label: 'Any injury concerns?',
           prompt: 'Are there any significant injuries affecting tonight\'s games I should know about?'
         },
         {
-          icon: 'sparkle',
+          icon: 'sparkle' as any,
           label: 'Betting trends today',
           prompt: 'What are the sharp money trends and public betting percentages for today?'
         }
       ],
     },
     entities: {
-      async onTagSearch(query) {
+      async onTagSearch(query: any) {
         // Search for players, teams, games
         try {
           const results = []
@@ -217,25 +216,12 @@ export default function ChatKitProfessorLock({
           return []
         }
       },
-      onClick: (entity) => {
+      async onTagSelect(entity: any) {
         // Handle entity clicks (navigate to player/team page, etc.)
         console.log('Entity clicked:', entity)
       },
-    },
-    widgets: {
-      async onAction(action, item) {
-        // Handle widget actions
-        console.log('Widget action:', action, item)
-        
-        // Send to your backend to process
-        await fetch('/api/chatkit/widget-action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, itemId: item?.id }),
-        })
-      },
     }
-  }
+  } as any
 
   const { control } = useChatKit(options)
 
