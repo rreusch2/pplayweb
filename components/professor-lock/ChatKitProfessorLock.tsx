@@ -148,7 +148,7 @@ export default function ChatKitProfessorLock({
           label: 'Player Stats',
           shortLabel: 'Stats',
           placeholderOverride: 'Which players are you interested in?',
-          icon: 'bar-chart',
+          icon: 'chart-line',
           pinned: false
         },
         {
@@ -156,7 +156,7 @@ export default function ChatKitProfessorLock({
           label: 'Check Injuries',
           shortLabel: 'Injuries',
           placeholderOverride: 'Which team\'s injury report?',
-          icon: 'heart',
+          icon: 'medical-cross',
           pinned: false
         },
         {
@@ -164,7 +164,7 @@ export default function ChatKitProfessorLock({
           label: 'Ask Anything',
           shortLabel: 'Ask',
           placeholderOverride: 'What would you like to know?',
-          icon: 'message-circle',
+          icon: 'sparkle',
           pinned: false
         }
       ],
@@ -175,7 +175,7 @@ export default function ChatKitProfessorLock({
         {
           name: 'What are today\'s best bets?',
           prompt: 'Analyze today\'s MLB and WNBA games and give me your top 3 confident picks',
-          icon: 'trending-up'
+          icon: 'sparkle-double'
         },
         {
           name: 'Build me a smart parlay',
@@ -190,12 +190,12 @@ export default function ChatKitProfessorLock({
         {
           name: 'Any injury concerns?',
           prompt: 'Are there any significant injuries affecting tonight\'s games I should know about?',
-          icon: 'info'
+          icon: 'circle-question'
         },
         {
           name: 'Betting trends today',
           prompt: 'What are the sharp money trends and public betting percentages for today?',
-          icon: 'chart'
+          icon: 'chart-line'
         }
       ],
     },
