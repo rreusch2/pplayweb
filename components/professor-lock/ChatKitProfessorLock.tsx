@@ -132,7 +132,7 @@ export default function ChatKitProfessorLock({
           label: 'Find Odds',
           shortLabel: 'Odds',
           placeholderOverride: 'Which game or bet type are you looking for?',
-          // Removed icon - causing runtime error
+          icon: 'search',
           pinned: true
         },
         {
@@ -140,7 +140,7 @@ export default function ChatKitProfessorLock({
           label: 'Build Parlay',
           shortLabel: 'Parlay',
           placeholderOverride: 'Describe the legs you want to add',
-          // Removed icon - causing runtime error
+          icon: 'write',
           pinned: true
         },
         {
@@ -148,7 +148,7 @@ export default function ChatKitProfessorLock({
           label: 'Player Stats',
           shortLabel: 'Stats',
           placeholderOverride: 'Which players are you interested in?',
-          // Removed icon - causing runtime error
+          icon: 'bar-chart',
           pinned: false
         },
         {
@@ -156,7 +156,15 @@ export default function ChatKitProfessorLock({
           label: 'Check Injuries',
           shortLabel: 'Injuries',
           placeholderOverride: 'Which team\'s injury report?',
-          // Removed icon - causing runtime error
+          icon: 'heart',
+          pinned: false
+        },
+        {
+          id: 'general',
+          label: 'Ask Anything',
+          shortLabel: 'Ask',
+          placeholderOverride: 'What would you like to know?',
+          icon: 'message-circle',
           pinned: false
         }
       ],
@@ -165,29 +173,29 @@ export default function ChatKitProfessorLock({
       greeting: 'Let\'s cash in some plays! 💰',
       prompts: [
         {
-          icon: 'sparkle-double' as any,
-          label: 'What are today\'s best bets?',
-          prompt: 'Analyze today\'s MLB and WNBA games and give me your top 3 confident picks'
+          name: 'What are today\'s best bets?',
+          prompt: 'Analyze today\'s MLB and WNBA games and give me your top 3 confident picks',
+          icon: 'trending-up'
         },
         {
-          icon: 'sparkle' as any,
-          label: 'Build me a smart parlay',
-          prompt: 'Build me a 3-leg parlay with good value and reasonable risk for tonight\'s games'
+          name: 'Build me a smart parlay',
+          prompt: 'Build me a 3-leg parlay with good value and reasonable risk for tonight\'s games',
+          icon: 'write'
         },
         {
-          icon: 'user' as any,
-          label: 'Hot player props tonight?',
-          prompt: 'Which player props offer the best value tonight? Focus on hits and points'
+          name: 'Hot player props tonight?',
+          prompt: 'Which player props offer the best value tonight? Focus on hits and points',
+          icon: 'user'
         },
         {
-          icon: 'circle-question' as any,
-          label: 'Any injury concerns?',
-          prompt: 'Are there any significant injuries affecting tonight\'s games I should know about?'
+          name: 'Any injury concerns?',
+          prompt: 'Are there any significant injuries affecting tonight\'s games I should know about?',
+          icon: 'info'
         },
         {
-          icon: 'sparkle' as any,
-          label: 'Betting trends today',
-          prompt: 'What are the sharp money trends and public betting percentages for today?'
+          name: 'Betting trends today',
+          prompt: 'What are the sharp money trends and public betting percentages for today?',
+          icon: 'chart'
         }
       ],
     },
