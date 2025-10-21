@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 
-// Dynamically import ChatKit to avoid SSR issues
+// Dynamically import ChatKit components to avoid SSR issues
 const ChatKitProfessorLock = dynamic(
   () => import('@/components/professor-lock/ChatKitProfessorLock'),
   { 
@@ -12,6 +12,21 @@ const ChatKitProfessorLock = dynamic(
         <div className="text-center">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
           <p className="text-lg text-slate-300">Loading Professor Lock...</p>
+        </div>
+      </div>
+    )
+  }
+)
+
+const ProfessorLockCustom = dynamic(
+  () => import('@/components/professor-lock/ProfessorLockCustom'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
+          <p className="text-lg text-slate-300">Loading Professor Lock Custom Server...</p>
         </div>
       </div>
     )
@@ -32,8 +47,12 @@ export default function ProfessorLockPage() {
           </p>
         </div>
 
-        {/* ChatKit Container */}
-        <ChatKitProfessorLock className="h-[700px] w-full" />
+        {/* ChatKit Container - Use Custom Server if available */}
+        {process.env.NEXT_PUBLIC_USE_CUSTOM_PROFESSOR_LOCK === 'true' ? (
+          <ProfessorLockCustom className="h-[700px] w-full" />
+        ) : (
+          <ChatKitProfessorLock className="h-[700px] w-full" />
+        )}
 
         {/* Feature Pills */}
         <div className="mt-6 flex flex-wrap justify-center gap-3">
