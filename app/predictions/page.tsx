@@ -139,7 +139,7 @@ const PredictionRow = memo(function PredictionRow({
 })
 
 export default function PredictionsPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, initializing } = useAuth()
   const { subscriptionTier } = useSubscription()
   const [activeTab, setActiveTab] = useState<'all' | 'team' | 'props'>('all')
   const [mounted, setMounted] = useState(false)
@@ -170,12 +170,14 @@ export default function PredictionsPage() {
   const tierStyling = getTierStyling(subscriptionTier as any)
 
   useEffect(() => {
-    if (!user) {
+    if (!initializing && !user) {
       router.push('/')
       return
     }
-    setMounted(true)
-  }, [user, router])
+    if (user) {
+      setMounted(true)
+    }
+  }, [user, initializing, router])
 
   // Combine team + props for All tab
   const combinedAll = useMemo(() => {
@@ -199,12 +201,19 @@ export default function PredictionsPage() {
   const currentLoading = activeTab === 'all' ? combinedLoading :
                         activeTab === 'team' ? isLoadingTeam : isLoadingProps
 
-  if (!user || !mounted) {
+  if (initializing || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Will redirect via useEffect
   }
 
   return (

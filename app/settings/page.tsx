@@ -44,7 +44,7 @@ interface SettingItem {
 }
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, initializing } = useAuth()
   const { subscriptionTier } = useSubscription()
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false)
   const [preferencesModalOpen, setPreferencesModalOpen] = useState(false)
@@ -56,12 +56,14 @@ export default function SettingsPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!user) {
+    if (!initializing && !user) {
       router.push('/')
       return
     }
-    setMounted(true)
-  }, [user, router])
+    if (user) {
+      setMounted(true)
+    }
+  }, [user, initializing, router])
 
   const handleManageSubscription = () => {
     if (subscriptionTier === 'free') {
@@ -242,12 +244,19 @@ export default function SettingsPage() {
     }
   ]
 
-  if (!user || !mounted) {
+  if (initializing || !mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Will redirect via useEffect
   }
 
   return (

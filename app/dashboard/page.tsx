@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const { user, signOut, profile } = useAuth()
+  const { user, signOut, profile, initializing } = useAuth()
   const { subscriptionTier } = useSubscription()
   
   // Get tier-based capabilities and styling
@@ -69,24 +69,32 @@ export default function Dashboard() {
   const isLoadingTeam = isLoading // Alias for compatibility
 
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (only after initialization completes)
   useEffect(() => {
-    if (!user) {
+    if (!initializing && !user) {
       router.push('/')
     }
-  }, [user, router])
+  }, [user, initializing, router])
 
   // Fix hydration
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!user) {
+  // Show loading state while auth initializes
+  if (initializing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Will redirect via useEffect
   }
 
   return (
