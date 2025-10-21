@@ -96,6 +96,7 @@ export default function ProfessorLockCustom({
         {
           id: 'analyze_games',
           label: 'Analyze Today\'s Games',
+          icon: 'analytics',
           shortLabel: 'Games',
           placeholderOverride: 'Which sport or specific games should I analyze?',
           pinned: true
@@ -103,6 +104,7 @@ export default function ProfessorLockCustom({
         {
           id: 'build_parlay',
           label: 'Build Smart Parlay',
+          icon: 'sparkle',
           shortLabel: 'Parlay',
           placeholderOverride: 'Tell me your preferred legs or let me suggest a parlay',
           pinned: true
@@ -110,6 +112,7 @@ export default function ProfessorLockCustom({
         {
           id: 'find_props',
           label: 'Find Player Props',
+          icon: 'star',
           shortLabel: 'Props',
           placeholderOverride: 'Which players or prop types are you interested in?',
           pinned: true
@@ -117,6 +120,7 @@ export default function ProfessorLockCustom({
         {
           id: 'check_injuries',
           label: 'Injury Reports',
+          icon: 'lifesaver',
           shortLabel: 'Injuries',
           placeholderOverride: 'Which teams should I check for injury updates?',
           pinned: false
@@ -124,6 +128,7 @@ export default function ProfessorLockCustom({
         {
           id: 'get_trends',
           label: 'Betting Trends',
+          icon: 'chart',
           shortLabel: 'Trends',
           placeholderOverride: 'What trends or patterns should I analyze?',
           pinned: false
@@ -134,27 +139,27 @@ export default function ProfessorLockCustom({
       greeting: '🎯 Professor Lock is locked in! Let\'s find some winners, champ! 💰',
       prompts: [
         {
-          icon: 'sparkle-double' as any,
+          icon: 'star-filled',
           label: 'What are today\'s best value bets?',
           prompt: 'Analyze today\'s games across all sports and give me your top 3 confident picks with the best value'
         },
         {
-          icon: 'target' as any,
+          icon: 'plus',
           label: 'Build me a 3-leg parlay',
           prompt: 'Create a 3-leg parlay with solid confidence levels and good payout potential for tonight\'s games'
         },
         {
-          icon: 'user' as any,
+          icon: 'bolt',
           label: 'Find hot player props',
           prompt: 'Show me the best player prop bets with strong value and high confidence for today\'s slate'
         },
         {
-          icon: 'chart-line' as any,
+          icon: 'chart',
           label: 'Show me betting trends',
           prompt: 'What are the current betting trends, line movements, and where is the smart money going?'
         },
         {
-          icon: 'medical-cross' as any,
+          icon: 'info',
           label: 'Any key injuries affecting bets?',
           prompt: 'Check for any significant injuries or lineup changes that could impact betting decisions today'
         }

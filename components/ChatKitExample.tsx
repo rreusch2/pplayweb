@@ -72,18 +72,15 @@ export function ChatKitExample({ className = "h-[600px] w-[400px]" }: ChatKitExa
       prompts: [
         { 
           label: "Analyze Today's Games", 
-          prompt: "What are the best betting opportunities for today's games?", 
-          icon: "search" as any
+          prompt: "What are the best betting opportunities for today's games?"
         },
         { 
           label: "Build a Parlay", 
-          prompt: "Help me build a smart 3-leg parlay with your latest predictions", 
-          icon: "write" as any
+          prompt: "Help me build a smart 3-leg parlay with your latest predictions"
         },
         { 
           label: "Player Props Analysis", 
-          prompt: "Show me your highest confidence player props for tonight", 
-          icon: "chart" as any
+          prompt: "Show me your highest confidence player props for tonight"
         },
       ],
     },
