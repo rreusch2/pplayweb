@@ -26,11 +26,8 @@ export default function SelfHostedChatKit({
     
     return {
       api: {
-        // Point to our self-hosted Python server
+        // Point to our self-hosted Python server (NO domainKey for custom backends!)
         url: 'https://pykit-production.up.railway.app/chatkit',
-        
-        // Required by ChatKit for custom backends (set via env on Vercel)
-        domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'self-hosted',
         
         // Custom fetch with auth headers for our backend
         fetch: (input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,7 +52,6 @@ export default function SelfHostedChatKit({
   const chatkit = useChatKit(options || { 
     api: { 
       url: 'https://pykit-production.up.railway.app/chatkit',
-      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'self-hosted',
       fetch: (_input: RequestInfo | URL, _init?: RequestInit) =>
         Promise.resolve(new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 }))
     }
