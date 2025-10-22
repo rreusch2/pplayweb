@@ -143,7 +143,6 @@ export default function ProfessorLockCustom({
     composer: {
       attachments: {
         enabled: true,
-        uploadStrategy: { type: 'hosted' },
         maxCount: 5,
         maxSize: 10485760 // 10MB
       },
