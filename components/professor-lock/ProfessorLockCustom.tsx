@@ -88,14 +88,14 @@ export default function ProfessorLockCustom({
         }
 
         const data = await res.json()
-        console.log(`✅ OpenAI ChatKit session ready: ${data.id}`)
+        console.log(`✅ OpenAI ChatKit session ready: ${data.session_id}`)
         setSessionData(data)
         setError(null)
         onSessionStartRef.current?.()
         
         // Cache for subsequent calls in this mount
         clientSecretRef.current = data.client_secret
-        sessionIdRef.current = data.id
+        sessionIdRef.current = data.session_id
         return data.client_secret as string
       })()
       const result = await inflightSecretRef.current
@@ -112,9 +112,11 @@ export default function ProfessorLockCustom({
   }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
-  // Use OpenAI hosted ChatKit mode with getClientSecret
+  // Use supported options for chatkit-react v1: api.getClientSecret
   const options = useMemo(() => ({
-    getClientSecret,
+    api: {
+      getClientSecret,
+    },
     theme: {
       colorScheme: 'dark' as const,
       radius: 'pill' as const,
@@ -253,7 +255,7 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any), [user, profile])
+  } as any), [getClientSecret])
 
   const { control } = useChatKit(options)
 
@@ -262,8 +264,26 @@ export default function ProfessorLockCustom({
     console.log('User:', user?.id)
     console.log('Session token:', session?.access_token ? 'Present' : 'Missing')
     
-    setIsLoading(false)
-    
+    // Load ChatKit script
+    if (!document.querySelector('script[src*="chatkit.js"]')) {
+      console.log('📦 Loading ChatKit script...')
+      const script = document.createElement('script')
+      script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js'
+      script.async = true
+      script.onload = () => {
+        console.log('✅ ChatKit script loaded')
+        setIsLoading(false)
+      }
+      script.onerror = () => {
+        console.error('❌ Failed to load ChatKit script')
+        setError('Failed to load ChatKit library')
+        setIsLoading(false)
+      }
+      document.head.appendChild(script)
+    } else {
+      console.log('✅ ChatKit script already loaded')
+      setIsLoading(false)
+    }
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
       onSessionEnd?.()
@@ -307,8 +327,8 @@ export default function ProfessorLockCustom({
           </p>
           <div className="mb-4 text-xs text-slate-400 space-y-1">
             <p>🔧 <strong>Troubleshooting:</strong></p>
-            <p>• Check your internet connection</p>
-            <p>• Try refreshing the page</p>
+            <p>• Check if PyKit server is running on Railway</p>
+            <p>• Verify PROFESSOR_LOCK_SERVER_URL is correct</p>
             <p>• Check browser console for detailed errors</p>
           </div>
           <div className="flex gap-3 justify-center">
@@ -339,36 +359,25 @@ export default function ProfessorLockCustom({
   }
 
   console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
-  console.log('📊 Component state:', { isLoading, error, connectionAttempted })
 
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
-      style={{ minHeight: '600px', background: '#1a1a1a' }}
+      className={`relative resize overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-[#242424] backdrop-blur-sm ${className}`}
+      style={{ width: 420, height: 600, minWidth: 320, minHeight: 420, maxHeight: '85vh' }}
     >
-      {error && (
-        <div className="flex h-full w-full items-center justify-center p-4">
-          <div className="text-center max-w-md">
-            <div className="text-red-500 text-4xl mb-4">⚠️</div>
-            <p className="text-lg text-red-400 mb-2">Connection Error</p>
-            <p className="text-sm text-slate-400">{error}</p>
-          </div>
-        </div>
-      )}
-      
-      {!error && control ? (
-        <>
-          <div className="absolute top-2 right-2 z-10 text-xs text-green-400">
-            ✅ OpenAI ChatKit
-          </div>
-          <ChatKit control={control} className="h-full w-full" />
-        </>
-      ) : !error && (
+      {/* Resize handle indicator */}
+      <div className="absolute bottom-1 right-1 w-4 h-4 pointer-events-none opacity-30 hover:opacity-100 transition-opacity z-10">
+        <svg className="w-full h-full text-white/40" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M15 12l-3 3v-3h3zM15 8l-7 7v-3l4-4h3zM15 4l-11 11v-3l8-8h3z" />
+        </svg>
+      </div>
+      {control ? (
+        <ChatKit control={control} className="h-full w-full" />
+      ) : (
         <div className="flex h-full w-full items-center justify-center">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-            <p className="text-lg text-slate-300">Connecting to Professor Lock...</p>
-            <p className="text-xs text-slate-500 mt-2">OpenAI ChatKit</p>
+            <p className="text-lg text-slate-300">Initializing ChatKit...</p>
           </div>
         </div>
       )}
