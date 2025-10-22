@@ -36,74 +36,84 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Helper to load user profile
-    const loadUserProfile = async (userId: string) => {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      
-      if (profileError) {
-        console.error('Error fetching profile:', profileError)
-        return null
-      }
-      
-      console.log('Profile loaded:', {
-        id: profile?.id,
-        username: profile?.username,
-        subscription_tier: profile?.subscription_tier
-      })
-      return profile as UserProfile
-    }
-
-    // Initialize auth on mount
+    // Simple, direct Supabase auth check - just like mobile
     const initAuth = async () => {
       try {
-        console.log('🔐 Initializing auth...')
+        // Get current session
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user && mounted) {
-          console.log('✅ Session found on init')
-          const profile = await loadUserProfile(session.user.id)
+          // Fetch profile directly from Supabase
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profileError) {
+            console.error('Error fetching profile:', profileError)
+          } else {
+            console.log('Profile loaded:', {
+              id: profile?.id,
+              username: profile?.username,
+              admin_role: profile?.admin_role,
+              subscription_tier: profile?.subscription_tier
+            })
+          }
+          
           setAuthState({
             session,
             user: session.user,
-            profile,
+            profile: profile as UserProfile,
             loading: false,
             initializing: false
           })
         } else {
-          console.log('❌ No session found on init')
-          setAuthState(prev => ({ ...prev, initializing: false }))
+          // Do not finalize initialization here; let onAuthStateChange handle the initial session event reliably
         }
       } catch (error) {
         console.error('Auth init error:', error)
-        setAuthState(prev => ({ ...prev, initializing: false }))
+        // Fall back to auth change listener to finalize initialization
       }
     }
 
     initAuth()
 
-    // Listen for auth state changes (sign in, sign out, token refresh)
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
-        
-        console.log('🔄 Auth state change:', event, session?.user?.id)
-        
-        // Handle all events that provide a valid session
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          const profile = await loadUserProfile(session.user.id)
+
+        // Treat INITIAL_SESSION and TOKEN_REFRESHED the same as SIGNED_IN for stable hydration
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+
+          if (profileError) {
+            console.error('Error fetching profile on sign in:', profileError)
+          } else {
+            console.log('Profile loaded on sign in:', {
+              id: profile?.id,
+              username: profile?.username,
+              admin_role: profile?.admin_role,
+              subscription_tier: profile?.subscription_tier
+            })
+          }
+
           setAuthState({
             session,
             user: session.user,
-            profile,
+            profile: profile as UserProfile,
             loading: false,
             initializing: false
           })
-        } else if (event === 'SIGNED_OUT') {
-          console.log('👋 User signed out')
+          return
+        }
+
+        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
           setAuthState({
             session: null,
             user: null,
@@ -112,7 +122,11 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
             initializing: false
           })
           router.push('/')
+          return
         }
+
+        // Ensure we always clear initializing after first auth event
+        setAuthState(prev => ({ ...prev, initializing: false }))
       }
     )
 

@@ -1,11 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { stripeSubscriptionService, SubscriptionInfo } from '@/lib/stripe-subscription-service'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+// Use shared browser Supabase client to keep session state consistent across the app
 
 interface UseSubscriptionReturn {
   subscription: SubscriptionInfo | null

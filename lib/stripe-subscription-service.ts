@@ -1,10 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
-// Supabase client for subscription management
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+// Use shared browser Supabase client to keep auth/session consistent across app
 
 export interface SubscriptionInfo {
   tier: 'free' | 'pro' | 'elite'
