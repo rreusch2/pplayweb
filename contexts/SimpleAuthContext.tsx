@@ -409,6 +409,11 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         console.log('[Auth] Sign in successful')
         toast.success('Welcome back!')
+        
+        // Redirect to dashboard after successful sign in
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 100)
       }
     } catch (error: any) {
       console.error('[Auth] Sign in failed:', error)
@@ -417,7 +422,7 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       safeSetAuthState({ loading: false })
     }
-  }, [safeSetAuthState])
+  }, [safeSetAuthState, router])
 
   const signOut = useCallback(async () => {
     try {
