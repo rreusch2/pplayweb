@@ -23,33 +23,30 @@ export default function SelfHostedChatKit({
   // Configure ChatKit for self-hosted backend
   const chatkit = useChatKit({
     initialThread: null,
-    api: {
-      url: 'https://pykit-production.up.railway.app/chatkit',
-      domainKey: 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-        if (!user || !session) {
-          return new Response(JSON.stringify({ error: 'Not authenticated' }), { 
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-          })
-        }
-        
-        console.log('🌐 ChatKit request:', input)
-        
-        const response = await fetch(input, {
-          ...init,
-          headers: {
-            ...init?.headers,
-            'Authorization': `Bearer ${session.access_token}`,
-            'X-User-Id': user.id,
-            'X-User-Email': user.email || '',
-            'X-User-Tier': profile?.subscription_tier || 'free',
-          },
-        })
-        
-        console.log('🌐 ChatKit response:', response.status)
-        return response
-      },
+    apiURL: 'https://pykit-production.up.railway.app/chatkit',
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!user || !session) {
+        return new Response(JSON.stringify({ error: 'Not authenticated' }), { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        } as any)
+      }
+      
+      console.log('🌐 ChatKit request:', input)
+      
+      const response = await fetch(input, {
+        ...init,
+        headers: {
+          ...init?.headers,
+          'Authorization': `Bearer ${session.access_token}`,
+          'X-User-Id': user.id,
+          'X-User-Email': user.email || '',
+          'X-User-Tier': profile?.subscription_tier || 'free',
+        },
+      })
+      
+      console.log('🌐 ChatKit response:', response.status)
+      return response
     },
     onError: ({ error }) => {
       console.error('[ChatKit error]', error)
@@ -147,10 +144,18 @@ export default function SelfHostedChatKit({
 
   return (
     <div className={className}>
-      <div className="h-full">
+      <div 
+        className="h-full w-full bg-white rounded-lg overflow-hidden"
+        style={{ minHeight: '400px' }}
+      >
         <ChatKit
           control={chatkit.control}
-          style={{ width: '100%', height: '100%' }}
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            display: 'block',
+            backgroundColor: 'white'
+          }}
         />
       </div>
       
