@@ -61,20 +61,23 @@ export default function SelfHostedChatKit({
   })
 
   useEffect(() => {
-    console.log('🎯 SelfHostedChatKit ready')
+    console.log('🎯 SelfHostedChatKit mounted')
     console.log('User:', user?.id)
-    console.log('ChatKit control:', chatkit?.control)
+    console.log('ChatKit control exists:', !!chatkit?.control)
     
-    if (chatkit?.control) {
+    if (chatkit?.control && user) {
+      console.log('✅ ChatKit ready - setting loading false')
       setIsLoading(false)
       onSessionStart?.()
     }
-
+  }, [chatkit?.control, user])
+  
+  useEffect(() => {
     return () => {
       console.log('🔌 SelfHostedChatKit unmounting')
       onSessionEnd?.()
     }
-  }, [chatkit, user, onSessionStart, onSessionEnd])
+  }, [])
 
   // Show authentication required
   if (!user) {
@@ -127,30 +130,33 @@ export default function SelfHostedChatKit({
     )
   }
 
-  // Render ChatKit
+  // Render ChatKit - no wrapper, direct rendering
+  if (!chatkit?.control) {
+    return (
+      <div className={className}>
+        <div className="flex h-full items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60">
+          <div className="text-center">
+            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
+            <p className="text-lg text-slate-300">Initializing ChatKit...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={className}>
-      <div className="h-full rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-sm">
-        {chatkit?.control && !isLoading ? (
-          <ChatKit
-            control={chatkit.control}
-            className="w-full h-full"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-              <p className="text-lg text-slate-300">Initializing Professor Lock...</p>
-              <p className="text-xs text-slate-500 mt-2">Connecting to self-hosted server...</p>
-            </div>
-          </div>
-        )}
+      <div className="h-full rounded-2xl overflow-hidden border border-white/10">
+        <ChatKit
+          control={chatkit.control}
+          className="w-full h-full"
+        />
       </div>
       
       {/* Self-hosted indicator */}
       <div className="mt-2 text-xs text-slate-500 text-center flex items-center justify-center gap-2">
-        <span className={`inline-block w-2 h-2 rounded-full ${chatkit?.control ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
-        <span>Self-hosted • {chatkit?.control ? 'Connected to Python server' : 'Connecting...'}</span>
+        <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <span>Professor Lock • Self-hosted on Railway</span>
       </div>
     </div>
   )
