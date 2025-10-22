@@ -32,15 +32,15 @@ export default function ProfessorLockCustom({
       api: {
         url: serverUrl,
         domainKey: domainKey,
-        fetch: (url: string, init?: RequestInit) => {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = {
             ...init?.headers,
             'X-User-Id': user.id || '',
             'X-User-Email': user.email || '',
             'X-User-Tier': profile?.subscription_tier || 'free',
           }
-          console.log('🌐 ChatKit fetch:', url)
-          return globalThis.fetch(url, { ...init, headers })
+          console.log('🌐 ChatKit fetch:', typeof input === 'string' ? input : input instanceof URL ? input.href : 'Request')
+          return globalThis.fetch(input, { ...init, headers })
         },
       },
       theme: {
@@ -73,7 +73,14 @@ export default function ProfessorLockCustom({
     }
   }, [user, profile, serverUrl, domainKey])
 
-  const { control } = useChatKit(options || {})
+  // Only initialize ChatKit when we have valid options
+  const chatkitHook = useChatKit(options ?? {
+    api: {
+      url: serverUrl,
+      domainKey: domainKey,
+    }
+  })
+  const { control } = chatkitHook
 
   useEffect(() => {
     if (user) {
