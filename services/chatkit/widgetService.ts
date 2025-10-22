@@ -76,7 +76,7 @@ export class WidgetService {
                   truncate: true,
                   maxLines: 1
                 }
-              ].filter(Boolean)
+              ].filter(Boolean) as WidgetNode[]
             }
           ]
         },
@@ -108,7 +108,7 @@ export class WidgetService {
             color: 'info'
           }))
         }
-      ].filter(Boolean)
+      ].filter(Boolean) as WidgetNode[]
     };
   }
 
@@ -157,7 +157,7 @@ export class WidgetService {
               color: 'success',
               variant: 'solid'
             }
-          ].filter(Boolean)
+          ].filter(Boolean) as WidgetNode[]
         },
         {
           type: 'Col',
@@ -323,7 +323,7 @@ export class WidgetService {
             }
           ]
         }
-      ].filter(Boolean)
+      ].filter(Boolean) as WidgetNode[]
     };
   }
 
@@ -531,7 +531,7 @@ export class WidgetService {
                 }
               ]
             }
-          ].filter(Boolean)
+          ].filter(Boolean) as WidgetNode[]
         },
         {
           type: 'Row',
@@ -646,7 +646,7 @@ export class WidgetService {
             }))
           ]
         }
-      ].filter(Boolean)
+      ].filter(Boolean) as WidgetNode[]
     };
   }
 
@@ -831,7 +831,7 @@ export class WidgetService {
                           weight: 'semibold',
                           color: { dark: '#10B981', light: '#059669' }
                         }
-                      ].filter(Boolean)
+                      ].filter(Boolean) as WidgetNode[]
                     }
                   ]
                 }
@@ -913,7 +913,7 @@ export class WidgetService {
                             variant: 'soft',
                             size: 'sm'
                           }
-                        ].filter(Boolean)
+                        ].filter(Boolean) as WidgetNode[]
                       },
                       {
                         type: 'Text',
@@ -930,9 +930,9 @@ export class WidgetService {
                         margin: { top: 8 },
                         onClickAction: insight.action
                       }
-                    ].filter(Boolean)
+                    ].filter(Boolean) as WidgetNode[]
                   }
-                ].filter(Boolean)
+                ].filter(Boolean) as WidgetNode[]
               }
             ]
           }))
