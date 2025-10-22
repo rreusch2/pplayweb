@@ -1,18 +1,8 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
-
-// TypeScript declaration for ChatKit global
-declare global {
-  interface Window {
-    ChatKit: {
-      create: (options: any) => {
-        element: HTMLElement
-      }
-    }
-  }
-}
 
 interface SelfHostedChatKitProps {
   className?: string
@@ -27,92 +17,55 @@ export default function SelfHostedChatKit({
 }: SelfHostedChatKitProps) {
   
   const { user, session, profile } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const chatkitRef = useRef<HTMLDivElement>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Initialize ChatKit with vanilla JS (more reliable for self-hosted)
-  const initializeChatKit = useCallback(async () => {
-    if (!user || !session || !chatkitRef.current || isInitialized) return
+  // Configure for custom backend (self-hosted Python server)
+  const options = useMemo(() => {
+    if (!user || !session) return null
     
-    try {
-      setIsLoading(true)
-      console.log('🎯 Initializing self-hosted ChatKit...')
-      
-      // Get client secret
-      const res = await fetch('/api/chatkit/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          user_id: user.id,
-          user_email: user.email,
-          tier: profile?.subscription_tier,
-          preferences: {
-            sports: profile?.preferred_sports,
-            risk_tolerance: profile?.risk_tolerance,
-            betting_style: profile?.betting_style
-          }
-        })
-      })
-      
-      if (!res.ok) {
-        throw new Error(`Session failed: ${res.status}`)
-      }
-      
-      const data = await res.json()
-      console.log('✅ Got session data:', data.session_id)
-      
-      // Load ChatKit script if not already loaded
-      if (!window.ChatKit) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
-        })
-      }
-      
-      // Initialize ChatKit with vanilla JS
-      const chatkit = window.ChatKit.create({
-        api: { 
-          clientToken: data.client_secret
+    return {
+      api: {
+        // Point to our self-hosted Python server
+        url: 'https://pykit-production.up.railway.app/chatkit',
+        
+        // Custom fetch with auth headers for our backend
+        fetch: (url: string, options: RequestInit) => {
+          console.log('🌐 ChatKit request to:', url)
+          
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...options.headers,
+              'Authorization': `Bearer ${session.access_token}`,
+              'X-User-Id': user.id,
+              'X-User-Email': user.email || '',
+              'X-User-Tier': profile?.subscription_tier || 'free',
+            },
+          })
         }
-      })
-      
-      // Mount to our div
-      if (chatkitRef.current) {
-        chatkitRef.current.innerHTML = ''
-        chatkitRef.current.appendChild(chatkit.element)
       }
-      
-      setIsInitialized(true)
-      onSessionStart?.()
-      
-    } catch (error) {
-      console.error('❌ ChatKit initialization failed:', error)
-      setError('Failed to initialize Professor Lock')
-    } finally {
-      setIsLoading(false)
     }
-  }, [user, session, profile, onSessionStart, isInitialized])
+  }, [user, session, profile])
+
+  // Use ChatKit hook with self-hosted config
+  const chatkit = useChatKit(options)
 
   useEffect(() => {
     console.log('🎯 SelfHostedChatKit mounting...')
     console.log('User:', user?.id)
     console.log('Server: https://pykit-production.up.railway.app')
     
-    initializeChatKit()
+    // ChatKit will handle initialization when options are ready
+    if (options) {
+      setIsLoading(false)
+    }
 
     return () => {
       console.log('🔌 SelfHostedChatKit unmounting')
       onSessionEnd?.()
     }
-  }, [initializeChatKit, onSessionEnd])
+  }, [options, onSessionEnd])
 
   // Show authentication required
   if (!user) {
@@ -169,17 +122,18 @@ export default function SelfHostedChatKit({
   return (
     <div className={className}>
       <div className="h-full rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-sm">
-        <div 
-          ref={chatkitRef}
-          className="w-full h-full"
-          style={{ minHeight: '400px' }}
-        />
+        {chatkit?.control && (
+          <ChatKit 
+            control={chatkit.control}
+            className="w-full h-full"
+          />
+        )}
       </div>
       
       {/* Self-hosted indicator */}
       <div className="mt-2 text-xs text-slate-500 text-center flex items-center justify-center gap-2">
-        <span className={`inline-block w-2 h-2 rounded-full ${isInitialized ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
-        <span>Self-hosted • {isInitialized ? 'Advanced widgets enabled' : 'Initializing...'}</span>
+        <span className={`inline-block w-2 h-2 rounded-full ${chatkit?.control ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
+        <span>Self-hosted • {chatkit?.control ? 'Connected to Python server' : 'Connecting...'}</span>
       </div>
     </div>
   )
