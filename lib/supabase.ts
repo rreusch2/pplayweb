@@ -5,33 +5,128 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables', { supabaseUrl: !!supabaseUrl, supabaseAnonKey: !!supabaseAnonKey });
-  // Don't throw error, just log it - we don't want to crash the app
+}
+
+// Custom storage implementation with better error handling and debugging
+const createSafeStorage = (): Storage | undefined => {
+  if (typeof window === 'undefined') {
+    console.log('[Auth] Running on server, no storage available')
+    return undefined
+  }
+
+  try {
+    const storage = window.localStorage
+    const testKey = '__supabase_test__'
+    
+    // Test if we can actually use localStorage
+    storage.setItem(testKey, '1')
+    storage.removeItem(testKey)
+    
+    console.log('[Auth] localStorage is available and working')
+    
+    // Return wrapped storage with error handling
+    return {
+      getItem: (key: string) => {
+        try {
+          return storage.getItem(key)
+        } catch (error) {
+          console.error('[Auth] Error reading from localStorage:', error)
+          return null
+        }
+      },
+      setItem: (key: string, value: string) => {
+        try {
+          storage.setItem(key, value)
+        } catch (error) {
+          console.error('[Auth] Error writing to localStorage:', error)
+          // If quota exceeded or other error, try to clear old data
+          if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+            console.warn('[Auth] localStorage quota exceeded, clearing auth data')
+            try {
+              Object.keys(storage)
+                .filter(k => k.startsWith('sb-'))
+                .forEach(k => storage.removeItem(k))
+              // Try again
+              storage.setItem(key, value)
+            } catch (retryError) {
+              console.error('[Auth] Failed to write even after clearing:', retryError)
+            }
+          }
+        }
+      },
+      removeItem: (key: string) => {
+        try {
+          storage.removeItem(key)
+        } catch (error) {
+          console.error('[Auth] Error removing from localStorage:', error)
+        }
+      },
+      clear: () => {
+        try {
+          // Only clear Supabase keys, not everything
+          Object.keys(storage)
+            .filter(k => k.startsWith('sb-'))
+            .forEach(k => storage.removeItem(k))
+        } catch (error) {
+          console.error('[Auth] Error clearing localStorage:', error)
+        }
+      },
+      get length() {
+        return storage.length
+      },
+      key: (index: number) => {
+        return storage.key(index)
+      }
+    }
+  } catch (error) {
+    console.warn('[Auth] localStorage unavailable (Safari private mode or blocked):', error)
+    return undefined
+  }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Use localStorage for web instead of AsyncStorage, guarded for SSR and Safari privacy modes
-    storage: ((): Storage | undefined => {
-      if (typeof window === 'undefined') return undefined
-      try {
-        const testKey = '__sb_test__'
-        window.localStorage.setItem(testKey, '1')
-        window.localStorage.removeItem(testKey)
-        return window.localStorage
-      } catch {
-        // localStorage unavailable (Safari private mode or blocked). Fall back to in-memory (undefined)
-        return undefined
-      }
-    })(),
+    storage: createSafeStorage(),
     persistSession: true,
-    // Enable automatic refresh; URL session detection remains disabled to avoid race conditions
     autoRefreshToken: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce'
+    detectSessionInUrl: false, // Prevents issues with email confirmation links
+    flowType: 'pkce',
+    // Add debug logging in development
+    debug: process.env.NODE_ENV === 'development',
   }
 })
 
-console.log("Main supabase client initialized with URL:", supabaseUrl);
+// Helper function to check if storage is working
+export const isStorageAvailable = (): boolean => {
+  if (typeof window === 'undefined') return false
+  
+  try {
+    const test = '__storage_test__'
+    window.localStorage.setItem(test, test)
+    window.localStorage.removeItem(test)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Helper to clear all auth data (useful for debugging/recovery)
+export const clearAuthStorage = () => {
+  if (typeof window === 'undefined') return
+  
+  try {
+    const storage = window.localStorage
+    Object.keys(storage)
+      .filter(k => k.startsWith('sb-'))
+      .forEach(k => storage.removeItem(k))
+    console.log('[Auth] Cleared all auth storage')
+  } catch (error) {
+    console.error('[Auth] Failed to clear auth storage:', error)
+  }
+}
+
+console.log('[Auth] Supabase client initialized with URL:', supabaseUrl)
+console.log('[Auth] Storage available:', isStorageAvailable())
 
 // Types matching your existing React Native app
 export interface UserProfile {
