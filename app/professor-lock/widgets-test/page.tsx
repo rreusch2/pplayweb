@@ -35,8 +35,8 @@ export default function WidgetsTestPage() {
       { label: 'FG%', value: '50.6' }
     ],
     props: [
-      { market: 'Points', line: '25.5', over: '-110', under: '-110', recommendation: 'over' },
-      { market: 'Assists', line: '7.5', over: '+105', under: '-125', recommendation: 'over' },
+      { market: 'Points', line: '25.5', over: '-110', under: '-110', recommendation: 'over' as const },
+      { market: 'Assists', line: '7.5', over: '+105', under: '-125', recommendation: 'over' as const },
       { market: 'Rebounds', line: '8.5', over: '-115', under: '-105' },
       { market: '3-Pointers', line: '2.5', over: '+120', under: '-140' }
     ]
@@ -77,7 +77,7 @@ export default function WidgetsTestPage() {
       pick: 'Lakers -4.5',
       odds: '-110',
       confidence: 85,
-      status: 'winning',
+      status: 'winning' as const,
       stake: 50,
       potentialWin: 45.45
     },
@@ -87,7 +87,7 @@ export default function WidgetsTestPage() {
       pick: 'Over 215.5',
       odds: '+105',
       confidence: 72,
-      status: 'pending',
+      status: 'pending' as const,
       stake: 30,
       potentialWin: 31.50
     },
@@ -97,7 +97,7 @@ export default function WidgetsTestPage() {
       pick: 'Bucks ML',
       odds: '-180',
       confidence: 92,
-      status: 'won',
+      status: 'won' as const,
       stake: 100,
       potentialWin: 55.56
     }
