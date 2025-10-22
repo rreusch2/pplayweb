@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { ChatKit, useChatKit } from '@openai/chatkit-react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
 
@@ -11,6 +10,18 @@ interface ProfessorLockCustomProps {
   onSessionEnd?: () => void
 }
 
+// ChatKit Web Component types
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'openai-chatkit': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        'api-url'?: string
+        'domain-key'?: string
+      }
+    }
+  }
+}
+
 export default function ProfessorLockCustom({ 
   className = "",
   onSessionStart,
@@ -18,191 +29,153 @@ export default function ProfessorLockCustom({
 }: ProfessorLockCustomProps) {
   const { user, profile, session } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const [scriptLoaded, setScriptLoaded] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const chatkitElementRef = useRef<any>(null)
   
-  // Store callbacks and values in refs to prevent unnecessary re-renders
-  const accessTokenRef = useRef(session?.access_token)
-  
+  // Load ChatKit Web Component script
   useEffect(() => {
-    accessTokenRef.current = session?.access_token
-  }, [session?.access_token])
-
-  // Memoize the entire options object to prevent ChatKit from reinitializing
-  // Custom API mode: use your self-hosted server URL + domain key
-  const options = useMemo(() => ({
-    api: {
-      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
-      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-      // Custom fetch to pass user context headers
-      fetch: async (url: string, init?: RequestInit) => {
-        const headers = {
-          ...init?.headers,
-          'X-User-Id': user?.id || '',
-          'X-User-Email': user?.email || '',
-          'X-User-Tier': profile?.subscription_tier || 'free',
-        };
-        console.log('🌐 ChatKit fetch:', url, 'Headers:', headers);
-        return globalThis.fetch(url, { ...init, headers });
-      },
-    },
-    theme: {
-      colorScheme: 'dark' as const,
-      radius: 'pill' as const,
-      density: 'normal' as const,
-      color: {
-        grayscale: {
-          hue: 0,
-          tint: 0 as const
-        },
-        accent: {
-          primary: '#168aa2',
-          level: 1 as const
-        },
-        surface: {
-          background: '#242424',
-          foreground: '#595654'
-        }
-      },
-      typography: {
-        baseSize: 16 as const,
-        fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      }
-    },
-    header: true as const,
-    composer: {
-      attachments: {
-        enabled: true,
-        maxCount: 5,
-        maxSize: 10485760 // 10MB
-      },
-      placeholder: "What's the play today, champ? Ask about odds, builds parlays, or get the latest insights...",
-      tools: [
-        {
-          id: 'analyze_games',
-          label: 'Analyze Today\'s Games',
-          icon: 'analytics',
-          shortLabel: 'Games',
-          placeholderOverride: 'Which sport or specific games should I analyze?',
-          pinned: true
-        },
-        {
-          id: 'build_parlay',
-          label: 'Build Smart Parlay',
-          icon: 'sparkle',
-          shortLabel: 'Parlay',
-          placeholderOverride: 'Tell me your preferred legs or let me suggest a parlay',
-          pinned: true
-        },
-        {
-          id: 'find_props',
-          label: 'Find Player Props',
-          icon: 'star',
-          shortLabel: 'Props',
-          placeholderOverride: 'Which players or prop types are you interested in?',
-          pinned: true
-        },
-        {
-          id: 'check_injuries',
-          label: 'Injury Reports',
-          icon: 'lifesaver',
-          shortLabel: 'Injuries',
-          placeholderOverride: 'Which teams should I check for injury updates?',
-          pinned: false
-        },
-        {
-          id: 'get_trends',
-          label: 'Betting Trends',
-          icon: 'chart',
-          shortLabel: 'Trends',
-          placeholderOverride: 'What trends or patterns should I analyze?',
-          pinned: false
-        }
-      ],
-    },
-    newThreadView: {
-      greeting: '🎯 Professor Lock is locked in! Let\'s find some winners, champ! 💰',
-      prompts: [
-        {
-          icon: 'star-filled',
-          label: 'What are today\'s best value bets?',
-          prompt: 'Analyze today\'s games across all sports and give me your top 3 confident picks with the best value'
-        },
-        {
-          icon: 'plus',
-          label: 'Build me a 3-leg parlay',
-          prompt: 'Create a 3-leg parlay with solid confidence levels and good payout potential for tonight\'s games'
-        },
-        {
-          icon: 'bolt',
-          label: 'Find hot player props',
-          prompt: 'Show me the best player prop bets with strong value and high confidence for today\'s slate'
-        },
-        {
-          icon: 'chart',
-          label: 'Show me betting trends',
-          prompt: 'What are the current betting trends, line movements, and where is the smart money going?'
-        },
-        {
-          icon: 'info',
-          label: 'Any key injuries affecting bets?',
-          prompt: 'Check for any significant injuries or lineup changes that could impact betting decisions today'
-        }
-      ],
-    },
-    widgets: {
-      async onAction(action: any, item: any) {
-        try {
-          console.log('Widget action:', action.type, action.payload)
-          
-          // Send action to your custom widget handler
-          const token = accessTokenRef.current
-          if (!token) return
-          
-          await fetch('/api/chatkit/widget-action', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ action, itemId: item?.id })
-          })
-          
-          // Show success feedback
-          const actionLabels: { [key: string]: string } = {
-            'add_to_betslip': '💰 Added to betslip!',
-            'submit_parlay': '🔒 Parlay submitted!',
-            'analyze_game': '📊 Analyzing game...',
-            'refresh_odds': '🔄 Refreshing odds...'
-          }
-          
-          const message = actionLabels[action.type] || '✅ Action completed'
-          toast.success(message)
-          
-        } catch (error) {
-          console.error('Widget action error:', error)
-          toast.error('Action failed')
-        }
-      },
+    console.log('📦 Loading ChatKit Web Component script...')
+    
+    // Check if script already exists
+    if (document.querySelector('script[src*="chatkit"]')) {
+      console.log('✅ ChatKit script already loaded')
+      setScriptLoaded(true)
+      return
     }
-  } as any), [user, profile])
 
-  const { control } = useChatKit(options)
+    const script = document.createElement('script')
+    script.src = 'https://cdn.openai.com/chatkit/v1/chatkit.js'
+    script.async = true
+    script.onload = () => {
+      console.log('✅ ChatKit Web Component script loaded')
+      setScriptLoaded(true)
+    }
+    script.onerror = () => {
+      console.error('❌ Failed to load ChatKit script')
+      setError('Failed to load ChatKit library')
+    }
+    
+    document.head.appendChild(script)
+    
+    return () => {
+      // Don't remove script on unmount (shared across instances)
+    }
+  }, [])
 
+  // Initialize ChatKit Web Component
   useEffect(() => {
-    console.log('🎯 ProfessorLockCustom mounting (Custom API mode)...')
-    console.log('User:', user?.id)
-    console.log('User Tier:', profile?.subscription_tier)
+    if (!scriptLoaded || !user || !containerRef.current) return
+
+    console.log('🎯 Initializing ChatKit Web Component...')
+    console.log('User:', user.id)
+    console.log('Tier:', profile?.subscription_tier)
     
     const serverUrl = process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit'
     const domainKey = process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2'
     
-    console.log('🐍 Custom API mode - Railway server')
-    console.log('🔗 Server URL:', serverUrl)
+    console.log('🐍 Server:', serverUrl)
     console.log('🔑 Domain Key:', domainKey.substring(0, 20) + '...')
+
+    // Create the openai-chatkit custom element
+    const chatkitEl = document.createElement('openai-chatkit')
+    chatkitEl.setAttribute('api-url', serverUrl)
+    chatkitEl.setAttribute('domain-key', domainKey)
     
-    // Listen for ChatKit events for deeper debugging
+    // Apply configuration via JavaScript
+    const config = {
+      theme: {
+        colorScheme: 'dark',
+        radius: 'pill',
+        density: 'normal',
+        color: {
+          grayscale: { hue: 0, tint: 0 },
+          accent: { primary: '#168aa2', level: 1 },
+          surface: { background: '#242424', foreground: '#595654' }
+        },
+        typography: {
+          baseSize: 16,
+          fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+        }
+      },
+      header: true,
+      composer: {
+        attachments: { enabled: true, maxCount: 5, maxSize: 10485760 },
+        placeholder: "What's the play today, champ? Ask about odds, build parlays, or get the latest insights...",
+        tools: [
+          {
+            id: 'analyze_games',
+            label: 'Analyze Today\'s Games',
+            icon: 'analytics',
+            shortLabel: 'Games',
+            placeholderOverride: 'Which sport or specific games should I analyze?',
+            pinned: true
+          },
+          {
+            id: 'build_parlay',
+            label: 'Build Smart Parlay',
+            icon: 'sparkle',
+            shortLabel: 'Parlay',
+            placeholderOverride: 'Tell me your preferred legs or let me suggest a parlay',
+            pinned: true
+          }
+        ]
+      },
+      newThreadView: {
+        greeting: '🎯 Professor Lock is locked in! Let\'s find some winners, champ! 💰',
+        prompts: [
+          {
+            icon: 'star-filled',
+            label: 'What are today\'s best value bets?',
+            prompt: 'Analyze today\'s games across all sports and give me your top 3 confident picks with the best value'
+          },
+          {
+            icon: 'plus',
+            label: 'Build me a 3-leg parlay',
+            prompt: 'Create a 3-leg parlay with solid confidence levels and good payout potential for tonight\'s games'
+          },
+          {
+            icon: 'bolt',
+            label: 'Find hot player props',
+            prompt: 'Show me the best player prop bets with strong value and high confidence for today\'s slate'
+          }
+        ]
+      }
+    }
+    
+    // Apply config
+    ;(chatkitEl as any).config = config
+    
+    // Add user context headers interceptor
+    ;(chatkitEl as any).fetchInterceptor = (url: string, init: RequestInit) => {
+      return fetch(url, {
+        ...init,
+        headers: {
+          ...init.headers,
+          'X-User-Id': user.id || '',
+          'X-User-Email': user.email || '',
+          'X-User-Tier': profile?.subscription_tier || 'free'
+        }
+      })
+    }
+    
+    // Style the element
+    chatkitEl.style.width = '100%'
+    chatkitEl.style.height = '100%'
+    chatkitEl.style.minHeight = '600px'
+    chatkitEl.style.display = 'block'
+    
+    // Append to container
+    containerRef.current.innerHTML = '' // Clear any existing content
+    containerRef.current.appendChild(chatkitEl)
+    chatkitElementRef.current = chatkitEl
+    
+    console.log('✅ ChatKit element created and mounted')
+
+    // Event listeners
     const handleError = (e: any) => {
       console.error('🚨 chatkit.error:', e.detail)
-      setError(`ChatKit error: ${e.detail?.error?.message || 'Unknown error'}`)
+      setError(`ChatKit error: ${e.detail?.error?.message || 'Connection failed'}`)
     }
     const handleLog = (e: any) => {
       console.log('🪵 chatkit.log:', e.detail)
@@ -215,27 +188,43 @@ export default function ProfessorLockCustom({
     }
     const handleThread = (e: any) => {
       console.log('🧵 chatkit.thread.change:', e.detail)
+      if (e.detail?.threadId && !chatkitElementRef.current?.hasSession) {
+        chatkitElementRef.current.hasSession = true
+        onSessionStart?.()
+      }
+    }
+    const handleAction = (e: any) => {
+      console.log('🎬 chatkit.widget.action:', e.detail)
+      const { action } = e.detail || {}
+      if (action?.type) {
+        const actionLabels: Record<string, string> = {
+          'add_to_betslip': '💰 Added to betslip!',
+          'submit_parlay': '🔒 Parlay submitted!',
+          'analyze_game': '📊 Analyzing game...',
+          'refresh_odds': '🔄 Refreshing odds...'
+        }
+        toast.success(actionLabels[action.type] || '✅ Action completed')
+      }
     }
 
-    window.addEventListener('chatkit.error', handleError as any)
-    window.addEventListener('chatkit.log', handleLog as any)
-    window.addEventListener('chatkit.response.start', handleStart as any)
-    window.addEventListener('chatkit.response.end', handleEnd as any)
-    window.addEventListener('chatkit.thread.change', handleThread as any)
-    
-    // Trigger onSessionStart when component mounts (Custom API has no "session")
-    onSessionStart?.()
+    chatkitEl.addEventListener('chatkit.error', handleError)
+    chatkitEl.addEventListener('chatkit.log', handleLog)
+    chatkitEl.addEventListener('chatkit.response.start', handleStart)
+    chatkitEl.addEventListener('chatkit.response.end', handleEnd)
+    chatkitEl.addEventListener('chatkit.thread.change', handleThread)
+    chatkitEl.addEventListener('chatkit.widget.action', handleAction)
     
     return () => {
-      console.log('🔌 ProfessorLockCustom unmounting')
-      window.removeEventListener('chatkit.error', handleError as any)
-      window.removeEventListener('chatkit.log', handleLog as any)
-      window.removeEventListener('chatkit.response.start', handleStart as any)
-      window.removeEventListener('chatkit.response.end', handleEnd as any)
-      window.removeEventListener('chatkit.thread.change', handleThread as any)
+      console.log('🔌 Cleaning up ChatKit Web Component')
+      chatkitEl.removeEventListener('chatkit.error', handleError)
+      chatkitEl.removeEventListener('chatkit.log', handleLog)
+      chatkitEl.removeEventListener('chatkit.response.start', handleStart)
+      chatkitEl.removeEventListener('chatkit.response.end', handleEnd)
+      chatkitEl.removeEventListener('chatkit.thread.change', handleThread)
+      chatkitEl.removeEventListener('chatkit.widget.action', handleAction)
       onSessionEnd?.()
     }
-  }, [onSessionStart, onSessionEnd, user, profile])
+  }, [scriptLoaded, user, profile, onSessionStart, onSessionEnd])
 
   if (!user) {
     return (
@@ -251,7 +240,17 @@ export default function ProfessorLockCustom({
     )
   }
 
-  console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
+  if (!scriptLoaded) {
+    return (
+      <div className="flex h-[600px] items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60">
+        <div className="text-center">
+          <div className="mb-4 h-10 w-10 animate-spin rounded-full border-3 border-blue-500/20 border-t-blue-500 mx-auto"></div>
+          <p className="text-lg text-slate-200 font-medium">Loading Professor Lock...</p>
+          <p className="text-xs text-slate-400 mt-2">Initializing ChatKit</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -274,22 +273,12 @@ export default function ProfessorLockCustom({
         </div>
       )}
       
-      {control ? (
-        <>
-          <div className="absolute top-3 right-3 z-10 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-            ⚡ Live
-          </div>
-          <ChatKit control={control} className="w-full min-h-[600px]" />
-        </>
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <div className="text-center">
-            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-3 border-blue-500/20 border-t-blue-500 mx-auto"></div>
-            <p className="text-lg text-slate-200 font-medium">Initializing Professor Lock...</p>
-            <p className="text-xs text-slate-400 mt-2">Custom API Mode</p>
-          </div>
-        </div>
-      )}
+      <div className="absolute top-3 right-3 z-10 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+        ⚡ Live
+      </div>
+      
+      {/* ChatKit Web Component container */}
+      <div ref={containerRef} className="w-full h-full" />
     </div>
   )
 }
