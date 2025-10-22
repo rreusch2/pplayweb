@@ -40,8 +40,8 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
     error: null
   })
   const router = useRouter()
-  const initTimeoutRef = useRef<NodeJS.Timeout>()
-  const profileFetchRef = useRef<Promise<UserProfile | null>>()
+  const initTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const profileFetchRef = useRef<Promise<UserProfile | null> | undefined>(undefined)
   const mountedRef = useRef(true)
   const hasInitializedRef = useRef(false)
 

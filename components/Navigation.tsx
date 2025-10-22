@@ -229,6 +229,18 @@ export default function Navigation() {
                       </Link>
                     )}
 
+                    {/* Auth Debug Link - Only in development */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <Link
+                        href="/auth-debug"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-3 px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-500/10 transition-colors"
+                      >
+                        <Zap className="w-4 h-4" />
+                        <span>Auth Debug</span>
+                      </Link>
+                    )}
+
                     <div className="my-2 border-t border-white/10" />
 
                     {/* Logout */}
