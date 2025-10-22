@@ -39,19 +39,22 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Create ChatKit session with OpenAI
-    const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
+    // Create ChatKit session with YOUR Python server on Railway
+    const railwayUrl = process.env.CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app';
+    const response = await fetch(`${railwayUrl}/create-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'OpenAI-Beta': 'chatkit_beta=v1',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // Your Python server will use this for OpenAI
       },
       body: JSON.stringify({
-        workflow: { 
-          id: process.env.OPENAI_WORKFLOW_ID || 'wf_placeholder' // You'll need to add your workflow ID
-        },
-        user: user.id
+        user_id: user.id,
+        user_preferences: {
+          subscription_tier: profile?.subscription_tier,
+          preferred_sports: profile?.preferred_sports,
+          risk_tolerance: profile?.risk_tolerance,
+          betting_style: profile?.betting_style
+        }
       }),
     })
 
@@ -71,8 +74,14 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         created_at: new Date().toISOString(),
         metadata: {
-          workflow_id: process.env.OPENAI_WORKFLOW_ID,
-          tier: profile?.subscription_tier
+          server: 'python_chatkit_railway',
+          server_url: railwayUrl,
+          tier: profile?.subscription_tier,
+          preferences: {
+            sports: profile?.preferred_sports,
+            risk: profile?.risk_tolerance,
+            style: profile?.betting_style
+          }
         }
       })
 
