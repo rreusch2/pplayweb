@@ -12,7 +12,7 @@ interface ProfessorLockCustomProps {
 }
 
 export default function ProfessorLockCustom({ 
-  className = "h-[600px] w-full",
+  className = "",
   onSessionStart,
   onSessionEnd
 }: ProfessorLockCustomProps) {
@@ -143,6 +143,7 @@ export default function ProfessorLockCustom({
     composer: {
       attachments: {
         enabled: true,
+        uploadStrategy: { type: 'hosted' },
         maxCount: 5,
         maxSize: 10485760 // 10MB
       },
@@ -361,30 +362,14 @@ export default function ProfessorLockCustom({
   console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
 
   return (
-    <div className="chatkit-container rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-xl">
-      {/* Professor Lock Status Bar */}
-      {sessionData && (
-        <div className="p-3 border-b border-white/10 bg-gradient-to-r from-blue-600/20 to-purple-600/20">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-slate-300">
-                🎯 Professor Lock • <span className="capitalize">{profile?.subscription_tier || 'free'} tier</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-slate-400">
-              <span>🔧 Advanced Tools</span>
-              <span>📊 Live Widgets</span>
-              <span>💰 Parlay Builder</span>
-            </div>
-          </div>
-        </div>
-      )}
-      
+    <div
+      className={`relative resize overflow-hidden ${className}`}
+      style={{ width: 420, height: 600, minWidth: 320, minHeight: 420, maxHeight: '85vh' }}
+    >
       {control ? (
-        <ChatKit control={control} className={className} />
+        <ChatKit control={control} className="h-full w-full" />
       ) : (
-        <div className="flex h-[600px] items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
             <p className="text-lg text-slate-300">Initializing ChatKit...</p>
