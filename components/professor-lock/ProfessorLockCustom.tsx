@@ -27,6 +27,7 @@ export default function ProfessorLockCustom({
   const onSessionStartRef = useRef(onSessionStart)
   const clientSecretRef = useRef<string | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+  const inflightSecretRef = useRef<Promise<string> | null>(null)
   
   useEffect(() => {
     accessTokenRef.current = session?.access_token
@@ -41,6 +42,12 @@ export default function ProfessorLockCustom({
     if (clientSecretRef.current) {
       console.log('♻️ Using cached client_secret - NO SERVER CALL')
       return clientSecretRef.current
+    }
+
+    // If a request is already in-flight, await and return the same promise
+    if (inflightSecretRef.current) {
+      console.log('⏳ Reusing in-flight client_secret request')
+      return inflightSecretRef.current
     }
     
     try {
@@ -60,54 +67,55 @@ export default function ProfessorLockCustom({
         throw new Error(errorMsg)
       }
       
-      console.log('🛰 Requesting Professor Lock session (server may reuse a recent one)...')
+      console.log('🛰 Requesting OpenAI ChatKit session (server stores/reuses in DB)...')
       
-      // Use custom session endpoint for Professor Lock server
-      const res = await fetch('/api/chatkit/custom-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      // Use OpenAI-hosted session endpoint (also persists in DB on server)
+      inflightSecretRef.current = (async () => {
+        const res = await fetch('/api/chatkit/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
-        const errorMsg = errorData.error || `Server responded with status ${res.status}`
-        console.error('❌ Professor Lock connection failed:', errorMsg)
-        setError(`Connection failed: ${errorMsg}`)
-        throw new Error(errorMsg)
-      }
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
+          const errorMsg = errorData.error || `Server responded with status ${res.status}`
+          console.error('❌ ChatKit session creation failed:', errorMsg)
+          setError(`Connection failed: ${errorMsg}`)
+          throw new Error(errorMsg)
+        }
 
-      const data = await res.json()
-      console.log(`✅ Professor Lock session ready: ${data.session_id} ${data.reused ? '(reused)' : '(new)'}`)
-      setSessionData(data)
-      setError(null)
-      onSessionStartRef.current?.()
-      
-      // Cache for subsequent calls in this mount
-      clientSecretRef.current = data.client_secret
-      sessionIdRef.current = data.session_id
-      return data.client_secret
+        const data = await res.json()
+        console.log(`✅ OpenAI ChatKit session ready: ${data.session_id}`)
+        setSessionData(data)
+        setError(null)
+        onSessionStartRef.current?.()
+        
+        // Cache for subsequent calls in this mount
+        clientSecretRef.current = data.client_secret
+        sessionIdRef.current = data.session_id
+        return data.client_secret as string
+      })()
+      const result = await inflightSecretRef.current
+      return result
     } catch (error: any) {
       const errorMsg = error.message || 'Failed to connect to Professor Lock server'
       console.error('❌ Professor Lock session error:', error)
       setError(errorMsg)
       throw error
     }
+    finally {
+      inflightSecretRef.current = null
+    }
   }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
-  // IMPORTANT: Use custom server mode (apiURL + fetch). ChatKit will stream to our proxy which forwards to PyKit.
+  // Use supported options for chatkit-react v1: api.getClientSecret
   const options = useMemo(() => ({
-    apiURL: '/api/chatkit/proxy',
-    fetch: async (url: string, init?: RequestInit) => {
-      const token = accessTokenRef.current
-      const headers = new Headers(init?.headers || {})
-      if (token) headers.set('Authorization', `Bearer ${token}`)
-      // Ensure streaming content type is preserved
-      if (!headers.get('Accept')) headers.set('Accept', 'text/event-stream')
-      return fetch(url, { ...init, headers })
+    api: {
+      getClientSecret,
     },
     theme: {
       colorScheme: 'dark' as const,
@@ -247,7 +255,7 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any), [])
+  } as any), [getClientSecret])
 
   const { control } = useChatKit(options)
 
@@ -276,33 +284,6 @@ export default function ProfessorLockCustom({
       console.log('✅ ChatKit script already loaded')
       setIsLoading(false)
     }
-
-    // Fire-and-forget: create/reuse session on our side for tracking & UI, independent of ChatKit transport
-    const ensureSessionTracked = async () => {
-      try {
-        if (!accessTokenRef.current) return
-        const res = await fetch('/api/chatkit/custom-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessTokenRef.current}`,
-          },
-        })
-        if (!res.ok) {
-          console.warn('custom-session tracking failed')
-          return
-        }
-        const data = await res.json()
-        console.log(`🗂 Session tracking ready: ${data.session_id} ${data.reused ? '(reused)' : '(new)'}`)
-        setSessionData(data)
-        clientSecretRef.current = data.client_secret
-        sessionIdRef.current = data.session_id
-      } catch (e) {
-        console.warn('custom-session call errored', e)
-      }
-    }
-    ensureSessionTracked()
-
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
       onSessionEnd?.()
