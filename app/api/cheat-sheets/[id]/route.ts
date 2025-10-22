@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase client
@@ -8,11 +8,11 @@ const supabase = createClient(
 )
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: any
 ) {
   try {
-    const shareId = params.id
+    const shareId = context?.params?.id
 
     if (!shareId) {
       return NextResponse.json({ error: 'Missing share ID' }, { status: 400 })
