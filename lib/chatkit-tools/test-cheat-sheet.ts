@@ -260,6 +260,17 @@ export const testPrompts = [
 ]
 
 /**
+ * Helper for expect-like matchers (Jest-style)
+ */
+const expect = {
+  stringContaining: (str: string) => str,
+  stringMatching: (pattern: RegExp) => pattern,
+  arrayContaining: (arr: any[]) => arr,
+  objectContaining: (obj: any) => obj,
+  any: (type: any) => type
+}
+
+/**
  * Expected Tool Calls
  * 
  * When Professor Lock receives these prompts, he should call
@@ -279,13 +290,4 @@ export const expectedToolCalls = {
     ]),
     insights: expect.any(Array)
   }
-}
-
-// Helper for expect (if using Jest)
-const expect = {
-  stringContaining: (str: string) => str,
-  stringMatching: (pattern: RegExp) => pattern,
-  arrayContaining: (arr: any[]) => arr,
-  objectContaining: (obj: any) => obj,
-  any: (type: any) => type
 }
