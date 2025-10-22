@@ -64,6 +64,7 @@ export default function SelfHostedChatKit({
     console.log('🎯 SelfHostedChatKit mounted')
     console.log('User:', user?.id)
     console.log('ChatKit control exists:', !!chatkit?.control)
+    console.log('ChatKit full object:', chatkit)
     
     if (chatkit?.control && user) {
       console.log('✅ ChatKit ready - setting loading false')
@@ -146,10 +147,10 @@ export default function SelfHostedChatKit({
 
   return (
     <div className={className}>
-      <div className="h-full rounded-2xl overflow-hidden border border-white/10">
+      <div className="h-full">
         <ChatKit
           control={chatkit.control}
-          className="w-full h-full"
+          style={{ width: '100%', height: '100%' }}
         />
       </div>
       

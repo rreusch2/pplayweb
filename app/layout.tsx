@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import Script from 'next/script'
 import './globals.css'
 import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
@@ -259,11 +258,6 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
-        {/* ChatKit Web Component - using Next Script for better loading */}
-        <Script 
-          src="https://cdn.openai.com/chatkit/chatkit.js"
-          strategy="lazyOnload"
-        />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-600 text-white px-3 py-2 rounded"
