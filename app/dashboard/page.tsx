@@ -101,7 +101,7 @@ export default function Dashboard() {
     <>
     <TierEnhancedUI>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
         {/* Enhanced Welcome Section with tier-based styling */}
         <div className={`mb-8 p-6 rounded-xl ${
           subscriptionTier === 'elite' ? 'bg-gradient-to-br from-blue-900/25 via-purple-900/25 to-indigo-900/25 border border-blue-500/40' :

@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
-import { Maximize2, Minimize2, LayoutPanelTop } from 'lucide-react'
+import { Maximize2, Minimize2 } from 'lucide-react'
+import ResizableChatKit from '@/components/professor-lock/ResizableChatKit'
 
 // Dynamically import ChatKit components to avoid SSR issues
 const ChatKitProfessorLock = dynamic(
@@ -40,16 +41,13 @@ export default function ProfessorLockPage() {
   const { profile } = useAuth()
   const tier = (profile?.subscription_tier || 'free') as 'free' | 'pro' | 'elite'
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [compact, setCompact] = useState(false)
-
-  const heightClass = compact ? 'h-[65vh] md:h-[68vh]' : 'h-[72vh] md:h-[75vh]'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 pt-2 md:pt-3 pb-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 pt-4 pb-8 px-4">
       <div className="mx-auto w-full max-w-6xl">
         {/* Header */}
-        <div className="mb-2 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-0.5">
+        <div className="mb-4 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
             Professor Lock
           </h1>
           <p className="text-slate-400 text-sm md:text-base">
@@ -58,8 +56,8 @@ export default function ProfessorLockPage() {
         </div>
 
         {/* Toolbar + ChatKit Container */}
-        <div className="mx-auto w-full max-w-4xl">
-          <div className="mb-2 flex items-center justify-between">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs rounded-full px-2.5 py-1 border border-white/10 bg-white/5 capitalize">
                 {tier} tier
@@ -67,15 +65,8 @@ export default function ProfessorLockPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCompact((v) => !v)}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/10"
-                title="Toggle compact height"
-              >
-                <LayoutPanelTop className="w-4 h-4" /> {compact ? 'Normal height' : 'Compact height'}
-              </button>
-              <button
                 onClick={() => setIsFullscreen(true)}
-                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/10"
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/10 transition-colors"
                 title="Fullscreen"
               >
                 <Maximize2 className="w-4 h-4" /> Fullscreen
@@ -84,12 +75,21 @@ export default function ProfessorLockPage() {
           </div>
 
           {!isFullscreen && (
-            <div className={`relative overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-white/[0.04] backdrop-blur-sm ${heightClass}`}>
-              {process.env.NEXT_PUBLIC_USE_CUSTOM_PROFESSOR_LOCK === 'true' ? (
-                <ProfessorLockCustom className="w-full h-full" />
-              ) : (
-                <ChatKitProfessorLock className="w-full h-full" />
-              )}
+            <div className="flex justify-center">
+              <ResizableChatKit
+                initialWidth={900}
+                initialHeight={600}
+                minWidth={600}
+                maxWidth={1200}
+                minHeight={400}
+                maxHeight={800}
+              >
+                {process.env.NEXT_PUBLIC_USE_CUSTOM_PROFESSOR_LOCK === 'true' ? (
+                  <ProfessorLockCustom className="w-full h-full" />
+                ) : (
+                  <ChatKitProfessorLock className="w-full h-full" />
+                )}
+              </ResizableChatKit>
             </div>
           )}
         </div>
