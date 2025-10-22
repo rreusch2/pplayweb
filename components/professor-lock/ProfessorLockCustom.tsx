@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 import { useChatKit, ChatKit } from '@openai/chatkit-react'
+import '@openai/chatkit-react/styles.css'
 
 interface ProfessorLockCustomProps {
   className?: string
