@@ -23,7 +23,7 @@ const ChatKitProfessorLock = dynamic(
 )
 
 const ProfessorLockCustom = dynamic(
-  () => import('@/components/professor-lock/ProfessorLockCustom'),
+  () => import('@/components/professor-lock/ProfessorLockCustomRaw'),
   { 
     ssr: false,
     loading: () => (
