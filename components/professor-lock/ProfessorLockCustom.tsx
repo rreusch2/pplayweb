@@ -23,7 +23,6 @@ export default function ProfessorLockCustom({
   useEffect(() => {
     if (typeof window === 'undefined') return
     
-    // Check if already loaded
     if (window.customElements?.get('openai-chatkit')) {
       setScriptLoaded(true)
       return
@@ -49,7 +48,7 @@ export default function ProfessorLockCustom({
     document.head.appendChild(script)
     
     return () => {
-      // Keep script for other instances
+      // keep script loaded
     }
   }, [])
 
@@ -64,34 +63,77 @@ export default function ProfessorLockCustom({
     console.log('🐍 Server:', serverUrl)
     console.log('👤 User:', user.id, 'Tier:', profile?.subscription_tier)
 
-    const element = document.createElement('openai-chatkit') as any
-    
-    // Configure Custom API mode
-    element.apiURL = serverUrl
-    element.domainKey = domainKey
-    
-    // Pass user context via custom headers
-    element.addEventListener('chatkit:request', (e: any) => {
-      if (e.detail?.headers) {
-        e.detail.headers['X-User-Id'] = user.id || ''
-        e.detail.headers['X-User-Email'] = user.email || ''
-        e.detail.headers['X-User-Tier'] = profile?.subscription_tier || 'free'
+    const el = document.createElement('openai-chatkit') as any
+
+    // Set both properties and attributes to be safe
+    el.apiURL = serverUrl
+    el.domainKey = domainKey
+    el.setAttribute('api-url', serverUrl)
+    el.setAttribute('domain-key', domainKey)
+
+    // Inject headers for Custom API requests
+    el.fetchInterceptor = (url: string, init: RequestInit) => {
+      const headers = {
+        ...init?.headers,
+        'X-User-Id': user.id || '',
+        'X-User-Email': user.email || '',
+        'X-User-Tier': profile?.subscription_tier || 'free',
       }
-    })
-    
-    // Style
-    element.style.width = '100%'
-    element.style.height = '100%'
-    element.style.display = 'block'
-    
-    // Clear and mount
+      console.log('🌐 ChatKit request:', url)
+      return fetch(url, { ...init, headers })
+    }
+
+    // Force visible UI: header + composer + start screen
+    el.config = {
+      header: true,
+      composer: {
+        attachments: { enabled: true, maxCount: 5, maxSize: 10485760 },
+        placeholder: "What's the play today, champ? Ask about odds, build parlays, or get the latest insights...",
+      },
+      newThreadView: {
+        greeting: "🎯 Professor Lock is locked in! Let's find some winners, champ! 💰",
+        prompts: [
+          { icon: 'star-filled', label: "Today's best value bets", prompt: "Analyze today's games and give me top 3 confident picks" },
+          { icon: 'plus', label: 'Build me a 3-leg parlay', prompt: "Build a 3-leg parlay with strong value and reasonable risk" },
+          { icon: 'bolt', label: 'Find hot player props', prompt: "Show the best player prop bets with strong value today" },
+        ],
+      },
+      theme: {
+        colorScheme: 'dark',
+      },
+    }
+
+    // Helpful event listeners
+    const onError = (e: any) => {
+      console.error('🚨 chatkit.error:', e?.detail || e)
+      setError(e?.detail?.error?.message || 'ChatKit error')
+    }
+    const onLog = (e: any) => console.log('🪵 chatkit.log:', e?.detail || e)
+    const onStart = () => console.log('🟢 chatkit.response.start')
+    const onEnd = () => console.log('🟣 chatkit.response.end')
+
+    el.addEventListener('chatkit.error', onError)
+    el.addEventListener('chatkit:log', onLog)
+    el.addEventListener('chatkit.log', onLog)
+    el.addEventListener('chatkit.response.start', onStart)
+    el.addEventListener('chatkit.response.end', onEnd)
+
+    // Style & mount
+    el.style.width = '100%'
+    el.style.height = '100%'
+    el.style.display = 'block'
     containerRef.current.innerHTML = ''
-    containerRef.current.appendChild(element)
-    
+    containerRef.current.appendChild(el)
+
     console.log('✅ ChatKit element mounted')
     onSessionStart?.()
 
     return () => {
+      el.removeEventListener('chatkit.error', onError)
+      el.removeEventListener('chatkit:log', onLog)
+      el.removeEventListener('chatkit.log', onLog)
+      el.removeEventListener('chatkit.response.start', onStart)
+      el.removeEventListener('chatkit.response.end', onEnd)
       onSessionEnd?.()
     }
   }, [scriptLoaded, user, profile, onSessionStart, onSessionEnd])
