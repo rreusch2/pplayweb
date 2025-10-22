@@ -362,15 +362,9 @@ export default function ProfessorLockCustom({
 
   return (
     <div
-      className={`relative resize overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-[#242424] backdrop-blur-sm ${className}`}
+      className={`relative resize overflow-hidden ${className}`}
       style={{ width: 420, height: 600, minWidth: 320, minHeight: 420, maxHeight: '85vh' }}
     >
-      {/* Resize handle indicator */}
-      <div className="absolute bottom-1 right-1 w-4 h-4 pointer-events-none opacity-30 hover:opacity-100 transition-opacity z-10">
-        <svg className="w-full h-full text-white/40" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M15 12l-3 3v-3h3zM15 8l-7 7v-3l4-4h3zM15 4l-11 11v-3l8-8h3z" />
-        </svg>
-      </div>
       {control ? (
         <ChatKit control={control} className="h-full w-full" />
       ) : (
