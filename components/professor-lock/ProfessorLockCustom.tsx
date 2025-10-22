@@ -16,14 +16,14 @@ export default function ProfessorLockCustom({
   onSessionStart,
   onSessionEnd
 }: ProfessorLockCustomProps) {
-  const { user, profile } = useAuth()
+  const { user, profile, session } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const accessTokenRef = useRef(profile?.access_token)
+  const accessTokenRef = useRef(session?.access_token)
   useEffect(() => {
-    accessTokenRef.current = profile?.access_token
-  }, [profile?.access_token])
+    accessTokenRef.current = session?.access_token
+  }, [session?.access_token])
 
   const options = useMemo(() => ({
     api: {
