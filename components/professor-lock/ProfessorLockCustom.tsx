@@ -1,27 +1,8 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
-
-// Declare the custom element type for TypeScript
-interface OpenAIChatKitElement extends HTMLElement {
-  fetch?: typeof window.fetch
-  composer?: any
-  newThreadView?: any
-  theme?: string
-  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void
-}
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'openai-chatkit': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        'api-url'?: string
-        theme?: string
-      }, HTMLElement>
-    }
-  }
-}
+import { useChatKit, ChatKit } from '@openai/chatkit-react'
 
 interface ProfessorLockCustomProps {
   className?: string
@@ -36,122 +17,88 @@ export default function ProfessorLockCustom({
 }: ProfessorLockCustomProps) {
   const { user, profile } = useAuth()
   const [error, setError] = useState<string | null>(null)
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false)
-  const chatkitRef = useRef<OpenAIChatKitElement | null>(null)
 
   const serverUrl = process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit'
+  const domainKey = process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2'
 
   console.log('🎯 Configuring ChatKit for Custom Backend')
   console.log('🐍 Server URL:', serverUrl)
+  console.log('🔑 Domain Key:', domainKey)
   console.log('👤 User:', user?.id, 'Tier:', profile?.subscription_tier)
 
-  // Load ChatKit script
+  // Configure ChatKit options for custom backend
+  const options = useMemo(() => {
+    return {
+      api: {
+        // For custom backends with Python SDK
+        url: serverUrl,
+        domainKey: domainKey,
+        fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+          const headers = {
+            ...init?.headers,
+            'X-User-Id': user?.id || '',
+            'X-User-Email': user?.email || '',
+            'X-User-Tier': profile?.subscription_tier || 'free',
+          }
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url
+          console.log('🌐 ChatKit fetch:', url, 'with headers:', headers)
+          return fetch(input, { ...init, headers })
+        },
+      },
+      theme: {
+        colorScheme: 'dark' as const,
+      },
+      composer: {
+        placeholder: "What's the play today, champ? Ask about odds, build parlays, or get insights...",
+      },
+      startScreen: {
+        greeting: "🎯 Professor Lock is locked in! Let's find some winners, champ! 💰",
+        prompts: [
+          { 
+            label: "Today's best value bets", 
+            prompt: "Analyze today's games and give me top 3 confident picks", 
+            icon: 'star' as const
+          },
+          { 
+            label: 'Build me a 3-leg parlay', 
+            prompt: "Build a 3-leg parlay with strong value and reasonable risk", 
+            icon: 'write' as const
+          },
+          { 
+            label: 'Find hot player props', 
+            prompt: "Show the best player prop bets with strong value today", 
+            icon: 'bolt' as const
+          },
+        ],
+      },
+      onError: (event: any) => {
+        console.error('🚨 ChatKit error:', event.error)
+        setError(event.error?.message || 'An error occurred')
+      },
+      onLog: (event: any) => {
+        console.log('🪵 ChatKit log:', event.name, event.data)
+      },
+      onResponseStart: () => {
+        console.log('🟢 Response started')
+      },
+      onResponseEnd: () => {
+        console.log('🟣 Response ended')
+      },
+    }
+  }, [user, profile, serverUrl, domainKey])
+
+  const { control } = useChatKit(options)
+
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    // Check if script already exists
-    if (document.querySelector('script[src*="chatkit.js"]')) {
-      console.log('📦 ChatKit script already loaded')
-      setIsScriptLoaded(true)
-      return
+    if (user && control) {
+      console.log('✅ ChatKit initialized with custom backend')
+      console.log('🎮 Control object:', control)
+      onSessionStart?.()
     }
-
-    console.log('📦 Loading ChatKit script from CDN...')
-    const script = document.createElement('script')
-    script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js'
-    script.async = true
-    
-    script.onload = () => {
-      console.log('✅ ChatKit script loaded successfully')
-      setIsScriptLoaded(true)
-    }
-    
-    script.onerror = () => {
-      console.error('❌ Failed to load ChatKit script')
-      setError('Failed to load ChatKit')
-      setIsScriptLoaded(false)
-    }
-
-    document.head.appendChild(script)
-
-    return () => {
-      // Don't remove the script on unmount as it might be used by other components
-    }
-  }, [])
-
-  // Configure ChatKit Web Component after it loads
-  useEffect(() => {
-    if (!isScriptLoaded || !chatkitRef.current || !user) return
-
-    const element = chatkitRef.current
-
-    console.log('⚙️ Configuring ChatKit Web Component')
-
-    // Set up custom fetch to inject user headers
-    const originalFetch = window.fetch
-    element.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const headers = {
-        ...init?.headers,
-        'X-User-Id': user?.id || '',
-        'X-User-Email': user?.email || '',
-        'X-User-Tier': profile?.subscription_tier || 'free',
-      }
-      console.log('🌐 ChatKit fetch:', typeof input === 'string' ? input : input instanceof URL ? input.href : 'Request')
-      return originalFetch(input, { ...init, headers })
-    }
-
-    // Configure composer
-    element.composer = {
-      placeholder: "What's the play today, champ? Ask about odds, build parlays, or get insights..."
-    }
-
-    // Configure new thread view (start screen)
-    element.newThreadView = {
-      greeting: "🎯 Professor Lock is locked in! Let's find some winners, champ! 💰",
-      prompts: [
-        { 
-          label: "Today's best value bets", 
-          prompt: "Analyze today's games and give me top 3 confident picks", 
-          icon: 'star'
-        },
-        { 
-          label: 'Build me a 3-leg parlay', 
-          prompt: "Build a 3-leg parlay with strong value and reasonable risk", 
-          icon: 'write'
-        },
-        { 
-          label: 'Find hot player props', 
-          prompt: "Show the best player prop bets with strong value today", 
-          icon: 'bolt'
-        },
-      ],
-    }
-
-    // Set up event listeners
-    element.addEventListener('chatkit.error', ((e: CustomEvent) => {
-      console.error('🚨 ChatKit error:', e.detail.error)
-      setError(e.detail.error?.message || 'An error occurred')
-    }) as EventListener)
-
-    element.addEventListener('chatkit.log', ((e: CustomEvent) => {
-      console.log('🪵 ChatKit log:', e.detail.name, e.detail.data)
-    }) as EventListener)
-
-    element.addEventListener('chatkit.response.start', () => {
-      console.log('🟢 Response started')
-    })
-
-    element.addEventListener('chatkit.response.end', () => {
-      console.log('🟣 Response ended')
-    })
-
-    console.log('✅ ChatKit Web Component configured')
-    onSessionStart?.()
-
     return () => {
       onSessionEnd?.()
     }
-  }, [isScriptLoaded, user, profile, onSessionStart, onSessionEnd])
+  }, [user, control, onSessionStart, onSessionEnd])
 
   if (!user) {
     return (
@@ -163,16 +110,18 @@ export default function ProfessorLockCustom({
     )
   }
 
-  if (!isScriptLoaded) {
+  if (!control) {
     return (
       <div className="flex h-[600px] items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60">
         <div className="text-center">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-          <p className="text-white/40">Loading ChatKit...</p>
+          <p className="text-white/40">Initializing Professor Lock...</p>
         </div>
       </div>
     )
   }
+
+  console.log('🎨 Rendering ChatKit with control:', !!control)
 
   return (
     <div
@@ -193,14 +142,15 @@ export default function ProfessorLockCustom({
         ⚡ Custom API
       </div>
       
-      {/* ChatKit Web Component for Custom Backend */}
-      <openai-chatkit
-        ref={chatkitRef as any}
-        api-url={serverUrl}
+      {/* ChatKit Component for Custom Backend */}
+      <ChatKit 
+        control={control} 
+        className="w-full h-full"
         style={{
           width: '100%',
           height: '100%',
-          display: 'block',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       />
     </div>
