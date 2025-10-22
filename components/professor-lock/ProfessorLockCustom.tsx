@@ -29,21 +29,19 @@ export default function ProfessorLockCustom({
   // Memoize the entire options object to prevent ChatKit from reinitializing
   // Custom API mode: use your self-hosted server URL + domain key
   const options = useMemo(() => ({
-    api: {
-      // Custom API mode: point to your self-hosted Python ChatKit server
-      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
-      // Required: domain public key from your ChatKit Domain Allowlist
-      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-      // Pass user context to your Python server
-      fetch: async (url: string, init?: RequestInit) => {
-        const headers = {
-          ...init?.headers,
-          'X-User-Id': user?.id || '',
-          'X-User-Email': user?.email || '',
-          'X-User-Tier': profile?.subscription_tier || 'free',
-        };
-        return globalThis.fetch(url, { ...init, headers });
-      },
+    // API endpoint for your self-hosted Python ChatKit server
+    apiUrl: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
+    
+    // Custom fetch to pass user context headers
+    fetch: async (url: string, init?: RequestInit) => {
+      const headers = {
+        ...init?.headers,
+        'X-User-Id': user?.id || '',
+        'X-User-Email': user?.email || '',
+        'X-User-Tier': profile?.subscription_tier || 'free',
+      };
+      console.log('🌐 ChatKit fetch:', url, 'Headers:', headers);
+      return globalThis.fetch(url, { ...init, headers });
     },
     theme: {
       colorScheme: 'dark' as const,
