@@ -65,12 +65,19 @@ export async function POST(req: NextRequest) {
     }
 
     const sessionData = await response.json()
+    
+    console.log('🐍 Python ChatKit server response:', {
+      session_id: sessionData.session_id,
+      has_client_secret: !!sessionData.client_secret,
+      status: sessionData.status,
+      features: sessionData.features
+    })
 
     // Store session in database for tracking
     await supabase
       .from('chatkit_sessions')
       .insert({
-        id: sessionData.id,
+        id: sessionData.session_id,
         user_id: user.id,
         created_at: new Date().toISOString(),
         metadata: {
@@ -87,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       client_secret: sessionData.client_secret,
-      session_id: sessionData.id,
+      session_id: sessionData.session_id,
       user_preferences: {
         sports: profile?.preferred_sports,
         riskTolerance: profile?.risk_tolerance,
