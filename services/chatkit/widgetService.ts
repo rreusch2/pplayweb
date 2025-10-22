@@ -216,7 +216,8 @@ export class WidgetService {
                         color: pick.selected ? 'danger' : 'primary',
                         onClickAction: {
                           type: 'toggle_parlay_pick',
-                          pickId: pick.id
+                          handler: 'client',
+                          payload: { pickId: pick.id }
                         }
                       }
                     ]
@@ -309,7 +310,9 @@ export class WidgetService {
               block: true,
               onClickAction: {
                 type: 'place_parlay',
-                picks: selectedPicks.map(p => p.id)
+                handler: 'client',
+                loadingBehavior: 'container',
+                payload: { picks: selectedPicks.map(p => p.id) }
               }
             },
             {
@@ -318,7 +321,9 @@ export class WidgetService {
               variant: 'outline',
               color: 'secondary',
               onClickAction: {
-                type: 'clear_parlay'
+                type: 'clear_parlay',
+                handler: 'client',
+                payload: {}
               }
             }
           ]
@@ -618,10 +623,13 @@ export class WidgetService {
                           color: prop.recommendation === 'over' ? 'success' : 'secondary',
                           onClickAction: {
                             type: 'select_prop',
-                            player: name,
-                            market: prop.market,
-                            selection: 'over',
-                            odds: prop.over
+                            handler: 'client',
+                            payload: {
+                              player: name,
+                              market: prop.market,
+                              selection: 'over',
+                              odds: prop.over
+                            }
                           }
                         },
                         {
@@ -632,10 +640,13 @@ export class WidgetService {
                           color: prop.recommendation === 'under' ? 'success' : 'secondary',
                           onClickAction: {
                             type: 'select_prop',
-                            player: name,
-                            market: prop.market,
-                            selection: 'under',
-                            odds: prop.under
+                            handler: 'client',
+                            payload: {
+                              player: name,
+                              market: prop.market,
+                              selection: 'under',
+                              odds: prop.under
+                            }
                           }
                         }
                       ]
