@@ -29,19 +29,20 @@ export default function ProfessorLockCustom({
   // Memoize the entire options object to prevent ChatKit from reinitializing
   // Custom API mode: use your self-hosted server URL + domain key
   const options = useMemo(() => ({
-    // API endpoint for your self-hosted Python ChatKit server
-    apiUrl: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
-    
-    // Custom fetch to pass user context headers
-    fetch: async (url: string, init?: RequestInit) => {
-      const headers = {
-        ...init?.headers,
-        'X-User-Id': user?.id || '',
-        'X-User-Email': user?.email || '',
-        'X-User-Tier': profile?.subscription_tier || 'free',
-      };
-      console.log('🌐 ChatKit fetch:', url, 'Headers:', headers);
-      return globalThis.fetch(url, { ...init, headers });
+    api: {
+      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
+      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
+      // Custom fetch to pass user context headers
+      fetch: async (url: string, init?: RequestInit) => {
+        const headers = {
+          ...init?.headers,
+          'X-User-Id': user?.id || '',
+          'X-User-Email': user?.email || '',
+          'X-User-Tier': profile?.subscription_tier || 'free',
+        };
+        console.log('🌐 ChatKit fetch:', url, 'Headers:', headers);
+        return globalThis.fetch(url, { ...init, headers });
+      },
     },
     theme: {
       colorScheme: 'dark' as const,
@@ -234,7 +235,7 @@ export default function ProfessorLockCustom({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={{ minHeight: '600px', background: '#1a1a1a' }}
+      style={{ minHeight: '600px', height: '600px', background: '#1a1a1a' }}
     >
       {error && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -257,7 +258,7 @@ export default function ProfessorLockCustom({
           <div className="absolute top-3 right-3 z-10 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
             ⚡ Live
           </div>
-          <ChatKit control={control} className="h-full w-full" />
+          <ChatKit control={control} className="w-full min-h-[600px]" />
         </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
