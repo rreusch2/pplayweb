@@ -144,6 +144,14 @@ export default function ChatKitProfessorLock({
           pinned: true
         },
         {
+          id: 'cheat_sheet',
+          label: 'Generate Cheat Sheet',
+          icon: 'chart',
+          shortLabel: 'Cheat Sheet',
+          placeholderOverride: 'What type of cheat sheet would you like? (Daily picks, player props, etc.)',
+          pinned: true
+        },
+        {
           id: 'player_stats',
           label: 'Player Stats',
           icon: 'profile-card',
