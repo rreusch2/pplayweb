@@ -21,19 +21,30 @@ export default function ProfessorLockCustom({
   const [error, setError] = useState<string | null>(null)
   const [sessionData, setSessionData] = useState<any>(null)
   const [connectionAttempted, setConnectionAttempted] = useState(false)
+  
+  // Store callbacks and values in refs to prevent unnecessary re-renders
+  const accessTokenRef = useRef(session?.access_token)
+  const onSessionStartRef = useRef(onSessionStart)
+  
+  useEffect(() => {
+    accessTokenRef.current = session?.access_token
+    onSessionStartRef.current = onSessionStart
+  }, [session?.access_token, onSessionStart])
 
   // CRITICAL: Memoize getClientSecret and options to prevent ChatKit from reinitializing
   // on every render, which causes the component to mount/unmount repeatedly
   const getClientSecret = useCallback(async (existing: any) => {
+    console.log('🔑 getClientSecret called, existing:', existing ? 'YES' : 'NO')
+    
     try {
       setConnectionAttempted(true)
       
       if (existing) {
-        console.log('Refreshing Professor Lock session...')
+        console.log('♻️ Reusing existing Professor Lock session - NO NEW SESSION CREATED')
         return existing
       }
 
-      const token = session?.access_token
+      const token = accessTokenRef.current
       
       if (!token) {
         const errorMsg = 'No access token available. Please refresh the page.'
@@ -41,7 +52,7 @@ export default function ProfessorLockCustom({
         throw new Error(errorMsg)
       }
       
-      console.log('🔌 Connecting to Professor Lock server...')
+      console.log('🔌 Creating NEW Professor Lock session...')
       
       // Use custom session endpoint for Professor Lock server
       const res = await fetch('/api/chatkit/custom-session', {
@@ -64,7 +75,7 @@ export default function ProfessorLockCustom({
       console.log('✅ Professor Lock session created:', data.session_id)
       setSessionData(data)
       setError(null)
-      onSessionStart?.()
+      onSessionStartRef.current?.()
       
       return data.client_secret
     } catch (error: any) {
@@ -73,7 +84,7 @@ export default function ProfessorLockCustom({
       setError(errorMsg)
       throw error
     }
-  }, [session?.access_token, onSessionStart])
+  }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
   const options = useMemo(() => ({
@@ -189,7 +200,7 @@ export default function ProfessorLockCustom({
           console.log('Widget action:', action.type, action.payload)
           
           // Send action to your custom widget handler
-          const token = session?.access_token
+          const token = accessTokenRef.current
           if (!token) return
           
           await fetch('/api/chatkit/widget-action', {
@@ -218,7 +229,7 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any), [getClientSecret, session])
+  } as any), [getClientSecret]) // Only depend on getClientSecret, not session
 
   const { control } = useChatKit(options)
 
