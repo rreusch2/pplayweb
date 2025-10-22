@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
@@ -22,59 +22,63 @@ export default function ProfessorLockCustom({
   const [sessionData, setSessionData] = useState<any>(null)
   const [connectionAttempted, setConnectionAttempted] = useState(false)
 
-  // Enhanced ChatKit configuration for Professor Lock custom server
-  const options = {
+  // CRITICAL: Memoize getClientSecret and options to prevent ChatKit from reinitializing
+  // on every render, which causes the component to mount/unmount repeatedly
+  const getClientSecret = useCallback(async (existing: any) => {
+    try {
+      setConnectionAttempted(true)
+      
+      if (existing) {
+        console.log('Refreshing Professor Lock session...')
+        return existing
+      }
+
+      const token = session?.access_token
+      
+      if (!token) {
+        const errorMsg = 'No access token available. Please refresh the page.'
+        setError(errorMsg)
+        throw new Error(errorMsg)
+      }
+      
+      console.log('🔌 Connecting to Professor Lock server...')
+      
+      // Use custom session endpoint for Professor Lock server
+      const res = await fetch('/api/chatkit/custom-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
+        const errorMsg = errorData.error || `Server responded with status ${res.status}`
+        console.error('❌ Professor Lock connection failed:', errorMsg)
+        setError(`Connection failed: ${errorMsg}`)
+        throw new Error(errorMsg)
+      }
+
+      const data = await res.json()
+      console.log('✅ Professor Lock session created:', data.session_id)
+      setSessionData(data)
+      setError(null)
+      onSessionStart?.()
+      
+      return data.client_secret
+    } catch (error: any) {
+      const errorMsg = error.message || 'Failed to connect to Professor Lock server'
+      console.error('❌ Professor Lock session error:', error)
+      setError(errorMsg)
+      throw error
+    }
+  }, [session?.access_token, onSessionStart])
+
+  // Memoize the entire options object to prevent ChatKit from reinitializing
+  const options = useMemo(() => ({
     api: {
-      async getClientSecret(existing: any) {
-        try {
-          setConnectionAttempted(true)
-          
-          if (existing) {
-            console.log('Refreshing Professor Lock session...')
-          }
-
-          const token = session?.access_token
-          
-          if (!token) {
-            const errorMsg = 'No access token available. Please refresh the page.'
-            setError(errorMsg)
-            throw new Error(errorMsg)
-          }
-          
-          console.log('🔌 Connecting to Professor Lock server...')
-          
-          // Use custom session endpoint for Professor Lock server
-          const res = await fetch('/api/chatkit/custom-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          })
-
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
-            const errorMsg = errorData.error || `Server responded with status ${res.status}`
-            console.error('❌ Professor Lock connection failed:', errorMsg)
-            setError(`Connection failed: ${errorMsg}`)
-            throw new Error(errorMsg)
-          }
-
-          const data = await res.json()
-          console.log('✅ Professor Lock session created:', data.session_id)
-          setSessionData(data)
-          setError(null)
-          onSessionStart?.()
-          
-          return data.client_secret
-        } catch (error: any) {
-          const errorMsg = error.message || 'Failed to connect to Professor Lock server'
-          console.error('❌ Professor Lock session error:', error)
-          setError(errorMsg)
-          // Don't re-throw - let the component show the error UI
-          return null
-        }
-      },
+      getClientSecret,
     },
     theme: {
       colorScheme: 'dark' as const,
@@ -214,7 +218,7 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any
+  } as any), [getClientSecret, session])
 
   const { control } = useChatKit(options)
 
