@@ -19,9 +19,25 @@ export function useChatkitWidgets() {
    */
   const handleWidgetAction = useCallback(async (action: any, sessionId: string) => {
     try {
+      // Try to include Supabase access token for authenticated actions
+      let token: string | undefined
+      if (typeof window !== 'undefined') {
+        try {
+          const keyPrefix = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]
+          const authRaw = window.localStorage.getItem(`sb-${keyPrefix}-auth-token`)
+          const authObj = authRaw ? JSON.parse(authRaw) : null
+          token = authObj?.access_token
+        } catch (e) {
+          // Ignore token parse errors; proceed unauthenticated
+        }
+      }
+
       const response = await fetch('/api/chatkit/widgets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ action, sessionId })
       });
 
