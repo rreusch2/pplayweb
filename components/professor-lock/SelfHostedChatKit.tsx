@@ -59,6 +59,14 @@ export default function SelfHostedChatKit({
     }
   })
 
+  // Ensure a thread exists so ChatKit initializes and starts requesting
+  useEffect(() => {
+    if (chatkit?.setThreadId) {
+      console.log('🧵 Initializing ChatKit thread...')
+      chatkit.setThreadId('new')
+    }
+  }, [chatkit])
+
   useEffect(() => {
     console.log('🎯 SelfHostedChatKit mounting...')
     console.log('User:', user?.id)
