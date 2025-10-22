@@ -117,18 +117,6 @@ export default function ProfessorLockCustom({
     api: {
       getClientSecret,
     },
-    // Add response debugging
-    onResponse: (response: any) => {
-      console.log('🤖 Agent response received:', response)
-      if (response.type === 'message' && response.content) {
-        console.log('📝 Message content:', response.content)
-        // Look for widget-like JSON in the response
-        const content = JSON.stringify(response.content)
-        if (content.includes('"type":"Card"') || content.includes('"type":"ListView"')) {
-          console.log('🎨 WIDGET DETECTED in response!')
-        }
-      }
-    },
     theme: {
       colorScheme: 'dark' as const,
       radius: 'pill' as const,
@@ -235,7 +223,7 @@ export default function ProfessorLockCustom({
     widgets: {
       async onAction(action: any, item: any) {
         try {
-          console.log('🎯 Widget action received:', action.type, action.payload)
+          console.log('Widget action:', action.type, action.payload)
           
           // Send action to your custom widget handler
           const token = accessTokenRef.current
@@ -255,9 +243,7 @@ export default function ProfessorLockCustom({
             'add_to_betslip': '💰 Added to betslip!',
             'submit_parlay': '🔒 Parlay submitted!',
             'analyze_game': '📊 Analyzing game...',
-            'refresh_odds': '🔄 Refreshing odds...',
-            'toggle_parlay_pick': '🎯 Pick toggled!',
-            'test_action': '✅ Test successful!'
+            'refresh_odds': '🔄 Refreshing odds...'
           }
           
           const message = actionLabels[action.type] || '✅ Action completed'
@@ -268,13 +254,6 @@ export default function ProfessorLockCustom({
           toast.error('Action failed')
         }
       },
-      // Add debug hooks to see if widgets are being processed
-      onMount: () => {
-        console.log('🎨 ChatKit widgets system mounted')
-      },
-      onRender: (widget: any) => {
-        console.log('🎨 Widget being rendered:', widget)
-      }
     }
   } as any), [getClientSecret])
 
