@@ -25,6 +25,8 @@ export default function ProfessorLockCustom({
   // Store callbacks and values in refs to prevent unnecessary re-renders
   const accessTokenRef = useRef(session?.access_token)
   const onSessionStartRef = useRef(onSessionStart)
+  const clientSecretRef = useRef<string | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
   
   useEffect(() => {
     accessTokenRef.current = session?.access_token
@@ -35,12 +37,18 @@ export default function ProfessorLockCustom({
   // on every render, which causes the component to mount/unmount repeatedly
   const getClientSecret = useCallback(async (existing: any) => {
     console.log('🔑 getClientSecret called, existing:', existing ? 'YES' : 'NO')
+    // Local cache guard: if we already have a client secret, reuse it
+    if (clientSecretRef.current) {
+      console.log('♻️ Using cached client_secret - NO SERVER CALL')
+      return clientSecretRef.current
+    }
     
     try {
       setConnectionAttempted(true)
       
       if (existing) {
         console.log('♻️ Reusing existing Professor Lock session - NO NEW SESSION CREATED')
+        clientSecretRef.current = existing
         return existing
       }
 
@@ -52,7 +60,7 @@ export default function ProfessorLockCustom({
         throw new Error(errorMsg)
       }
       
-      console.log('🔌 Creating NEW Professor Lock session...')
+      console.log('🛰 Requesting Professor Lock session (server may reuse a recent one)...')
       
       // Use custom session endpoint for Professor Lock server
       const res = await fetch('/api/chatkit/custom-session', {
@@ -72,11 +80,14 @@ export default function ProfessorLockCustom({
       }
 
       const data = await res.json()
-      console.log('✅ Professor Lock session created:', data.session_id)
+      console.log(`✅ Professor Lock session ready: ${data.session_id} ${data.reused ? '(reused)' : '(new)'}`)
       setSessionData(data)
       setError(null)
       onSessionStartRef.current?.()
       
+      // Cache for subsequent calls in this mount
+      clientSecretRef.current = data.client_secret
+      sessionIdRef.current = data.session_id
       return data.client_secret
     } catch (error: any) {
       const errorMsg = error.message || 'Failed to connect to Professor Lock server'
@@ -87,9 +98,16 @@ export default function ProfessorLockCustom({
   }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
+  // IMPORTANT: Use custom server mode (apiURL + fetch). ChatKit will stream to our proxy which forwards to PyKit.
   const options = useMemo(() => ({
-    api: {
-      getClientSecret,
+    apiURL: '/api/chatkit/proxy',
+    fetch: async (url: string, init?: RequestInit) => {
+      const token = accessTokenRef.current
+      const headers = new Headers(init?.headers || {})
+      if (token) headers.set('Authorization', `Bearer ${token}`)
+      // Ensure streaming content type is preserved
+      if (!headers.get('Accept')) headers.set('Accept', 'text/event-stream')
+      return fetch(url, { ...init, headers })
     },
     theme: {
       colorScheme: 'dark' as const,
@@ -229,7 +247,7 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any), [getClientSecret]) // Only depend on getClientSecret, not session
+  } as any), [])
 
   const { control } = useChatKit(options)
 
@@ -258,6 +276,32 @@ export default function ProfessorLockCustom({
       console.log('✅ ChatKit script already loaded')
       setIsLoading(false)
     }
+
+    // Fire-and-forget: create/reuse session on our side for tracking & UI, independent of ChatKit transport
+    const ensureSessionTracked = async () => {
+      try {
+        if (!accessTokenRef.current) return
+        const res = await fetch('/api/chatkit/custom-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessTokenRef.current}`,
+          },
+        })
+        if (!res.ok) {
+          console.warn('custom-session tracking failed')
+          return
+        }
+        const data = await res.json()
+        console.log(`🗂 Session tracking ready: ${data.session_id} ${data.reused ? '(reused)' : '(new)'}`)
+        setSessionData(data)
+        clientSecretRef.current = data.client_secret
+        sessionIdRef.current = data.session_id
+      } catch (e) {
+        console.warn('custom-session call errored', e)
+      }
+    }
+    ensureSessionTracked()
 
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')

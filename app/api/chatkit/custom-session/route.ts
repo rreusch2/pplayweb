@@ -39,7 +39,42 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Create session with your custom Professor Lock ChatKit server
+    // 1) Try to REUSE a recent session for this user to avoid duplicates from Strict Mode double-invocation
+    const reuseWindowMinutes = 10
+    const cutoff = new Date(Date.now() - reuseWindowMinutes * 60 * 1000).toISOString()
+
+    const { data: existingSessions, error: existingErr } = await supabase
+      .from('chatkit_sessions')
+      .select('session_id, client_secret, created_at, metadata')
+      .eq('user_id', user.id)
+      .gte('created_at', cutoff)
+      .contains('metadata', { server_type: 'professor_lock_custom' })
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!existingErr && existingSessions && existingSessions.length > 0) {
+      const existing = existingSessions[0]
+      return NextResponse.json({
+        client_secret: existing.client_secret,
+        session_id: existing.session_id,
+        server_type: 'professor_lock_custom',
+        user_preferences: {
+          sports: profile?.preferred_sports,
+          riskTolerance: profile?.risk_tolerance,
+          bettingStyle: profile?.betting_style
+        },
+        features: {
+          advanced_widgets: true,
+          betting_analysis: true,
+          statmuse_integration: true,
+          parlay_builder: true,
+          live_odds: true
+        },
+        reused: true,
+      })
+    }
+
+    // 2) No recent session. Create a new session with your custom Professor Lock ChatKit server
     const customServerUrl = process.env.PROFESSOR_LOCK_SERVER_URL || 'http://localhost:8000'
     
     const response = await fetch(`${customServerUrl}/create-session`, {
@@ -73,7 +108,6 @@ export async function POST(req: NextRequest) {
     await supabase
       .from('chatkit_sessions')
       .insert({
-        id: sessionData.session_id,
         user_id: user.id,
         session_id: sessionData.session_id,
         client_secret: sessionData.client_secret,
