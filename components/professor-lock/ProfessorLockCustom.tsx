@@ -30,7 +30,6 @@ export default function ProfessorLockCustom({
   const options = useMemo(() => {
     return {
       api: {
-        // For custom backends with Python SDK
         url: serverUrl,
         domainKey: domainKey,
         fetch: (input: RequestInfo | URL, init?: RequestInit) => {
