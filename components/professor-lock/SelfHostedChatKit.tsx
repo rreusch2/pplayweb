@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
-import { toast } from 'react-hot-toast'
 
 interface SelfHostedChatKitProps {
   className?: string
@@ -20,24 +19,17 @@ export default function SelfHostedChatKit({
   const { user, session, profile } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isReady, setIsReady] = useState(false)
 
-  // Your self-hosted server URL (Railway or wherever you deploy)
-  const CHATKIT_SERVER_URL = process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 
-    'https://pykit-production.up.railway.app'
-
-  const getClientSecret = useCallback(async () => {
+  // Get client secret for self-hosted ChatKit
+  const getClientSecret = useCallback(async (existing?: any) => {
+    console.log('🔑 Getting client secret...', existing ? 'refreshing' : 'new')
+    
     try {
       if (!user || !session) {
         throw new Error('User not authenticated')
       }
-
-      console.log('🔐 Creating self-hosted ChatKit session...')
-      console.log('User ID:', user.id)
-      console.log('Server URL:', CHATKIT_SERVER_URL)
       
-      // Call your self-hosted session endpoint
-      const res = await fetch(`${CHATKIT_SERVER_URL}/api/chatkit/session`, {
+      const res = await fetch('/api/chatkit/session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,7 +38,7 @@ export default function SelfHostedChatKit({
         body: JSON.stringify({
           user_id: user.id,
           user_email: user.email,
-          tier: profile?.subscription_tier || 'free',
+          tier: profile?.subscription_tier,
           preferences: {
             sports: profile?.preferred_sports,
             risk_tolerance: profile?.risk_tolerance,
@@ -54,100 +46,39 @@ export default function SelfHostedChatKit({
           }
         })
       })
-
+      
       if (!res.ok) {
         const errorText = await res.text()
-        console.error('Session creation failed:', errorText)
-        throw new Error(`Failed to create session: ${res.status}`)
+        throw new Error(`Session failed: ${errorText}`)
       }
-
+      
       const data = await res.json()
-      console.log('✅ Self-hosted session created:', data.session_id)
+      console.log('✅ Got client secret')
       
       onSessionStart?.()
-      
       return data.client_secret
+      
     } catch (error) {
       console.error('❌ ChatKit session error:', error)
       setError('Failed to connect to Professor Lock')
       throw error
     }
-  }, [user, session, profile, CHATKIT_SERVER_URL, onSessionStart])
+  }, [user, session, profile, onSessionStart])
 
-  // ChatKit options for self-hosted server
-  const options = {
-    api: {
-      // Point to your self-hosted server
-      url: `${CHATKIT_SERVER_URL}/chatkit`,
-      
-      // Get client secret from your server
-      async getClientSecret() {
-        return await getClientSecret()
-      },
-      
-      // Custom fetch to add user context headers
-      fetch: async (url: string, init: RequestInit = {}) => {
-        console.log('📡 ChatKit request to:', url)
-        
-        return fetch(url, {
-          ...init,
-          headers: {
-            ...init.headers,
-            'X-User-Id': user?.id || '',
-            'X-User-Email': user?.email || '',
-            'X-User-Tier': profile?.subscription_tier || 'free',
-            'X-Session-Id': session?.access_token || '',
-          },
-        })
-      }
-    },
-    theme: {
-      colorScheme: 'dark' as const,
-      borderRadius: 'large' as const,
-      primaryColor: '#3b82f6',
-      fontFamily: 'Inter, system-ui, sans-serif',
-    },
-    ui: {
-      brandName: 'Professor Lock',
-      brandIcon: '🎯',
-      placeholder: 'Ask Professor Lock about betting strategies...',
-      welcomeMessage: {
-        title: '🎯 Professor Lock',
-        subtitle: 'Your AI Sports Betting Expert',
-        suggestions: [
-          'Build me a 3-leg parlay for tonight',
-          'Show me odds for MLB games',
-          'What\'s the best player prop for Lakers?',
-          'Analyze trends for Patrick Mahomes'
-        ]
-      }
-    },
-    composer: {
-      placeholder: 'Ask for analysis, odds, parlays...',
-      submitOnEnter: true,
-      attachments: {
-        enabled: false, // Can enable later if needed
-      }
-    },
-    display: {
-      showTimestamps: true,
-      showMessageActions: true,
-      animateMessages: true,
-      autoScroll: true,
-    },
-    behavior: {
-      autoFocus: true,
-      persistThread: true,
-      loadHistory: true,
+  // ChatKit options - correct format per docs
+  const options = useMemo(() => ({
+    api: { 
+      getClientSecret,
+      url: 'https://pykit-production.up.railway.app/chatkit'
     }
-  }
+  }), [getClientSecret])
 
-  const { control } = useChatKit(options as any)
+  const { control } = useChatKit(options)
 
   useEffect(() => {
     console.log('🎯 SelfHostedChatKit mounting...')
     console.log('User:', user?.id)
-    console.log('Server:', CHATKIT_SERVER_URL)
+    console.log('Server: https://pykit-production.up.railway.app')
     
     // Load ChatKit script
     if (!document.querySelector('script[src*="chatkit.js"]')) {
@@ -158,7 +89,6 @@ export default function SelfHostedChatKit({
       script.onload = () => {
         console.log('✅ ChatKit script loaded')
         setIsLoading(false)
-        setIsReady(true)
       }
       script.onerror = () => {
         console.error('❌ Failed to load ChatKit script')
@@ -169,14 +99,13 @@ export default function SelfHostedChatKit({
     } else {
       console.log('✅ ChatKit script already loaded')
       setIsLoading(false)
-      setIsReady(true)
     }
 
     return () => {
       console.log('🔌 SelfHostedChatKit unmounting')
       onSessionEnd?.()
     }
-  }, [onSessionEnd, user, CHATKIT_SERVER_URL])
+  }, [onSessionEnd, user])
 
   // Show authentication required
   if (!user) {

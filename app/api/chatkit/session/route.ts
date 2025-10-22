@@ -39,46 +39,17 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Create ChatKit session with OpenAI
-    const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'OpenAI-Beta': 'chatkit_beta=v1',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        workflow: { 
-          id: process.env.OPENAI_WORKFLOW_ID || 'wf_placeholder' // You'll need to add your workflow ID
-        },
-        user: user.id
-      }),
-    })
+    // Generate self-hosted session (no OpenAI call needed)
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const clientSecret = `cs_self_${user.id}_${Math.random().toString(36).substr(2, 16)}`
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('OpenAI ChatKit session creation failed:', error)
-      throw new Error('Failed to create ChatKit session')
-    }
-
-    const sessionData = await response.json()
-
-    // Store session in database for tracking
-    await supabase
-      .from('chatkit_sessions')
-      .insert({
-        id: sessionData.id,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        metadata: {
-          workflow_id: process.env.OPENAI_WORKFLOW_ID,
-          tier: profile?.subscription_tier
-        }
-      })
+    console.log('✅ Created self-hosted ChatKit session for user:', user.id)
+    console.log('Session ID:', sessionId)
 
     return NextResponse.json({
-      client_secret: sessionData.client_secret,
-      session_id: sessionData.id,
+      client_secret: clientSecret,
+      session_id: sessionId,
+      self_hosted: true,
       user_preferences: {
         sports: profile?.preferred_sports,
         riskTolerance: profile?.risk_tolerance,
