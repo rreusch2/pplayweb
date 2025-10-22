@@ -362,8 +362,7 @@ export default function ProfessorLockCustom({
 
   return (
     <div
-      className={`relative resize overflow-hidden ${className}`}
-      style={{ width: 420, height: 600, minWidth: 320, minHeight: 420, maxHeight: '85vh' }}
+      className={`relative overflow-hidden ${className}`}
     >
       {control ? (
         <ChatKit control={control} className="h-full w-full" />
