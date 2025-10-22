@@ -27,42 +27,49 @@ export default function ChatKitProfessorLock({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ChatKit configuration with your custom theme
+  // ChatKit configuration pointing to your Python server on Railway  
   const options = {
     api: {
+      // Point directly to your Python ChatKit server
+      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
+      
+      // Simple client secret - just return user ID since you control the server
       async getClientSecret(existing: any) {
         try {
           if (existing) {
-            // Implement session refresh logic
-            console.log('Refreshing ChatKit session...')
+            console.log('Reusing existing session')
+            return existing
           }
 
-          const token = session?.access_token
-          
-          if (!token) {
-            throw new Error('No access token available')
+          if (!user?.id) {
+            throw new Error('No user logged in')
           }
           
-          const res = await fetch('/api/chatkit/session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          })
-
-          if (!res.ok) {
-            throw new Error('Failed to get ChatKit session')
-          }
-
-          const { client_secret } = await res.json()
+          // For self-hosted, the "secret" can just be your user ID
+          // Your Python server will get this in requests and can validate
+          const clientSecret = `user_${user.id}_${Date.now()}`
+          
+          console.log('🔐 Created client secret for self-hosted ChatKit:', clientSecret.substring(0, 20) + '...')
           onSessionStart?.()
-          return client_secret
+          
+          return clientSecret
         } catch (error) {
           console.error('ChatKit session error:', error)
           setError('Failed to connect to Professor Lock')
           throw error
         }
+      },
+      
+      // Add custom headers to pass user context to your server
+      async fetch(url: string, init?: RequestInit) {
+        const headers = {
+          ...init?.headers,
+          'X-User-Id': user?.id || '',
+          'X-User-Email': user?.email || '',
+          'X-User-Tier': profile?.subscription_tier || 'free',
+        };
+        
+        return globalThis.fetch(url, { ...init, headers });
       },
     },
     theme: {
