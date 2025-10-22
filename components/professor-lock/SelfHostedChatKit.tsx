@@ -43,8 +43,20 @@ export default function SelfHostedChatKit({
               'X-User-Email': user.email || '',
               'X-User-Tier': profile?.subscription_tier || 'free',
             },
+          }).then(res => {
+            console.log('🌐 ChatKit response:', res.status, res.statusText)
+            return res
+          }).catch(err => {
+            console.error('🌐 ChatKit fetch error:', err)
+            throw err
           })
         }
+      },
+      onError: ({ error }: { error: unknown }) => {
+        console.error('[ChatKit error]', error)
+      },
+      onLog: (detail: unknown) => {
+        console.debug('[ChatKit log]', detail)
       }
     }
   }, [user, session, profile])
@@ -56,6 +68,12 @@ export default function SelfHostedChatKit({
       domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? 'unknown-domain',
       fetch: (_input: RequestInfo | URL, _init?: RequestInit) =>
         Promise.resolve(new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 }))
+    },
+    onError: ({ error }: { error: unknown }) => {
+      console.error('[ChatKit error]', error)
+    },
+    onLog: (detail: unknown) => {
+      console.debug('[ChatKit log]', detail)
     }
   })
 
