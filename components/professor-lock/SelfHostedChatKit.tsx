@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 
@@ -20,85 +20,61 @@ export default function SelfHostedChatKit({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Configure for custom backend (self-hosted Python server)
-  const options = useMemo(() => {
-    if (!user || !session) return null
-    
-    return {
-      // Force create a new thread immediately to trigger backend connection
-      initialThread: 'new',
-      
-      api: {
-        // Point to our self-hosted Python server
-        url: 'https://pykit-production.up.railway.app/chatkit',
-        domainKey: 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-        
-        // Custom fetch with auth headers for our backend
-        fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-          console.log('🌐 ChatKit request to:', input)
-          
-          return fetch(input, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              'Authorization': `Bearer ${session.access_token}`,
-              'X-User-Id': user.id,
-              'X-User-Email': user.email || '',
-              'X-User-Tier': profile?.subscription_tier || 'free',
-            },
-          }).then(res => {
-            console.log('🌐 ChatKit response:', res.status, res.statusText)
-            return res
-          }).catch(err => {
-            console.error('🌐 ChatKit fetch error:', err)
-            throw err
-          })
-        }
-      },
-      onError: ({ error }: { error: unknown }) => {
-        console.error('[ChatKit error]', error)
-      },
-      onLog: (detail: unknown) => {
-        console.debug('[ChatKit log]', detail)
-      }
-    }
-  }, [user, session, profile])
-
-  // Use ChatKit hook with self-hosted config (fallback to prevent null error)
-  const chatkit = useChatKit(options || { 
-    initialThread: 'new',
-    api: { 
+  // Configure ChatKit for self-hosted backend
+  const chatkit = useChatKit({
+    initialThread: null,
+    api: {
       url: 'https://pykit-production.up.railway.app/chatkit',
       domainKey: 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-      fetch: async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        Promise.resolve(new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 }))
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (!user || !session) {
+          return new Response(JSON.stringify({ error: 'Not authenticated' }), { 
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+        
+        console.log('🌐 ChatKit request:', input)
+        
+        const response = await fetch(input, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            'Authorization': `Bearer ${session.access_token}`,
+            'X-User-Id': user.id,
+            'X-User-Email': user.email || '',
+            'X-User-Tier': profile?.subscription_tier || 'free',
+          },
+        })
+        
+        console.log('🌐 ChatKit response:', response.status)
+        return response
+      },
     },
-    onError: ({ error }: { error: unknown }) => {
+    onError: ({ error }) => {
       console.error('[ChatKit error]', error)
+      setError(error instanceof Error ? error.message : 'ChatKit error')
     },
-    onLog: (detail: unknown) => {
+    onLog: (detail) => {
       console.debug('[ChatKit log]', detail)
-    }
+    },
   })
 
   useEffect(() => {
-    console.log('🎯 SelfHostedChatKit mounting...')
+    console.log('🎯 SelfHostedChatKit ready')
     console.log('User:', user?.id)
-    console.log('Server: https://pykit-production.up.railway.app')
-    console.log('ChatKit object:', chatkit)
     console.log('ChatKit control:', chatkit?.control)
-    console.log('Options:', options)
     
-    // ChatKit will handle initialization when options are ready
-    if (options) {
+    if (chatkit?.control) {
       setIsLoading(false)
+      onSessionStart?.()
     }
 
     return () => {
       console.log('🔌 SelfHostedChatKit unmounting')
       onSessionEnd?.()
     }
-  }, [options, onSessionEnd, chatkit])
+  }, [chatkit, user, onSessionStart, onSessionEnd])
 
   // Show authentication required
   if (!user) {
@@ -155,8 +131,8 @@ export default function SelfHostedChatKit({
   return (
     <div className={className}>
       <div className="h-full rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-sm">
-        {chatkit?.control ? (
-          <ChatKit 
+        {chatkit?.control && !isLoading ? (
+          <ChatKit
             control={chatkit.control}
             className="w-full h-full"
           />
@@ -164,7 +140,8 @@ export default function SelfHostedChatKit({
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-              <p className="text-lg text-slate-300">Initializing ChatKit...</p>
+              <p className="text-lg text-slate-300">Initializing Professor Lock...</p>
+              <p className="text-xs text-slate-500 mt-2">Connecting to self-hosted server...</p>
             </div>
           </div>
         )}
