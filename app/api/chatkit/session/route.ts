@@ -39,17 +39,17 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Create ChatKit session with YOUR Python server on Railway
-    const railwayUrl = process.env.CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app';
-    const response = await fetch(`${railwayUrl}/create-session`, {
+    // Create ChatKit session with OpenAI's hosted service
+    const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // Your Python server will use this for OpenAI
       },
       body: JSON.stringify({
+        agent_id: process.env.CHATKIT_AGENT_ID || 'agent_01JBJ6QTCW20KCXR9D2GGQH8ZR', // Professor Lock agent
         user_id: user.id,
-        user_preferences: {
+        metadata: {
           subscription_tier: profile?.subscription_tier,
           preferred_sports: profile?.preferred_sports,
           risk_tolerance: profile?.risk_tolerance,
@@ -66,23 +66,21 @@ export async function POST(req: NextRequest) {
 
     const sessionData = await response.json()
     
-    console.log('🐍 Python ChatKit server response:', {
-      session_id: sessionData.session_id,
-      has_client_secret: !!sessionData.client_secret,
-      status: sessionData.status,
-      features: sessionData.features
+    console.log('✅ OpenAI ChatKit session created:', {
+      session_id: sessionData.id,
+      has_client_secret: !!sessionData.client_secret
     })
 
     // Store session in database for tracking
     await supabase
       .from('chatkit_sessions')
       .insert({
-        id: sessionData.session_id,
+        id: sessionData.id,
         user_id: user.id,
         created_at: new Date().toISOString(),
         metadata: {
-          server: 'python_chatkit_railway',
-          server_url: railwayUrl,
+          server: 'openai_hosted_chatkit',
+          agent_id: process.env.CHATKIT_AGENT_ID || 'agent_01JBJ6QTCW20KCXR9D2GGQH8ZR',
           tier: profile?.subscription_tier,
           preferences: {
             sports: profile?.preferred_sports,
@@ -94,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       client_secret: sessionData.client_secret,
-      session_id: sessionData.session_id,
+      id: sessionData.id,
       user_preferences: {
         sports: profile?.preferred_sports,
         riskTolerance: profile?.risk_tolerance,

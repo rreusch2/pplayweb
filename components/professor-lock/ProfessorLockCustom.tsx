@@ -88,14 +88,14 @@ export default function ProfessorLockCustom({
         }
 
         const data = await res.json()
-        console.log(`✅ OpenAI ChatKit session ready: ${data.session_id}`)
+        console.log(`✅ OpenAI ChatKit session ready: ${data.id}`)
         setSessionData(data)
         setError(null)
         onSessionStartRef.current?.()
         
         // Cache for subsequent calls in this mount
         clientSecretRef.current = data.client_secret
-        sessionIdRef.current = data.session_id
+        sessionIdRef.current = data.id
         return data.client_secret as string
       })()
       const result = await inflightSecretRef.current
@@ -112,24 +112,9 @@ export default function ProfessorLockCustom({
   }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
-  // Custom API mode: use your self-hosted server URL + domain key
+  // Use OpenAI hosted ChatKit mode with getClientSecret
   const options = useMemo(() => ({
-    api: {
-      // Custom API mode: point to your self-hosted Python ChatKit server
-      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
-      // Required: domain public key from your ChatKit Domain Allowlist
-      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
-      // Pass user context to your Python server
-      fetch: async (url: string, init?: RequestInit) => {
-        const headers = {
-          ...init?.headers,
-          'X-User-Id': user?.id || '',
-          'X-User-Email': user?.email || '',
-          'X-User-Tier': profile?.subscription_tier || 'free',
-        };
-        return globalThis.fetch(url, { ...init, headers });
-      },
-    },
+    getClientSecret,
     theme: {
       colorScheme: 'dark' as const,
       radius: 'pill' as const,
@@ -273,30 +258,14 @@ export default function ProfessorLockCustom({
   const { control } = useChatKit(options)
 
   useEffect(() => {
-    console.log('🎯 ProfessorLockCustom mounting (self-hosted)...')
-    console.log('ENV CHECK (ProfessorLockCustom):')
-    console.log('  - NEXT_PUBLIC_CHATKIT_SERVER_URL:', process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL)
-    console.log('  - NEXT_PUBLIC_CHATKIT_DOMAIN_KEY:', process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY)
+    console.log('🎯 ProfessorLockCustom mounting...')
     console.log('User:', user?.id)
     console.log('Session token:', session?.access_token ? 'Present' : 'Missing')
     
-    // For self-hosted ChatKit, no external script needed
-    // The @openai/chatkit-react package handles everything
-    console.log('🐍 Using self-hosted ChatKit - connecting to Railway server')
-    console.log('🔗 ChatKit server URL:', process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit')
     setIsLoading(false)
-    
-    // Listen for ChatKit errors
-    const handleChatkitError = (e: any) => {
-      console.error('🚨 ChatKit error event:', e.detail)
-      setError(`ChatKit error: ${e.detail?.error?.message || 'Unknown error'}`)
-    }
-    
-    window.addEventListener('chatkit.error', handleChatkitError as any)
     
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
-      window.removeEventListener('chatkit.error', handleChatkitError as any)
       onSessionEnd?.()
     }
   }, [onSessionEnd, user, session])
@@ -338,8 +307,8 @@ export default function ProfessorLockCustom({
           </p>
           <div className="mb-4 text-xs text-slate-400 space-y-1">
             <p>🔧 <strong>Troubleshooting:</strong></p>
-            <p>• Check if PyKit server is running on Railway</p>
-            <p>• Verify PROFESSOR_LOCK_SERVER_URL is correct</p>
+            <p>• Check your internet connection</p>
+            <p>• Try refreshing the page</p>
             <p>• Check browser console for detailed errors</p>
           </div>
           <div className="flex gap-3 justify-center">
@@ -390,7 +359,7 @@ export default function ProfessorLockCustom({
       {!error && control ? (
         <>
           <div className="absolute top-2 right-2 z-10 text-xs text-green-400">
-            ✅ Connected to Railway
+            ✅ OpenAI ChatKit
           </div>
           <ChatKit control={control} className="h-full w-full" />
         </>
@@ -399,7 +368,7 @@ export default function ProfessorLockCustom({
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
             <p className="text-lg text-slate-300">Connecting to Professor Lock...</p>
-            <p className="text-xs text-slate-500 mt-2">Railway Server</p>
+            <p className="text-xs text-slate-500 mt-2">OpenAI ChatKit</p>
           </div>
         </div>
       )}
