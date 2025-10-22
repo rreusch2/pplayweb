@@ -135,11 +135,18 @@ export default function SelfHostedChatKit({
   return (
     <div className={className}>
       <div className="h-full rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-sm">
-        {chatkit?.control && (
+        {chatkit?.control ? (
           <ChatKit 
             control={chatkit.control}
             className="w-full h-full"
           />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center">
+              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
+              <p className="text-lg text-slate-300">Initializing ChatKit...</p>
+            </div>
+          </div>
         )}
       </div>
       
