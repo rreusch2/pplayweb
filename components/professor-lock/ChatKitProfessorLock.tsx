@@ -243,20 +243,10 @@ export default function ChatKitProfessorLock({
   const { control } = useChatKit(options)
 
   useEffect(() => {
-    // Load ChatKit script
-    if (!document.querySelector('script[src*="chatkit.js"]')) {
-      const script = document.createElement('script')
-      script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js'
-      script.async = true
-      script.onload = () => setIsLoading(false)
-      script.onerror = () => {
-        setError('Failed to load ChatKit')
-        setIsLoading(false)
-      }
-      document.head.appendChild(script)
-    } else {
-      setIsLoading(false)
-    }
+    // For self-hosted ChatKit, we don't need to load external script
+    // The @openai/chatkit-react package handles everything
+    console.log('🐍 Using self-hosted ChatKit - no external script needed')
+    setIsLoading(false)
 
     return () => {
       onSessionEnd?.()
