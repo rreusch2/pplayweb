@@ -24,7 +24,7 @@ export default function ProfessorLockCustomRaw({
   onSessionEnd
 }: ProfessorLockCustomProps) {
   const { user, profile } = useAuth()
-  const chatkitRef = useRef<HTMLElement>(null)
+  const chatkitRef = useRef<any>(null)
 
   const serverUrl = process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit'
 
