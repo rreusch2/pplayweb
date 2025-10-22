@@ -25,10 +25,15 @@ export default function SelfHostedChatKit({
     if (!user || !session) return null
     
     return {
+      // Start with new thread view immediately
+      initialThread: null,
+      
       api: {
+        // Point to our self-hosted Python server
         url: 'https://pykit-production.up.railway.app/chatkit',
-        domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? 'unknown-domain',
+        domainKey: 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
         
+        // Custom fetch with auth headers for our backend
         fetch: (input: RequestInfo | URL, init?: RequestInit) => {
           console.log('🌐 ChatKit request to:', input)
           
@@ -50,17 +55,6 @@ export default function SelfHostedChatKit({
           })
         }
       },
-      startScreen: {
-        greeting: `Welcome, ${profile?.username || 'Player'}! I'm Professor Lock, your AI sports betting assistant.`,
-        prompts: [
-          { name: 'Today\'s Best Bets', prompt: 'What are today\'s best betting opportunities?', icon: 'search' },
-          { name: 'Analyze Game', prompt: 'Analyze the upcoming game for me', icon: 'write' },
-          { name: 'My Stats', prompt: 'Show me my betting performance stats', icon: 'bolt' },
-        ],
-      },
-      composer: {
-        placeholder: 'Ask Professor Lock about sports betting...',
-      },
       onError: ({ error }: { error: unknown }) => {
         console.error('[ChatKit error]', error)
       },
@@ -72,9 +66,10 @@ export default function SelfHostedChatKit({
 
   // Use ChatKit hook with self-hosted config (fallback to prevent null error)
   const chatkit = useChatKit(options || { 
+    initialThread: null,
     api: { 
       url: 'https://pykit-production.up.railway.app/chatkit',
-      domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? 'unknown-domain',
+      domainKey: 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2',
       fetch: (_input: RequestInfo | URL, _init?: RequestInit) =>
         Promise.resolve(new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 }))
     },
@@ -92,7 +87,6 @@ export default function SelfHostedChatKit({
     console.log('Server: https://pykit-production.up.railway.app')
     console.log('ChatKit object:', chatkit)
     console.log('ChatKit control:', chatkit?.control)
-    console.log('ChatKit ref.current:', chatkit?.ref?.current)
     console.log('Options:', options)
     
     // ChatKit will handle initialization when options are ready
