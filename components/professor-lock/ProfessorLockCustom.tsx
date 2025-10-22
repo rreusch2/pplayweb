@@ -374,18 +374,36 @@ export default function ProfessorLockCustom({
   }
 
   console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
+  console.log('📊 Component state:', { isLoading, error, connectionAttempted })
 
   return (
     <div
       className={`relative overflow-hidden ${className}`}
+      style={{ minHeight: '600px', background: '#1a1a1a' }}
     >
-      {control ? (
-        <ChatKit control={control} className="h-full w-full" />
-      ) : (
+      {error && (
+        <div className="flex h-full w-full items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <p className="text-lg text-red-400 mb-2">Connection Error</p>
+            <p className="text-sm text-slate-400">{error}</p>
+          </div>
+        </div>
+      )}
+      
+      {!error && control ? (
+        <>
+          <div className="absolute top-2 right-2 z-10 text-xs text-green-400">
+            ✅ Connected to Railway
+          </div>
+          <ChatKit control={control} className="h-full w-full" />
+        </>
+      ) : !error && (
         <div className="flex h-full w-full items-center justify-center">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-            <p className="text-lg text-slate-300">Initializing ChatKit...</p>
+            <p className="text-lg text-slate-300">Connecting to Professor Lock...</p>
+            <p className="text-xs text-slate-500 mt-2">Railway Server</p>
           </div>
         </div>
       )}
