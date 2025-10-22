@@ -4,11 +4,10 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 import { Maximize2, Minimize2 } from 'lucide-react'
-import ResizableChatKit from '@/components/professor-lock/ResizableChatKit'
 
-// Dynamically import ChatKit components to avoid SSR issues
-const ChatKitProfessorLock = dynamic(
-  () => import('@/components/professor-lock/ChatKitProfessorLock'),
+// Self-hosted ChatKit component with advanced widgets
+const SelfHostedChatKit = dynamic(
+  () => import('@/components/professor-lock/SelfHostedChatKit'),
   { 
     ssr: false,
     loading: () => (
@@ -16,21 +15,7 @@ const ChatKitProfessorLock = dynamic(
         <div className="text-center">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
           <p className="text-lg text-slate-300">Loading Professor Lock...</p>
-        </div>
-      </div>
-    )
-  }
-)
-
-const ProfessorLockCustom = dynamic(
-  () => import('@/components/professor-lock/ProfessorLockCustom'),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-          <p className="text-lg text-slate-300">Loading Professor Lock Custom Server...</p>
+          <p className="text-sm text-slate-500 mt-2">Self-hosted • Advanced Widgets • Real-time Analysis</p>
         </div>
       </div>
     )
@@ -62,6 +47,10 @@ export default function ProfessorLockPage() {
               <span className="text-xs rounded-full px-2.5 py-1 border border-white/10 bg-white/5 capitalize">
                 {tier} tier
               </span>
+              <span className="flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1 border border-green-500/20 bg-green-500/10 text-green-300">
+                <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                Self-Hosted
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -76,20 +65,7 @@ export default function ProfessorLockPage() {
 
           {!isFullscreen && (
             <div className="flex justify-center">
-              <ResizableChatKit
-                initialWidth={900}
-                initialHeight={600}
-                minWidth={600}
-                maxWidth={1200}
-                minHeight={400}
-                maxHeight={800}
-              >
-                {process.env.NEXT_PUBLIC_USE_CUSTOM_PROFESSOR_LOCK === 'true' ? (
-                  <ProfessorLockCustom className="w-full h-full" />
-                ) : (
-                  <ChatKitProfessorLock className="w-full h-full" />
-                )}
-              </ResizableChatKit>
+              <SelfHostedChatKit className="w-full h-[600px]" />
             </div>
           )}
         </div>
@@ -105,28 +81,30 @@ export default function ProfessorLockPage() {
               >
                 <Minimize2 className="w-4 h-4" /> Exit
               </button>
-              {process.env.NEXT_PUBLIC_USE_CUSTOM_PROFESSOR_LOCK === 'true' ? (
-                <ProfessorLockCustom className="w-full h-full" />
-              ) : (
-                <ChatKitProfessorLock className="w-full h-full" />
-              )}
+              <SelfHostedChatKit className="w-full h-full" />
             </div>
           </div>
         )}
 
         {/* Feature Pills */}
         <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-4 py-2">
+            <span className="text-sm text-green-300">⚡ Advanced Widgets</span>
+          </div>
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
             <span className="text-sm text-slate-300">✅ Real-Time Odds</span>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-            <span className="text-sm text-slate-300">📊 StatMuse Data</span>
+            <span className="text-sm text-slate-300">📊 StatMuse Integration</span>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-            <span className="text-sm text-slate-300">🎯 Smart Parlays</span>
+            <span className="text-sm text-slate-300">🎯 Parlay Builder</span>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-            <span className="text-sm text-slate-300">🔥 Player Props</span>
+            <span className="text-sm text-slate-300">🔍 Live Search</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2">
+            <span className="text-sm text-purple-300">🎨 Interactive Cards</span>
           </div>
         </div>
       </div>
