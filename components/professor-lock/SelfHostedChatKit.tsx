@@ -26,11 +26,9 @@ export default function SelfHostedChatKit({
     
     return {
       api: {
-        // Point to our self-hosted Python server (NO domainKey for custom backends!)
         url: 'https://pykit-production.up.railway.app/chatkit',
         domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY ?? 'unknown-domain',
         
-        // Custom fetch with auth headers for our backend
         fetch: (input: RequestInfo | URL, init?: RequestInit) => {
           console.log('🌐 ChatKit request to:', input)
           
@@ -51,6 +49,17 @@ export default function SelfHostedChatKit({
             throw err
           })
         }
+      },
+      startScreen: {
+        greeting: `Welcome, ${profile?.username || 'Player'}! I'm Professor Lock, your AI sports betting assistant.`,
+        prompts: [
+          { name: 'Today\'s Best Bets', prompt: 'What are today\'s best betting opportunities?', icon: 'search' },
+          { name: 'Analyze Game', prompt: 'Analyze the upcoming game for me', icon: 'write' },
+          { name: 'My Stats', prompt: 'Show me my betting performance stats', icon: 'bolt' },
+        ],
+      },
+      composer: {
+        placeholder: 'Ask Professor Lock about sports betting...',
       },
       onError: ({ error }: { error: unknown }) => {
         console.error('[ChatKit error]', error)
@@ -83,6 +92,7 @@ export default function SelfHostedChatKit({
     console.log('Server: https://pykit-production.up.railway.app')
     console.log('ChatKit object:', chatkit)
     console.log('ChatKit control:', chatkit?.control)
+    console.log('ChatKit ref.current:', chatkit?.ref?.current)
     console.log('Options:', options)
     
     // ChatKit will handle initialization when options are ready
@@ -95,14 +105,6 @@ export default function SelfHostedChatKit({
       onSessionEnd?.()
     }
   }, [options, onSessionEnd, chatkit])
-  
-  // Initialize thread after component mounts
-  useEffect(() => {
-    if (chatkit?.ref?.current && chatkit?.setThreadId) {
-      console.log('🧵 Initializing ChatKit thread (component is mounted)...')
-      chatkit.setThreadId('new')
-    }
-  }, [chatkit?.ref?.current, chatkit])
 
   // Show authentication required
   if (!user) {
