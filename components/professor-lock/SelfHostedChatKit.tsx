@@ -65,6 +65,9 @@ export default function SelfHostedChatKit({
     console.log('🎯 SelfHostedChatKit mounting...')
     console.log('User:', user?.id)
     console.log('Server: https://pykit-production.up.railway.app')
+    console.log('ChatKit object:', chatkit)
+    console.log('ChatKit control:', chatkit?.control)
+    console.log('Options:', options)
     
     // ChatKit will handle initialization when options are ready
     if (options) {
@@ -75,7 +78,7 @@ export default function SelfHostedChatKit({
       console.log('🔌 SelfHostedChatKit unmounting')
       onSessionEnd?.()
     }
-  }, [options, onSessionEnd])
+  }, [options, onSessionEnd, chatkit])
 
   // Show authentication required
   if (!user) {
