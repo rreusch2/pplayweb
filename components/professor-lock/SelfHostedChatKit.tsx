@@ -48,8 +48,13 @@ export default function SelfHostedChatKit({
     }
   }, [user, session, profile])
 
-  // Use ChatKit hook with self-hosted config
-  const chatkit = useChatKit(options)
+  // Use ChatKit hook with self-hosted config (fallback to prevent null error)
+  const chatkit = useChatKit(options || { 
+    api: { 
+      url: 'https://pykit-production.up.railway.app/chatkit',
+      fetch: () => Promise.reject('Not authenticated')
+    }
+  })
 
   useEffect(() => {
     console.log('🎯 SelfHostedChatKit mounting...')
