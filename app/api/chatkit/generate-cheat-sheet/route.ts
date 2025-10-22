@@ -96,7 +96,6 @@ async function generateCheatSheetData(request: CheatSheetRequest) {
 }
 
 async function generateCheatSheetImage(data: any, template: string): Promise<string> {
-  // We'll implement server-side image generation using canvas
-  // For now, return a placeholder that we'll replace with actual image generation
-  return `/api/chatkit/render-cheat-sheet?id=${data.id}&template=${template}`
+  // Using @vercel/og for serverless-compatible image generation
+  return `/api/chatkit/render-cheat-sheet-og?id=${data.id}&template=${template}`
 }
