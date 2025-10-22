@@ -17,99 +17,14 @@ export default function ProfessorLockCustom({
   onSessionEnd
 }: ProfessorLockCustomProps) {
   const { user, profile, session } = useAuth()
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sessionData, setSessionData] = useState<any>(null)
-  const [connectionAttempted, setConnectionAttempted] = useState(false)
   
   // Store callbacks and values in refs to prevent unnecessary re-renders
   const accessTokenRef = useRef(session?.access_token)
-  const onSessionStartRef = useRef(onSessionStart)
-  const clientSecretRef = useRef<string | null>(null)
-  const sessionIdRef = useRef<string | null>(null)
-  const inflightSecretRef = useRef<Promise<string> | null>(null)
   
   useEffect(() => {
     accessTokenRef.current = session?.access_token
-    onSessionStartRef.current = onSessionStart
-  }, [session?.access_token, onSessionStart])
-
-  // CRITICAL: Memoize getClientSecret and options to prevent ChatKit from reinitializing
-  // on every render, which causes the component to mount/unmount repeatedly
-  const getClientSecret = useCallback(async (existing: any) => {
-    console.log('🔑 getClientSecret called, existing:', existing ? 'YES' : 'NO')
-    // Local cache guard: if we already have a client secret, reuse it
-    if (clientSecretRef.current) {
-      console.log('♻️ Using cached client_secret - NO SERVER CALL')
-      return clientSecretRef.current
-    }
-
-    // If a request is already in-flight, await and return the same promise
-    if (inflightSecretRef.current) {
-      console.log('⏳ Reusing in-flight client_secret request')
-      return inflightSecretRef.current
-    }
-    
-    try {
-      setConnectionAttempted(true)
-      
-      if (existing) {
-        console.log('♻️ Reusing existing Professor Lock session - NO NEW SESSION CREATED')
-        clientSecretRef.current = existing
-        return existing
-      }
-
-      const token = accessTokenRef.current
-      
-      if (!token) {
-        const errorMsg = 'No access token available. Please refresh the page.'
-        setError(errorMsg)
-        throw new Error(errorMsg)
-      }
-      
-      console.log('🛰 Requesting OpenAI ChatKit session (server stores/reuses in DB)...')
-      
-      // Use OpenAI-hosted session endpoint (also persists in DB on server)
-      inflightSecretRef.current = (async () => {
-        const res = await fetch('/api/chatkit/session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
-          const errorMsg = errorData.error || `Server responded with status ${res.status}`
-          console.error('❌ ChatKit session creation failed:', errorMsg)
-          setError(`Connection failed: ${errorMsg}`)
-          throw new Error(errorMsg)
-        }
-
-        const data = await res.json()
-        console.log(`✅ OpenAI ChatKit session ready: ${data.session_id}`)
-        setSessionData(data)
-        setError(null)
-        onSessionStartRef.current?.()
-        
-        // Cache for subsequent calls in this mount
-        clientSecretRef.current = data.client_secret
-        sessionIdRef.current = data.session_id
-        return data.client_secret as string
-      })()
-      const result = await inflightSecretRef.current
-      return result
-    } catch (error: any) {
-      const errorMsg = error.message || 'Failed to connect to Professor Lock server'
-      console.error('❌ Professor Lock session error:', error)
-      setError(errorMsg)
-      throw error
-    }
-    finally {
-      inflightSecretRef.current = null
-    }
-  }, []) // Empty deps - function uses refs and doesn't need to be recreated
+  }, [session?.access_token])
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
   // Custom API mode: use your self-hosted server URL + domain key
@@ -273,15 +188,16 @@ export default function ProfessorLockCustom({
   const { control } = useChatKit(options)
 
   useEffect(() => {
-    console.log('🎯 ProfessorLockCustom mounting (self-hosted)...')
+    console.log('🎯 ProfessorLockCustom mounting (Custom API mode)...')
     console.log('User:', user?.id)
-    console.log('Session token:', session?.access_token ? 'Present' : 'Missing')
+    console.log('User Tier:', profile?.subscription_tier)
     
-    // For self-hosted ChatKit, no external script needed
-    // The @openai/chatkit-react package handles everything
-    console.log('🐍 Using self-hosted ChatKit - connecting to Railway server')
-    console.log('🔗 ChatKit server URL:', process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit')
-    setIsLoading(false)
+    const serverUrl = process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit'
+    const domainKey = process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'domain_pk_68ee8f22d84c8190afddda0c6ca72f7c0560633b5555ebb2'
+    
+    console.log('🐍 Custom API mode - Railway server')
+    console.log('🔗 Server URL:', serverUrl)
+    console.log('🔑 Domain Key:', domainKey.substring(0, 20) + '...')
     
     // Listen for ChatKit errors
     const handleChatkitError = (e: any) => {
@@ -291,12 +207,15 @@ export default function ProfessorLockCustom({
     
     window.addEventListener('chatkit.error', handleChatkitError as any)
     
+    // Trigger onSessionStart when component mounts (Custom API has no "session")
+    onSessionStart?.()
+    
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
       window.removeEventListener('chatkit.error', handleChatkitError as any)
       onSessionEnd?.()
     }
-  }, [onSessionEnd, user, session])
+  }, [onSessionStart, onSessionEnd, user, profile])
 
   if (!user) {
     return (
@@ -312,62 +231,7 @@ export default function ProfessorLockCustom({
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-[600px] items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/50 to-black/60">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-          <p className="text-lg text-slate-300 mb-2">Loading Professor Lock...</p>
-          <p className="text-sm text-slate-500">Preparing your betting analysis tools</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error && connectionAttempted) {
-    return (
-      <div className="flex h-[600px] items-center justify-center rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-950/40 via-black/50 to-black/60">
-        <div className="text-center max-w-md px-6">
-          <div className="mb-4 text-6xl">⚠️</div>
-          <h3 className="text-xl font-bold text-white mb-2">Connection Failed</h3>
-          <p className="mb-4 text-sm text-red-300 bg-red-950/50 rounded-lg p-3 border border-red-500/30">
-            {error}
-          </p>
-          <div className="mb-4 text-xs text-slate-400 space-y-1">
-            <p>🔧 <strong>Troubleshooting:</strong></p>
-            <p>• Check if PyKit server is running on Railway</p>
-            <p>• Verify PROFESSOR_LOCK_SERVER_URL is correct</p>
-            <p>• Check browser console for detailed errors</p>
-          </div>
-          <div className="flex gap-3 justify-center">
-            <button 
-              onClick={() => {
-                setError(null)
-                setConnectionAttempted(false)
-                setIsLoading(true)
-                window.location.reload()
-              }} 
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
-            >
-              Retry Connection
-            </button>
-            <button 
-              onClick={() => {
-                // Switch to standard ChatKit mode
-                window.location.href = '/professor-lock?mode=standard'
-              }} 
-              className="rounded-lg bg-slate-600 px-4 py-2 text-white hover:bg-slate-700 transition-colors"
-            >
-              Use Standard Mode
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
-  console.log('📊 Component state:', { isLoading, error, connectionAttempted })
 
   return (
     <div
@@ -375,28 +239,34 @@ export default function ProfessorLockCustom({
       style={{ minHeight: '600px', background: '#1a1a1a' }}
     >
       {error && (
-        <div className="flex h-full w-full items-center justify-center p-4">
-          <div className="text-center max-w-md">
-            <div className="text-red-500 text-4xl mb-4">⚠️</div>
-            <p className="text-lg text-red-400 mb-2">Connection Error</p>
-            <p className="text-sm text-slate-400">{error}</p>
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center max-w-md mx-4">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <p className="text-lg text-red-400 mb-2 font-semibold">Connection Error</p>
+            <p className="text-sm text-slate-300 mb-4 bg-red-950/30 p-3 rounded-lg border border-red-500/30">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 transition-colors font-medium"
+            >
+              Retry
+            </button>
           </div>
         </div>
       )}
       
-      {!error && control ? (
+      {control ? (
         <>
-          <div className="absolute top-2 right-2 z-10 text-xs text-green-400">
-            ✅ Connected to Railway
+          <div className="absolute top-3 right-3 z-10 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+            ⚡ Live
           </div>
           <ChatKit control={control} className="h-full w-full" />
         </>
-      ) : !error && (
+      ) : (
         <div className="flex h-full w-full items-center justify-center">
           <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mx-auto"></div>
-            <p className="text-lg text-slate-300">Connecting to Professor Lock...</p>
-            <p className="text-xs text-slate-500 mt-2">Railway Server</p>
+            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-3 border-blue-500/20 border-t-blue-500 mx-auto"></div>
+            <p className="text-lg text-slate-200 font-medium">Initializing Professor Lock...</p>
+            <p className="text-xs text-slate-400 mt-2">Custom API Mode</p>
           </div>
         </div>
       )}
