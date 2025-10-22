@@ -112,10 +112,40 @@ export default function ProfessorLockCustom({
   }, []) // Empty deps - function uses refs and doesn't need to be recreated
 
   // Memoize the entire options object to prevent ChatKit from reinitializing
-  // Use supported options for chatkit-react v1: api.getClientSecret
+  // Use supported options for chatkit-react v1: api.getClientSecret + self-hosted URL
   const options = useMemo(() => ({
     api: {
-      getClientSecret,
+      // Point to your self-hosted Python server on Railway
+      url: process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit',
+      
+      // Simple client secret for self-hosted (you control validation)
+      getClientSecret: async (existing: any) => {
+        if (existing) {
+          console.log('♻️ Reusing existing session')
+          return existing
+        }
+        
+        if (!user?.id) {
+          throw new Error('No user logged in')
+        }
+        
+        // For self-hosted, client secret can be simple
+        const clientSecret = `user_${user.id}_${Date.now()}`
+        console.log('🔐 Created self-hosted client secret')
+        onSessionStartRef.current?.()
+        return clientSecret
+      },
+      
+      // Pass user context to your Python server
+      fetch: async (url: string, init?: RequestInit) => {
+        const headers = {
+          ...init?.headers,
+          'X-User-Id': user?.id || '',
+          'X-User-Email': user?.email || '',
+          'X-User-Tier': profile?.subscription_tier || 'free',
+        };
+        return globalThis.fetch(url, { ...init, headers });
+      },
     },
     theme: {
       colorScheme: 'dark' as const,
@@ -255,35 +285,20 @@ export default function ProfessorLockCustom({
         }
       },
     }
-  } as any), [getClientSecret])
+  } as any), [user, profile])
 
   const { control } = useChatKit(options)
 
   useEffect(() => {
-    console.log('🎯 ProfessorLockCustom mounting...')
+    console.log('🎯 ProfessorLockCustom mounting (self-hosted)...')
     console.log('User:', user?.id)
     console.log('Session token:', session?.access_token ? 'Present' : 'Missing')
     
-    // Load ChatKit script
-    if (!document.querySelector('script[src*="chatkit.js"]')) {
-      console.log('📦 Loading ChatKit script...')
-      const script = document.createElement('script')
-      script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js'
-      script.async = true
-      script.onload = () => {
-        console.log('✅ ChatKit script loaded')
-        setIsLoading(false)
-      }
-      script.onerror = () => {
-        console.error('❌ Failed to load ChatKit script')
-        setError('Failed to load ChatKit library')
-        setIsLoading(false)
-      }
-      document.head.appendChild(script)
-    } else {
-      console.log('✅ ChatKit script already loaded')
-      setIsLoading(false)
-    }
+    // For self-hosted ChatKit, no external script needed
+    // The @openai/chatkit-react package handles everything
+    console.log('🐍 Using self-hosted ChatKit - connecting to Railway server')
+    setIsLoading(false)
+    
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
       onSessionEnd?.()
