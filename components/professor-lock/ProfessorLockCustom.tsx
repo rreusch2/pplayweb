@@ -297,10 +297,20 @@ export default function ProfessorLockCustom({
     // For self-hosted ChatKit, no external script needed
     // The @openai/chatkit-react package handles everything
     console.log('🐍 Using self-hosted ChatKit - connecting to Railway server')
+    console.log('🔗 ChatKit server URL:', process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL || 'https://pykit-production.up.railway.app/chatkit')
     setIsLoading(false)
+    
+    // Listen for ChatKit errors
+    const handleChatkitError = (e: any) => {
+      console.error('🚨 ChatKit error event:', e.detail)
+      setError(`ChatKit error: ${e.detail?.error?.message || 'Unknown error'}`)
+    }
+    
+    window.addEventListener('chatkit.error', handleChatkitError as any)
     
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
+      window.removeEventListener('chatkit.error', handleChatkitError as any)
       onSessionEnd?.()
     }
   }, [onSessionEnd, user, session])
