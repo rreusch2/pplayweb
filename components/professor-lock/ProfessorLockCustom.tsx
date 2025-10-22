@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { useAuth } from '@/contexts/SimpleAuthContext'
 import { toast } from 'react-hot-toast'
-import { useCheatSheetActions } from './CheatSheetHandler'
 
 interface ProfessorLockCustomProps {
   className?: string
@@ -22,7 +21,6 @@ export default function ProfessorLockCustom({
   const [error, setError] = useState<string | null>(null)
   const [sessionData, setSessionData] = useState<any>(null)
   const [connectionAttempted, setConnectionAttempted] = useState(false)
-  const { handleCheatSheetAction } = useCheatSheetActions()
   
   // Store callbacks and values in refs to prevent unnecessary re-renders
   const accessTokenRef = useRef(session?.access_token)
@@ -129,18 +127,17 @@ export default function ProfessorLockCustom({
           tint: 0 as const
         },
         accent: {
-          primary: '#26a1df',
+          primary: '#168aa2',
           level: 1 as const
         },
         surface: {
-          background: '#212121',
-          foreground: '#000000'
+          background: '#242424',
+          foreground: '#595654'
         }
       },
       typography: {
-        baseSize: 18 as const,
+        baseSize: 16 as const,
         fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        fontFamilyMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       }
     },
     composer: {
@@ -228,13 +225,7 @@ export default function ProfessorLockCustom({
         try {
           console.log('Widget action:', action.type, action.payload)
           
-          // Handle cheat sheet actions client-side
-          if (action.type.includes('cheat_sheet')) {
-            handleCheatSheetAction(action)
-            return
-          }
-          
-          // Send other actions to server
+          // Send action to your custom widget handler
           const token = accessTokenRef.current
           if (!token) return
           
@@ -370,24 +361,16 @@ export default function ProfessorLockCustom({
   console.log('🎨 Rendering ProfessorLockCustom, control:', control ? 'Present' : 'Missing')
 
   return (
-    <div className="flex justify-center items-start py-8 px-4">
-      <div
-        className={`relative resize overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-[#212121] transition-shadow hover:shadow-[0_20px_60px_-15px_rgba(38,161,223,0.3)] ${className}`}
-        style={{ 
-          width: 520, 
-          height: 680, 
-          minWidth: 360, 
-          minHeight: 480, 
-          maxHeight: '85vh',
-          resize: 'both'
-        }}
-      >
-        {/* Resize handle indicator */}
-        <div className="absolute bottom-1 right-1 w-5 h-5 pointer-events-none opacity-40 hover:opacity-100 transition-opacity">
-          <svg className="w-full h-full text-white/30" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M15 12l-3 3v-3h3zM15 8l-7 7v-3l4-4h3zM15 4l-11 11v-3l8-8h3z" />
-          </svg>
-        </div>
+    <div
+      className={`relative resize overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-[#242424] backdrop-blur-sm ${className}`}
+      style={{ width: 420, height: 600, minWidth: 320, minHeight: 420, maxHeight: '85vh' }}
+    >
+      {/* Resize handle indicator */}
+      <div className="absolute bottom-1 right-1 w-4 h-4 pointer-events-none opacity-30 hover:opacity-100 transition-opacity z-10">
+        <svg className="w-full h-full text-white/40" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M15 12l-3 3v-3h3zM15 8l-7 7v-3l4-4h3zM15 4l-11 11v-3l8-8h3z" />
+        </svg>
+      </div>
       {control ? (
         <ChatKit control={control} className="h-full w-full" />
       ) : (
@@ -398,7 +381,6 @@ export default function ProfessorLockCustom({
           </div>
         </div>
       )}
-      </div>
     </div>
   )
 }
