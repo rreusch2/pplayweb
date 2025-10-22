@@ -77,14 +77,6 @@ export default function SelfHostedChatKit({
     }
   })
 
-  // Ensure a thread exists so ChatKit initializes and starts requesting
-  useEffect(() => {
-    if (chatkit?.setThreadId) {
-      console.log('🧵 Initializing ChatKit thread...')
-      chatkit.setThreadId('new')
-    }
-  }, [chatkit])
-
   useEffect(() => {
     console.log('🎯 SelfHostedChatKit mounting...')
     console.log('User:', user?.id)
@@ -103,6 +95,14 @@ export default function SelfHostedChatKit({
       onSessionEnd?.()
     }
   }, [options, onSessionEnd, chatkit])
+  
+  // Initialize thread after component mounts
+  useEffect(() => {
+    if (chatkit?.ref?.current && chatkit?.setThreadId) {
+      console.log('🧵 Initializing ChatKit thread (component is mounted)...')
+      chatkit.setThreadId('new')
+    }
+  }, [chatkit?.ref?.current, chatkit])
 
   // Show authentication required
   if (!user) {
