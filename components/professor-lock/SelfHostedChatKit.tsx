@@ -33,13 +33,13 @@ export default function SelfHostedChatKit({
         domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'self-hosted',
         
         // Custom fetch with auth headers for our backend
-        fetch: (url: string, options: RequestInit) => {
-          console.log('🌐 ChatKit request to:', url)
+        fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+          console.log('🌐 ChatKit request to:', input)
           
-          return fetch(url, {
-            ...options,
+          return fetch(input, {
+            ...init,
             headers: {
-              ...options.headers,
+              ...init?.headers,
               'Authorization': `Bearer ${session.access_token}`,
               'X-User-Id': user.id,
               'X-User-Email': user.email || '',
@@ -56,7 +56,7 @@ export default function SelfHostedChatKit({
     api: { 
       url: 'https://pykit-production.up.railway.app/chatkit',
       domainKey: process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY || 'self-hosted',
-      fetch: (_url: string, _opts: RequestInit) =>
+      fetch: (_input: RequestInfo | URL, _init?: RequestInit) =>
         Promise.resolve(new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 }))
     }
   })
