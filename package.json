@@ -26,6 +26,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.16",
     "axios": "^1.10.0",
+    "canvas": "^2.11.2",
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
