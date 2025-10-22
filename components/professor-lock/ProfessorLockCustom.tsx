@@ -274,6 +274,9 @@ export default function ProfessorLockCustom({
 
   useEffect(() => {
     console.log('🎯 ProfessorLockCustom mounting (self-hosted)...')
+    console.log('ENV CHECK (ProfessorLockCustom):')
+    console.log('  - NEXT_PUBLIC_CHATKIT_SERVER_URL:', process.env.NEXT_PUBLIC_CHATKIT_SERVER_URL)
+    console.log('  - NEXT_PUBLIC_CHATKIT_DOMAIN_KEY:', process.env.NEXT_PUBLIC_CHATKIT_DOMAIN_KEY)
     console.log('User:', user?.id)
     console.log('Session token:', session?.access_token ? 'Present' : 'Missing')
     
