@@ -158,6 +158,7 @@ export interface UserProfile {
   revenuecat_customer_id?: string
   subscription_product_id?: string
   subscription_started_at?: string
+  betting_style?: 'conservative' | 'balanced' | 'aggressive'
 }
 
 export interface AIPrediction {
