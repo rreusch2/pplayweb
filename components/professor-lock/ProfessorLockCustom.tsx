@@ -67,6 +67,7 @@ export default function ProfessorLockCustom({
         fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }
     },
+    header: true as const,
     composer: {
       attachments: {
         enabled: true,
@@ -117,7 +118,7 @@ export default function ProfessorLockCustom({
         }
       ],
     },
-    startScreen: {
+    newThreadView: {
       greeting: '🎯 Professor Lock is locked in! Let\'s find some winners, champ! 💰',
       prompts: [
         {
@@ -198,20 +199,40 @@ export default function ProfessorLockCustom({
     console.log('🔗 Server URL:', serverUrl)
     console.log('🔑 Domain Key:', domainKey.substring(0, 20) + '...')
     
-    // Listen for ChatKit errors
-    const handleChatkitError = (e: any) => {
-      console.error('🚨 ChatKit error event:', e.detail)
+    // Listen for ChatKit events for deeper debugging
+    const handleError = (e: any) => {
+      console.error('🚨 chatkit.error:', e.detail)
       setError(`ChatKit error: ${e.detail?.error?.message || 'Unknown error'}`)
     }
-    
-    window.addEventListener('chatkit.error', handleChatkitError as any)
+    const handleLog = (e: any) => {
+      console.log('🪵 chatkit.log:', e.detail)
+    }
+    const handleStart = () => {
+      console.log('🟢 chatkit.response.start')
+    }
+    const handleEnd = () => {
+      console.log('🟣 chatkit.response.end')
+    }
+    const handleThread = (e: any) => {
+      console.log('🧵 chatkit.thread.change:', e.detail)
+    }
+
+    window.addEventListener('chatkit.error', handleError as any)
+    window.addEventListener('chatkit.log', handleLog as any)
+    window.addEventListener('chatkit.response.start', handleStart as any)
+    window.addEventListener('chatkit.response.end', handleEnd as any)
+    window.addEventListener('chatkit.thread.change', handleThread as any)
     
     // Trigger onSessionStart when component mounts (Custom API has no "session")
     onSessionStart?.()
     
     return () => {
       console.log('🔌 ProfessorLockCustom unmounting')
-      window.removeEventListener('chatkit.error', handleChatkitError as any)
+      window.removeEventListener('chatkit.error', handleError as any)
+      window.removeEventListener('chatkit.log', handleLog as any)
+      window.removeEventListener('chatkit.response.start', handleStart as any)
+      window.removeEventListener('chatkit.response.end', handleEnd as any)
+      window.removeEventListener('chatkit.thread.change', handleThread as any)
       onSessionEnd?.()
     }
   }, [onSessionStart, onSessionEnd, user, profile])
