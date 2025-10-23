@@ -51,6 +51,18 @@ export default function SelfHostedChatKit({
         return response
       },
     },
+    composer: {
+      placeholder: "Ask Professor Lock anything about today's slate…",
+    },
+    startScreen: {
+      greeting: "What can I help you lock today?",
+      prompts: [
+        { label: "Build a Parlay", prompt: "/parlay" },
+        { label: "Compare Odds", prompt: "/odds Lakers vs Celtics" },
+        { label: "Top Player Props", prompt: "/player Caitlin Clark" },
+        { label: "Betting Insights", prompt: "/insights" },
+      ],
+    },
     onError: ({ error }) => {
       console.error('[ChatKit error]', error)
       setError(error instanceof Error ? error.message : 'ChatKit error')
