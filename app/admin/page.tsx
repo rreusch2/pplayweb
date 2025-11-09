@@ -121,9 +121,14 @@ export default function AdminPage() {
       return
     }
 
-    // If no user, redirect to dashboard
-    if (!user || !profile) {
+    // If no user after initialization, redirect to dashboard
+    if (!user) {
       router.push('/dashboard')
+      return
+    }
+
+    // Wait for profile to load - don't redirect yet
+    if (!profile) {
       return
     }
 
